@@ -152,8 +152,8 @@ front_header(t('dashboard.title'));
 </section>
 <section class="cards">
   <article class="card">
-    <h3><?= h(t('sea.title') . ' (' . units_symbol('T') . ')') ?></h3>
-    <div><?= h($seaValue) ?></div>
+    <h3><?= h(t('sea.title')) ?></h3>
+    <div><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>
     <p class="small-muted"><?= h(t('sea.subtitle')) ?></p>
     <?php if (!empty($sea['distance_km'])): ?>
       <p class="small-muted"><?= h(t('sea.distance')) ?>: <?= h(number_format((float) $sea['distance_km'], 1, '.', '')) ?> km</p>
@@ -179,17 +179,28 @@ $metrics = [
 ];
 foreach ($metrics as $metric => $value):
     $display = units_format($metric, $value);
+    $displayWithUnit = $display;
+    if ($display !== t('common.na')) {
+        $symbol = units_symbol($metric);
+        if ($symbol !== '') {
+            $displayWithUnit .= ' ' . $symbol;
+        }
+    }
 ?>
-  <article class="card"><h3><?= h(units_metric_label($metric)) ?></h3><div><?= h($display) ?></div></article>
+  <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div><?= h($displayWithUnit) ?></div></article>
 <?php endforeach; ?>
 </section>
 <section class="panel">
   <h3><?= h(t('rain.total')) ?></h3>
   <div class="cards">
-    <article class="card"><h3><?= h(t('rain.day_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['day'])) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.month_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['month'])) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.year_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['year'])) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.rolling_year_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['rolling_year'] ?? 0.0)) ?></div></article>
+    <?php $rainDay = units_format('R', $rain['day']); ?>
+    <?php $rainMonth = units_format('R', $rain['month']); ?>
+    <?php $rainYear = units_format('R', $rain['year']); ?>
+    <?php $rainRolling = units_format('R', $rain['rolling_year'] ?? 0.0); ?>
+    <article class="card"><h3><?= h(t('rain.day_base')) ?></h3><div><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.month_base')) ?></h3><div><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.year_base')) ?></h3><div><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.rolling_year_base')) ?></h3><div><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
   </div>
 </section>
 <script>
