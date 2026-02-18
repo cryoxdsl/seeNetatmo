@@ -18,22 +18,29 @@ if (!app_is_installed()) {
     exit("Not installed\n");
 }
 
-$provided = (string) ($_GET['key'] ?? '');
-$candidates = array_values(array_filter([
+$provided = trim((string) ($_GET['key'] ?? $_GET['k'] ?? $_GET['cron_key'] ?? $_GET['token'] ?? ''));
+$cfgSecrets = app_secrets_config();
+$candidates = array_values(array_unique(array_filter([
     secret_get('cron_key_external') ?? '',
     secret_get('cron_key_daily') ?? '',
     secret_get('cron_key_fetch') ?? '',
-], static fn(string $v): bool => $v !== ''));
+    setting_get('cron_key_external', '') ?? '',
+    setting_get('cron_key_daily', '') ?? '',
+    setting_get('cron_key_fetch', '') ?? '',
+    (string) ($cfgSecrets['cron_key_external'] ?? ''),
+    (string) ($cfgSecrets['cron_key_daily'] ?? ''),
+    (string) ($cfgSecrets['cron_key_fetch'] ?? ''),
+], static fn(string $v): bool => trim($v) !== '')));
 $ok = false;
 foreach ($candidates as $expected) {
-    if (hash_equals($expected, $provided)) {
+    if (hash_equals(trim($expected), $provided)) {
         $ok = true;
         break;
     }
 }
 if ($provided === '' || !$ok) {
     http_response_code(403);
-    exit("Forbidden\n");
+    exit("Forbidden (invalid key)\n");
 }
 
 $lock = lock_acquire('cron_external');
