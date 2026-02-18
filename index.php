@@ -145,14 +145,21 @@ front_header(t('dashboard.title'));
         'red' => t('dashboard.alert_level_red'),
         default => t('dashboard.alert_level_green'),
       };
-      $bPhen = trim((string) ($badge['label'] ?? ''));
+      $bType = trim((string) ($badge['type'] ?? 'generic'));
+      $bPhen = match ($bType) {
+        'storm' => t('dashboard.alert_type_storm'),
+        'wind' => t('dashboard.alert_type_wind'),
+        'rain' => t('dashboard.alert_type_rain'),
+        'flood' => t('dashboard.alert_type_flood'),
+        'wave' => t('dashboard.alert_type_wave'),
+        'snow' => t('dashboard.alert_type_snow'),
+        'heat' => t('dashboard.alert_type_heat'),
+        'cold' => t('dashboard.alert_type_cold'),
+        'avalanche' => t('dashboard.alert_type_avalanche'),
+        default => t('dashboard.alert_type_generic'),
+      };
       if ($bPhen === '') {
-        $bPhen = match ($bLevel) {
-          'yellow' => t('dashboard.alert_desc_yellow'),
-          'orange' => t('dashboard.alert_desc_orange'),
-          'red' => t('dashboard.alert_desc_red'),
-          default => t('dashboard.alert_desc_green'),
-        };
+        $bPhen = trim((string) ($badge['label'] ?? ''));
       }
       $bTooltip = $bLabel . ' : ' . $bPhen;
     ?>

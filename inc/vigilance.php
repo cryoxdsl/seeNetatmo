@@ -108,6 +108,23 @@ function vigilance_type_from_label(string $label): string
     return $types[0] ?? 'generic';
 }
 
+function vigilance_badge_label_for_type(string $type, string $sourceLabel): string
+{
+    $src = vigilance_normalize_text($sourceLabel);
+    return match ($type) {
+        'flood' => (str_contains($src, 'submersion') ? 'Submersion' : (str_contains($src, 'inondation') ? 'Inondation' : 'Crues')),
+        'rain' => 'Pluie',
+        'wind' => 'Vent violent',
+        'storm' => 'Orages',
+        'snow' => 'Neige-verglas',
+        'heat' => 'Canicule',
+        'cold' => 'Grand froid',
+        'avalanche' => 'Avalanches',
+        'wave' => 'Vagues-submersion',
+        default => trim($sourceLabel) !== '' ? trim($sourceLabel) : 'Vigilance',
+    };
+}
+
 function vigilance_extract_entries(string $text, string $level, string $dept): array
 {
     $out = [];
@@ -409,14 +426,17 @@ function vigilance_current(bool $allowRemote = false): array
                     continue;
                 }
                 $typesForLabel = vigilance_types_from_label($label);
-                $primaryType = $typesForLabel[0] ?? 'generic';
-                $key = function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label);
-                if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
-                    $alertsByPhenomenon[$key] = [
+                foreach ($typesForLabel as $tp) {
+                    $badgeLabel = vigilance_badge_label_for_type($tp, $label);
+                    $keyRaw = $tp . '|' . $badgeLabel;
+                    $key = function_exists('mb_strtolower') ? mb_strtolower($keyRaw, 'UTF-8') : strtolower($keyRaw);
+                    if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
+                        $alertsByPhenomenon[$key] = [
                         'level' => $lvl,
-                        'type' => $primaryType,
-                        'label' => $label,
-                    ];
+                            'type' => $tp,
+                            'label' => $badgeLabel,
+                        ];
+                    }
                 }
             }
             $alerts = array_values($alertsByPhenomenon);
