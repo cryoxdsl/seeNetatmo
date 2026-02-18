@@ -30,13 +30,25 @@ if ((string)($_GET['export'] ?? '') === 'csv') {
 }
 
 $page = max(1, (int) ($_GET['page'] ?? 1));
-$perPage = 100;
+$perPage = (int) ($_GET['per_page'] ?? 25);
+if (!in_array($perPage, [25, 50, 100, 200], true)) {
+    $perPage = 25;
+}
 $total = count($rows);
 $pages = max(1, (int) ceil($total / $perPage));
 if ($page > $pages) {
     $page = $pages;
 }
 $chunk = array_slice($rows, ($page - 1) * $perPage, $perPage);
+
+$baseParams = [
+    'period' => $period,
+    'per_page' => $perPage,
+];
+function history_query(array $params): string
+{
+    return http_build_query(array_filter($params, static fn($v) => $v !== '' && $v !== null));
+}
 
 $periodLabels = [
     '24h' => t('period.24h'),
@@ -57,8 +69,16 @@ front_header(t('history.title'));
         <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($periodLabels[$p]) ?></option>
       <?php endforeach; ?>
     </select>
+    <label><?= h(t('logs.rows')) ?>
+      <select name="per_page">
+        <option value="25" <?= $perPage === 25 ? 'selected' : '' ?>>25</option>
+        <option value="50" <?= $perPage === 50 ? 'selected' : '' ?>>50</option>
+        <option value="100" <?= $perPage === 100 ? 'selected' : '' ?>>100</option>
+        <option value="200" <?= $perPage === 200 ? 'selected' : '' ?>>200</option>
+      </select>
+    </label>
     <button type="submit"><?= h(t('btn.apply')) ?></button>
-    <a class="btn" href="/history.php?period=<?= h($period) ?>&export=csv"><?= h(t('btn.export_csv')) ?></a>
+    <a class="btn" href="/history.php?<?= h(history_query($baseParams + ['export' => 'csv'])) ?>"><?= h(t('btn.export_csv')) ?></a>
   </form>
 </section>
 <section class="panel table-wrap">
@@ -68,12 +88,13 @@ front_header(t('history.title'));
 <?php foreach ($chunk as $r): ?><tr>
 <td><?= h($r['DateTime']) ?></td><td><?= h(units_format('T', $r['T'])) ?></td><td><?= h(units_format('Tmax', $r['Tmax'])) ?></td><td><?= h(units_format('Tmin', $r['Tmin'])) ?></td><td><?= h(units_format('H', $r['H'])) ?></td><td><?= h(units_format('D', $r['D'])) ?></td><td><?= h(units_format('W', $r['W'])) ?></td><td><?= h(units_format('G', $r['G'])) ?></td><td><?= h(units_format('B', $r['B'])) ?></td><td><?= h(units_format('RR', $r['RR'])) ?></td><td><?= h(units_format('R', $r['R'])) ?></td><td><?= h(units_format('P', $r['P'])) ?></td><td><?= h($r['S'] ?? t('common.na')) ?></td><td><?= h(units_format('A', $r['A'])) ?></td>
 </tr><?php endforeach; ?>
+<?php if (!$chunk): ?><tr><td colspan="14"><?= h(t('logs.no_results')) ?></td></tr><?php endif; ?>
 </tbody>
 </table>
 </section>
 <section class="panel row">
-  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= max(1, $page-1) ?>"><?= h(t('pagination.prev')) ?></a>
+  <a class="btn" href="/history.php?<?= h(history_query($baseParams + ['page' => max(1, $page - 1)])) ?>"><?= h(t('pagination.prev')) ?></a>
   <span><?= h(t('pagination.page')) ?> <?= $page ?>/<?= $pages ?></span>
-  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= min($pages, $page+1) ?>"><?= h(t('pagination.next')) ?></a>
+  <a class="btn" href="/history.php?<?= h(history_query($baseParams + ['page' => min($pages, $page + 1)])) ?>"><?= h(t('pagination.next')) ?></a>
 </section>
 <?php front_footer();
