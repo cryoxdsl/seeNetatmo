@@ -7,7 +7,7 @@ nav .nav-switch a{font-size:.78rem;padding:.15rem .35rem;opacity:.9}
 nav .nav-switch a.active{text-decoration:underline;opacity:1}
 nav .nav-switch .sep{font-size:.74rem;opacity:.72}
 main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--space);flex:1}.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:0;box-shadow:0 6px 18px rgba(8,42,78,.06)}
-.panel-dashboard{position:relative;background-color:#f6f9fc;background-size:cover;background-position:center;border-color:#c9d8e8;overflow:hidden}
+.panel-dashboard{position:relative;background-color:#f6f9fc;background-size:cover;background-position:center;border-color:#c9d8e8;overflow:visible}
 .panel-dashboard::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.55),rgba(255,255,255,.25));pointer-events:none}
 .panel-dashboard>*{position:relative;z-index:1}
 .panel-dashboard.season-spring{background-image:url('../img/seasons/spring.svg')}

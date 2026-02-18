@@ -100,7 +100,7 @@ $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
-  <a class="vigi-badge vigi-<?= h($alertLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" title="<?= h($tooltip) ?>" data-tooltip="<?= h($tooltip) ?>">
+  <a class="vigi-badge vigi-<?= h($alertLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($tooltip) ?>">
     <span class="vigi-icon"><?= $alertIcon ?></span>
   </a>
   <h2><?= h(t('dashboard.title')) ?></h2>
