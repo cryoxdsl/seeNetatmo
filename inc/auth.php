@@ -51,9 +51,20 @@ function auth_login_password(string $username, string $password): array
     }
 
     auth_log_attempt($username, $ip, true);
+    $totpSecret = decrypt_string((string) ($user['totp_secret_enc'] ?? ''));
+    if ($totpSecret === null || $totpSecret === '') {
+        $_SESSION['admin_uid'] = (int) $user['id'];
+        $_SESSION['admin_username'] = (string) $user['username'];
+        $_SESSION['admin_ok'] = 1;
+        unset($_SESSION['pending_uid'], $_SESSION['pending_user']);
+        db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $user['id']]);
+        session_regenerate_id(true);
+        return ['ok' => true, 'need_2fa' => false];
+    }
+
     $_SESSION['pending_uid'] = (int) $user['id'];
     $_SESSION['pending_user'] = (string) $user['username'];
-    return ['ok' => true];
+    return ['ok' => true, 'need_2fa' => true];
 }
 
 function auth_pending_user(): ?array
@@ -110,4 +121,22 @@ function admin_logout(): void
 {
     app_session_destroy();
     redirect(APP_ADMIN_PATH . '/login.php');
+}
+
+function admin_current_user(): ?array
+{
+    $uid = (int) ($_SESSION['admin_uid'] ?? 0);
+    if ($uid <= 0) {
+        return null;
+    }
+    $stmt = db()->prepare('SELECT * FROM users WHERE id=:id LIMIT 1');
+    $stmt->execute([':id' => $uid]);
+    $u = $stmt->fetch();
+    return $u ?: null;
+}
+
+function user_has_2fa(array $user): bool
+{
+    $secret = decrypt_string((string) ($user['totp_secret_enc'] ?? ''));
+    return $secret !== null && $secret !== '';
 }

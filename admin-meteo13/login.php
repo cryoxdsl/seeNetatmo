@@ -20,7 +20,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $p = (string) ($_POST['password'] ?? '');
     $res = auth_login_password($u, $p);
     if ($res['ok']) {
-        redirect(APP_ADMIN_PATH . '/2fa.php');
+        if (!empty($res['need_2fa'])) {
+            redirect(APP_ADMIN_PATH . '/2fa.php');
+        }
+        redirect(APP_ADMIN_PATH . '/index.php');
     }
     $error = (string) ($res['error'] ?? t('login.failed'));
 }

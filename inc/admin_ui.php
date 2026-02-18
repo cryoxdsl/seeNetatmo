@@ -16,6 +16,7 @@ function admin_header(string $title): void
     echo '<div class="admin-layout"><aside class="admin-nav"><h1>' . h(t('admin.title')) . '</h1>';
     echo '<a href="' . APP_ADMIN_PATH . '/index.php">' . h(t('admin.dashboard')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/site.php">' . h(t('admin.site')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/security.php">' . h(t('admin.twofa')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/netatmo.php">' . h(t('admin.netatmo')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/health.php">' . h(t('admin.health')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/logs.php">' . h(t('admin.logs')) . '</a>';
