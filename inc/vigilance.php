@@ -33,8 +33,8 @@ function vigilance_http_get(string $url): string
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 6,
-        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 2,
+        CURLOPT_CONNECTTIMEOUT => 1,
         CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
     ]);
     $raw = curl_exec($ch);
@@ -148,11 +148,29 @@ function vigilance_current(): array
 {
     $dept = station_department();
     $rawCache = setting_get('mf_vigilance_cache_json', '');
+    $lastTry = (int) (setting_get('mf_vigilance_last_try', '0') ?? 0);
+    $retryAfter = 300;
     if ($rawCache !== '') {
         $cache = json_decode($rawCache, true);
         if (is_array($cache) && ($cache['dept'] ?? '') === $dept && ((int) ($cache['fetched_at'] ?? 0)) > (time() - 300)) {
             return $cache;
         }
+        if (is_array($cache) && ($cache['dept'] ?? '') === $dept && $lastTry > (time() - $retryAfter)) {
+            return $cache;
+        }
+    } elseif ($lastTry > (time() - $retryAfter)) {
+        return [
+            'dept' => $dept,
+            'fetched_at' => time(),
+            'active' => false,
+            'level' => 'green',
+            'level_label' => 'green',
+            'phenomenon' => '',
+            'type' => 'generic',
+            'period_text' => '',
+            'updated_text' => '',
+            'url' => vigilance_department_url($dept),
+        ];
     }
 
     $result = [
@@ -169,6 +187,7 @@ function vigilance_current(): array
     ];
 
     try {
+        setting_set('mf_vigilance_last_try', (string) time());
         $html = vigilance_http_get(MF_VIGILANCE_ACCESSIBLE_URL);
         $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/\s+/', ' ', $text) ?? $text;

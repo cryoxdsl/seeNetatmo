@@ -25,8 +25,8 @@ function sea_temp_http_get_json(string $url): array
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 6,
-        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_TIMEOUT => 2,
+        CURLOPT_CONNECTTIMEOUT => 1,
         CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
     ]);
     $raw = curl_exec($ch);
@@ -66,6 +66,8 @@ function sea_temp_nearest(): array
     }
 
     $cacheRaw = setting_get('sea_temp_cache_json', '');
+    $lastTry = (int) (setting_get('sea_temp_last_try', '0') ?? 0);
+    $retryAfter = 300;
     if ($cacheRaw !== '') {
         $cache = json_decode($cacheRaw, true);
         if (is_array($cache)) {
@@ -75,7 +77,12 @@ function sea_temp_nearest(): array
             if ($fresh && $same) {
                 return $cache;
             }
+            if ($same && $lastTry > (time() - $retryAfter)) {
+                return $cache;
+            }
         }
+    } elseif ($lastTry > (time() - $retryAfter)) {
+        return ['available' => false, 'reason' => 'retry_later'];
     }
 
     $query = http_build_query([
@@ -103,6 +110,7 @@ function sea_temp_nearest(): array
     ];
 
     try {
+        setting_set('sea_temp_last_try', (string) time());
         $json = sea_temp_http_get_json($url);
         $value = null;
         $time = null;
@@ -144,4 +152,3 @@ function sea_temp_nearest(): array
     setting_set('sea_temp_cache_json', json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
     return $out;
 }
-
