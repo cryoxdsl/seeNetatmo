@@ -16,7 +16,7 @@ if (!in_array($hours, [0, 6, 12, 24, 48, 72, 168, 720], true)) {
     $hours = 24;
 }
 $page = max(1, (int) ($_GET['page'] ?? 1));
-$perPage = (int) ($_GET['per_page'] ?? 100);
+$perPage = (int) ($_GET['per_page'] ?? 25);
 if (!in_array($perPage, [25, 50, 100, 200], true)) {
     $perPage = 100;
 }
