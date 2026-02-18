@@ -105,11 +105,14 @@ if (isset($alert['alerts']) && is_array($alert['alerts'])) {
         }
         $type = trim((string) ($a['type'] ?? 'generic'));
         $level = trim((string) ($a['level'] ?? 'green'));
+        $level = match (strtolower($level)) {
+            'rouge', 'red' => 'red',
+            'orange' => 'orange',
+            'jaune', 'yellow' => 'yellow',
+            default => 'green',
+        };
         if ($type === '') {
             $type = 'generic';
-        }
-        if (!in_array($level, ['yellow', 'orange', 'red'], true)) {
-            $level = 'green';
         }
         $alertBadges[] = ['type' => $type, 'level' => $level];
     }
