@@ -95,11 +95,53 @@ function vigilance_extract_entry(string $text, string $level, string $dept): ?ar
             if ($code !== strtoupper($dept)) {
                 continue;
             }
+            $name = trim((string) $entry[1]);
             $phen = trim((string) $entry[3]);
-            return ['level' => $level, 'dept' => $code, 'phenomenon' => $phen];
+            return ['level' => $level, 'dept' => $code, 'dept_name' => $name, 'phenomenon' => $phen];
         }
     }
     return null;
+}
+
+function vigilance_slug(string $value): string
+{
+    $value = trim(strtolower($value));
+    $map = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a',
+        'ç' => 'c',
+        'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ñ' => 'n',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ÿ' => 'y',
+        '\'' => '-', '’' => '-', ' ' => '-',
+    ];
+    $value = strtr($value, $map);
+    $value = preg_replace('/[^a-z0-9\-]+/', '-', $value) ?? $value;
+    $value = preg_replace('/-+/', '-', $value) ?? $value;
+    return trim($value, '-');
+}
+
+function vigilance_department_url(string $dept, string $deptName = ''): string
+{
+    $deptName = trim($deptName);
+    if ($deptName !== '') {
+        $slug = vigilance_slug($deptName);
+        if ($slug !== '') {
+            return 'https://vigilance.meteofrance.fr/fr/' . rawurlencode($slug);
+        }
+    }
+
+    $fallbackByDept = [
+        '13' => 'bouches-du-rhone',
+    ];
+    $k = strtoupper($dept);
+    if (isset($fallbackByDept[$k])) {
+        return 'https://vigilance.meteofrance.fr/fr/' . $fallbackByDept[$k];
+    }
+
+    return 'https://vigilance.meteofrance.fr/fr/widget-vigilance/vigilance-departement/' . rawurlencode($dept);
 }
 
 function vigilance_current(): array
@@ -123,7 +165,7 @@ function vigilance_current(): array
         'type' => 'generic',
         'period_text' => '',
         'updated_text' => '',
-        'url' => 'https://vigilance.meteofrance.fr/fr/widget-vigilance/vigilance-departement/' . rawurlencode($dept),
+        'url' => vigilance_department_url($dept),
     ];
 
     try {
@@ -148,6 +190,7 @@ function vigilance_current(): array
             $result['level_label'] = $entry['level'];
             $result['phenomenon'] = $entry['phenomenon'];
             $result['type'] = vigilance_type_from_label($entry['phenomenon']);
+            $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
         }
     } catch (Throwable $e) {
         log_event('warning', 'front.vigilance', 'Vigilance fetch failed', ['err' => $e->getMessage(), 'dept' => $dept]);

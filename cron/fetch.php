@@ -91,6 +91,12 @@ try {
             }
         }
     }
+    if (isset($w['station_lat']) && $w['station_lat'] !== null && is_numeric((string) $w['station_lat'])) {
+        setting_set('station_lat', (string) ((float) $w['station_lat']));
+    }
+    if (isset($w['station_lon']) && $w['station_lon'] !== null && is_numeric((string) $w['station_lon'])) {
+        setting_set('station_lon', (string) ((float) $w['station_lon']));
+    }
 
     log_event('info', 'cron.fetch', 'Fetch success', ['dt' => $dt, 'duration_sec' => $dur, 'mods' => [
         'outdoor' => $w['mod_outdoor'],

@@ -25,6 +25,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .vigi-orange{background:rgba(211,102,24,.8)}
 .vigi-red{background:rgba(180,35,35,.82)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
+.small-muted{margin:.3rem 0 0;font-size:.8rem;color:var(--muted)}
 .weather-hero{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
 .weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
 .weather-icon svg{width:100px;height:100px}

@@ -6,6 +6,7 @@ require_once __DIR__ . '/inc/db.php';
 require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
 require_once __DIR__ . '/inc/vigilance.php';
+require_once __DIR__ . '/inc/sea_temp.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -96,6 +97,8 @@ if (($alert['updated_text'] ?? '') !== '') {
 $tooltip .= "\n" . t('dashboard.alert_source');
 $alertIcon = vigilance_icon((string) ($alert['type'] ?? 'generic'));
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
+$sea = sea_temp_nearest();
+$seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
 
 front_header(t('dashboard.title'));
 ?>
@@ -121,6 +124,19 @@ front_header(t('dashboard.title'));
     <p><?= h($weather['detail']) ?></p>
     <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : t('weather.trend.unavailable')) ?></p>
   </div>
+</section>
+<section class="cards">
+  <article class="card">
+    <h3><?= h(t('sea.title') . ' (' . units_symbol('T') . ')') ?></h3>
+    <div><?= h($seaValue) ?></div>
+    <p class="small-muted"><?= h(t('sea.subtitle')) ?></p>
+    <?php if (!empty($sea['distance_km'])): ?>
+      <p class="small-muted"><?= h(t('sea.distance')) ?>: <?= h(number_format((float) $sea['distance_km'], 1, '.', '')) ?> km</p>
+    <?php endif; ?>
+    <?php if (!empty($sea['time'])): ?>
+      <p class="small-muted"><?= h(t('sea.updated')) ?>: <?= h((string) $sea['time']) ?></p>
+    <?php endif; ?>
+  </article>
 </section>
 <section class="cards">
 <?php
