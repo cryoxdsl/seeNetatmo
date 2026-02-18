@@ -6,9 +6,12 @@ require_once __DIR__ . '/helpers.php';
 
 function front_header(string $title): void
 {
+    $baseTitle = browser_title_base();
+    $fullTitle = $title !== '' ? ($title . ' - ' . $baseTitle) : $baseTitle;
     echo '<!doctype html><html lang="fr"><head><meta charset="utf-8">';
     echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
-    echo '<title>' . h($title . ' - ' . app_name()) . '</title>';
+    echo '<title>' . h($fullTitle) . '</title>';
+    echo '<link rel="icon" href="' . h(favicon_url()) . '" type="image/x-icon">';
     echo '<link rel="stylesheet" href="/assets/css/style.css">';
     echo '</head><body>';
     echo '<header class="top"><div class="wrap head-row"><div class="brand">' . h(app_name()) . '</div><nav>';

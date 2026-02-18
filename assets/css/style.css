@@ -17,6 +17,9 @@ main{padding:1rem 0 2rem}.panel{background:var(--card);border:1px solid var(--li
 .weather-very_cloudy,.weather-cloudy{background:linear-gradient(125deg,#f2f6fa,#e5edf5)}
 .weather-offline{background:linear-gradient(125deg,#f5f7fa,#eceff3)}
 .pill{display:inline-block;padding:.25rem .7rem;border-radius:999px;font-weight:700}.pill-ok{background:#e4f4e7;color:var(--good)}.pill-bad{background:#fbe4e4;color:var(--bad)}
+.status-row{justify-content:space-between}
+.auto-refresh{display:flex;align-items:center;gap:.45rem;flex-wrap:wrap}
+.btn-lite{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.42rem .65rem;border-radius:8px;cursor:pointer}
 .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}select,input,button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.5rem .7rem;border-radius:8px;text-decoration:none}
 button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{padding:.48rem .35rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}

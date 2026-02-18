@@ -65,7 +65,14 @@ front_header('Dashboard');
 <section class="panel">
   <h2>Live dashboard</h2>
   <p>Last update: <strong><?= h($state['last'] ?? 'N/A') ?></strong></p>
-  <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
+  <div class="row status-row">
+    <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
+    <div class="auto-refresh" id="autoRefreshBox">
+      <span id="autoRefreshLabel">Auto refresh: ON</span>
+      <span class="code" id="autoRefreshCountdown">05:00</span>
+      <button type="button" class="btn-lite" id="autoRefreshToggle">Desactiver</button>
+    </div>
+  </div>
 </section>
 <section class="panel weather-hero weather-<?= h($weather['type']) ?>">
   <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weather['type']) : '' ?></div>
@@ -73,14 +80,6 @@ front_header('Dashboard');
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>
     <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : 'Tendance indisponible') ?></p>
-  </div>
-</section>
-<section class="panel">
-  <h3>Pluviometrie cumulee</h3>
-  <div class="cards">
-    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 3, '.', '')) ?></div></article>
-    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 3, '.', '')) ?></div></article>
-    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 3, '.', '')) ?></div></article>
   </div>
 </section>
 <section class="cards">
@@ -101,4 +100,58 @@ foreach ($metrics as $label => $value): ?>
   <article class="card"><h3><?= h($label) ?></h3><div><?= $value === null ? 'N/A' : h((string) $value) ?></div></article>
 <?php endforeach; ?>
 </section>
+<section class="panel">
+  <h3>Pluviometrie cumulee</h3>
+  <div class="cards">
+    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 3, '.', '')) ?></div></article>
+    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 3, '.', '')) ?></div></article>
+    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 3, '.', '')) ?></div></article>
+  </div>
+</section>
+<script>
+(function () {
+  var PERIOD = 300;
+  var storageKey = 'meteo13_auto_refresh_enabled';
+  var enabled = localStorage.getItem(storageKey);
+  enabled = enabled === null ? true : enabled === '1';
+  var remaining = PERIOD;
+
+  var label = document.getElementById('autoRefreshLabel');
+  var countdown = document.getElementById('autoRefreshCountdown');
+  var toggle = document.getElementById('autoRefreshToggle');
+  if (!label || !countdown || !toggle) return;
+
+  function fmt(sec) {
+    var m = Math.floor(sec / 60);
+    var s = sec % 60;
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function render() {
+    label.textContent = 'Auto refresh: ' + (enabled ? 'ON' : 'OFF');
+    countdown.textContent = fmt(remaining);
+    toggle.textContent = enabled ? 'Desactiver' : 'Activer';
+  }
+
+  toggle.addEventListener('click', function () {
+    enabled = !enabled;
+    localStorage.setItem(storageKey, enabled ? '1' : '0');
+    render();
+  });
+
+  setInterval(function () {
+    if (remaining <= 0) {
+      if (enabled) {
+        window.location.reload();
+        return;
+      }
+      remaining = PERIOD;
+    }
+    remaining--;
+    render();
+  }, 1000);
+
+  render();
+})();
+</script>
 <?php front_footer();

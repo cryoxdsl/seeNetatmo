@@ -32,3 +32,13 @@ function contact_email(): string
 {
     return setting_get('contact_email', 'contact@meteo13.fr') ?? 'contact@meteo13.fr';
 }
+
+function browser_title_base(): string
+{
+    return setting_get('browser_title', app_name()) ?? app_name();
+}
+
+function favicon_url(): string
+{
+    return setting_get('favicon_url', '/favicon.ico') ?? '/favicon.ico';
+}
