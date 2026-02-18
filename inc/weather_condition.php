@@ -72,6 +72,30 @@ function weather_trend_label(string $trend): string
 
 function weather_icon_svg(string $type, string $style = 'realistic'): string
 {
+    if ($style === 'outline') {
+        return match ($type) {
+            'sunny' => '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="11" fill="none" stroke="#e2a21c" stroke-width="3"/><g stroke="#e2a21c" stroke-width="3" stroke-linecap="round"><line x1="32" y1="6" x2="32" y2="14"/><line x1="32" y1="50" x2="32" y2="58"/><line x1="6" y1="32" x2="14" y2="32"/><line x1="50" y1="32" x2="58" y2="32"/><line x1="13" y1="13" x2="18" y2="18"/><line x1="46" y1="46" x2="51" y2="51"/><line x1="13" y1="51" x2="18" y2="46"/><line x1="46" y1="18" x2="51" y2="13"/></g></svg>',
+            'cloudy', 'very_cloudy', 'voile' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 42h25a8 8 0 0 0 0-16 11 11 0 0 0-21-2 8 8 0 0 0-4 18z" fill="none" stroke="#6f859c" stroke-width="3" stroke-linejoin="round"/></svg>',
+            'rain' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 36h25a8 8 0 0 0 0-16 11 11 0 0 0-21-2 8 8 0 0 0-4 18z" fill="none" stroke="#6f859c" stroke-width="3" stroke-linejoin="round"/><g stroke="#377fc2" stroke-width="3" stroke-linecap="round"><line x1="24" y1="44" x2="22" y2="54"/><line x1="32" y1="44" x2="30" y2="54"/><line x1="40" y1="44" x2="38" y2="54"/></g></svg>',
+            'snow' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M20 36h25a8 8 0 0 0 0-16 11 11 0 0 0-21-2 8 8 0 0 0-4 18z" fill="none" stroke="#7f93a8" stroke-width="3" stroke-linejoin="round"/><g stroke="#cfe4f8" stroke-width="2.5" stroke-linecap="round"><line x1="24" y1="46" x2="30" y2="52"/><line x1="30" y1="46" x2="24" y2="52"/><line x1="36" y1="46" x2="42" y2="52"/><line x1="42" y1="46" x2="36" y2="52"/></g></svg>',
+            'wind' => '<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#5f7f9f" stroke-width="3.5" stroke-linecap="round"><path d="M8 24h30c6 0 9-7 4-10"/><path d="M8 34h42c7 0 10 7 4 10"/><path d="M8 44h24c5 0 7-4 4-7"/></g></svg>',
+            'offline' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="32" rx="16" ry="11" fill="none" stroke="#889aac" stroke-width="3"/><line x1="20" y1="20" x2="44" y2="44" stroke="#889aac" stroke-width="4" stroke-linecap="round"/></svg>',
+            default => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="34" rx="14" ry="10" fill="none" stroke="#8095aa" stroke-width="3"/></svg>',
+        };
+    }
+
+    if ($style === 'glyph') {
+        return match ($type) {
+            'sunny' => '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="17" fill="#f6b733"/></svg>',
+            'cloudy', 'very_cloudy', 'voile' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 43h30a9 9 0 0 0 0-18 12 12 0 0 0-23-2 9 9 0 0 0-7 20z" fill="#8ca2b8"/></svg>',
+            'rain' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 36h30a9 9 0 0 0 0-18 12 12 0 0 0-23-2 9 9 0 0 0-7 20z" fill="#8ca2b8"/><path d="M24 42l-3 11h4l3-11zm10 0l-3 11h4l3-11zm10 0l-3 11h4l3-11z" fill="#3f8dd3"/></svg>',
+            'snow' => '<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 36h30a9 9 0 0 0 0-18 12 12 0 0 0-23-2 9 9 0 0 0-7 20z" fill="#93a8bb"/><circle cx="25" cy="49" r="3" fill="#eaf5ff"/><circle cx="33" cy="49" r="3" fill="#eaf5ff"/><circle cx="41" cy="49" r="3" fill="#eaf5ff"/></svg>',
+            'wind' => '<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="#6f8eae"><rect x="8" y="21" width="38" height="5" rx="2.5"/><rect x="8" y="31" width="48" height="5" rx="2.5"/><rect x="8" y="41" width="30" height="5" rx="2.5"/></g></svg>',
+            'offline' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="32" rx="16" ry="11" fill="#aab8c6"/><rect x="30.5" y="16" width="3" height="32" fill="#7f90a2" transform="rotate(-45 32 32)"/></svg>',
+            default => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="34" rx="14" ry="10" fill="#9db0c3"/></svg>',
+        };
+    }
+
     if ($style === 'minimal') {
         return match ($type) {
             'sunny' => '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="12" fill="#f4b400"/><g stroke="#f4b400" stroke-width="3" stroke-linecap="round"><line x1="32" y1="6" x2="32" y2="16"/><line x1="32" y1="48" x2="32" y2="58"/><line x1="6" y1="32" x2="16" y2="32"/><line x1="48" y1="32" x2="58" y2="32"/><line x1="13" y1="13" x2="20" y2="20"/><line x1="44" y1="44" x2="51" y2="51"/><line x1="13" y1="51" x2="20" y2="44"/><line x1="44" y1="20" x2="51" y2="13"/></g></svg>',

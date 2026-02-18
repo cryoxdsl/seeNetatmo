@@ -74,7 +74,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
     if ($site==='' || !filter_var($mail, FILTER_VALIDATE_EMAIL) || $table==='') {
         $err=t('site.invalid');
-    } elseif (!in_array($weatherIconStyle, ['realistic', 'minimal'], true)) {
+    } elseif (!in_array($weatherIconStyle, ['realistic', 'minimal', 'outline', 'glyph'], true)) {
         $err=t('site.invalid');
     } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
         $err=t('site.invalid');
@@ -118,6 +118,8 @@ admin_header(t('admin.site'));
     <select name="weather_icon_style">
       <option value="realistic" <?= $iconStyle === 'realistic' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_realistic')) ?></option>
       <option value="minimal" <?= $iconStyle === 'minimal' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_minimal')) ?></option>
+      <option value="outline" <?= $iconStyle === 'outline' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_outline')) ?></option>
+      <option value="glyph" <?= $iconStyle === 'glyph' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_glyph')) ?></option>
     </select>
   </label><br><br>
   <label><?= h(t('site.favicon_upload')) ?><br><input type="file" name="favicon_file" accept=".ico,.png,.jpg,.jpeg,.webp,image/x-icon,image/png,image/jpeg,image/webp"></label><br><br>
