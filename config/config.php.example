@@ -1,0 +1,15 @@
+<?php
+return [
+    'db_host' => 'localhost',
+    'db_port' => 3306,
+    'db_name' => 'database_name',
+    'db_user' => 'database_user',
+    'db_pass' => 'database_password',
+    'site_name' => 'seeNetatmo',
+    'contact_email' => 'contact@example.com',
+    'table_name' => 'alldata',
+    'admin_suffix' => 'securepanel',
+    'cron_key_fetch' => 'change-me',
+    'cron_key_daily' => 'change-me',
+    'app_version' => '1.0.0',
+];
