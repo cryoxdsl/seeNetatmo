@@ -86,38 +86,29 @@ front_header(t('dashboard.title'));
 <section class="cards">
 <?php
 $metrics = [
-  t('metric.temperature') => $row['T'] ?? null,
-  t('metric.humidity') => $row['H'] ?? null,
-  t('metric.pressure') => $row['P'] ?? null,
-  t('metric.rain_1h') => $row['RR'] ?? null,
-  t('metric.rain_day') => $row['R'] ?? null,
-  t('metric.wind_avg') => $row['W'] ?? null,
-  t('metric.wind_gust') => $row['G'] ?? null,
-  t('metric.wind_dir') => $row['B'] ?? null,
-  t('metric.dew_point') => $row['D'] ?? null,
-  t('metric.apparent') => $row['A'] ?? null,
+  'T' => $row['T'] ?? null,
+  'H' => $row['H'] ?? null,
+  'P' => $row['P'] ?? null,
+  'RR' => $row['RR'] ?? null,
+  'R' => $row['R'] ?? null,
+  'W' => $row['W'] ?? null,
+  'G' => $row['G'] ?? null,
+  'B' => $row['B'] ?? null,
+  'D' => $row['D'] ?? null,
+  'A' => $row['A'] ?? null,
 ];
-foreach ($metrics as $label => $value):
-    $display = t('common.na');
-    if ($value !== null) {
-        if ($label === t('metric.rain_1h') || $label === t('metric.rain_day')) {
-            $display = number_format((float) $value, 1, '.', '');
-        } elseif (in_array($label, [t('metric.humidity'), t('metric.pressure'), t('metric.wind_avg'), t('metric.wind_gust'), t('metric.wind_dir')], true)) {
-            $display = number_format((float) $value, 0, '.', '');
-        } else {
-            $display = (string) $value;
-        }
-    }
+foreach ($metrics as $metric => $value):
+    $display = units_format($metric, $value);
 ?>
-  <article class="card"><h3><?= h($label) ?></h3><div><?= h($display) ?></div></article>
+  <article class="card"><h3><?= h(units_metric_label($metric)) ?></h3><div><?= h($display) ?></div></article>
 <?php endforeach; ?>
 </section>
 <section class="panel">
   <h3><?= h(t('rain.total')) ?></h3>
   <div class="cards">
-    <article class="card"><h3><?= h(t('rain.day')) ?></h3><div><?= h(number_format((float) $rain['day'], 1, '.', '')) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.month')) ?></h3><div><?= h(number_format((float) $rain['month'], 1, '.', '')) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.year')) ?></h3><div><?= h(number_format((float) $rain['year'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.day_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['day'])) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.month_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['month'])) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.year_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['year'])) ?></div></article>
   </div>
 </section>
 <script>

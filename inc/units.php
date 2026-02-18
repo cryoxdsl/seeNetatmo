@@ -54,6 +54,34 @@ function units_symbol(string $metric): string
     };
 }
 
+function units_metric_name(string $metric): string
+{
+    return match ($metric) {
+        'T' => t('metric.temperature_name'),
+        'Tmax' => t('metric.tmax_name'),
+        'Tmin' => t('metric.tmin_name'),
+        'H' => t('metric.humidity_name'),
+        'D' => t('metric.dew_point_name'),
+        'W' => t('metric.wind_avg_name'),
+        'G' => t('metric.wind_gust_name'),
+        'B' => t('metric.wind_dir_name'),
+        'RR' => t('metric.rain_1h_name'),
+        'R' => t('metric.rain_day_name'),
+        'P' => t('metric.pressure_name'),
+        'A' => t('metric.apparent_name'),
+        default => $metric,
+    };
+}
+
+function units_metric_label(string $metric): string
+{
+    $symbol = units_symbol($metric);
+    if ($symbol === '') {
+        return units_metric_name($metric);
+    }
+    return units_metric_name($metric) . ' (' . $symbol . ')';
+}
+
 function units_convert(string $metric, ?float $value): ?float
 {
     if ($value === null) {
