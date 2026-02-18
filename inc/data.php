@@ -105,3 +105,98 @@ function rain_totals(): array
         'year' => round($yearTotal, 3),
     ];
 }
+
+function climat_available_years(): array
+{
+    $t = data_table();
+    $rows = db()->query("SELECT DISTINCT YEAR(`DateTime`) AS y FROM `{$t}` ORDER BY y DESC")->fetchAll();
+    return array_values(array_map(static fn(array $r): int => (int) $r['y'], $rows));
+}
+
+function climat_monthly_stats(int $year): array
+{
+    $t = data_table();
+    $statsStmt = db()->prepare(
+        "SELECT DATE_FORMAT(`DateTime`, '%Y-%m') AS p,
+                MIN(`T`) AS t_min, MAX(`T`) AS t_max,
+                MIN(`P`) AS p_min, MAX(`P`) AS p_max,
+                MAX(`RR`) AS rr_max,
+                MAX(`W`) AS w_max,
+                MAX(`G`) AS g_max,
+                MIN(`D`) AS d_min, MAX(`D`) AS d_max,
+                MIN(`A`) AS a_min, MAX(`A`) AS a_max
+         FROM `{$t}`
+         WHERE YEAR(`DateTime`) = :y
+         GROUP BY DATE_FORMAT(`DateTime`, '%Y-%m')
+         ORDER BY p ASC"
+    );
+    $statsStmt->execute([':y' => $year]);
+    $stats = $statsStmt->fetchAll();
+
+    $rainStmt = db()->prepare(
+        "SELECT DATE_FORMAT(d, '%Y-%m') AS p, COALESCE(SUM(day_total),0) AS rain_total
+         FROM (
+            SELECT DATE(`DateTime`) AS d,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            WHERE YEAR(`DateTime`) = :y
+            GROUP BY DATE(`DateTime`)
+         ) x
+         GROUP BY DATE_FORMAT(d, '%Y-%m')"
+    );
+    $rainStmt->execute([':y' => $year]);
+    $rains = $rainStmt->fetchAll();
+    $rainByPeriod = [];
+    foreach ($rains as $r) {
+        $rainByPeriod[(string) $r['p']] = (float) $r['rain_total'];
+    }
+
+    foreach ($stats as &$row) {
+        $period = (string) $row['p'];
+        $row['rain_total'] = $rainByPeriod[$period] ?? 0.0;
+    }
+    unset($row);
+
+    return $stats;
+}
+
+function climat_yearly_stats(): array
+{
+    $t = data_table();
+    $stats = db()->query(
+        "SELECT YEAR(`DateTime`) AS p,
+                MIN(`T`) AS t_min, MAX(`T`) AS t_max,
+                MIN(`P`) AS p_min, MAX(`P`) AS p_max,
+                MAX(`RR`) AS rr_max,
+                MAX(`W`) AS w_max,
+                MAX(`G`) AS g_max,
+                MIN(`D`) AS d_min, MAX(`D`) AS d_max,
+                MIN(`A`) AS a_min, MAX(`A`) AS a_max
+         FROM `{$t}`
+         GROUP BY YEAR(`DateTime`)
+         ORDER BY p DESC"
+    )->fetchAll();
+
+    $rains = db()->query(
+        "SELECT YEAR(d) AS p, COALESCE(SUM(day_total),0) AS rain_total
+         FROM (
+            SELECT DATE(`DateTime`) AS d,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            GROUP BY DATE(`DateTime`)
+         ) x
+         GROUP BY YEAR(d)"
+    )->fetchAll();
+    $rainByPeriod = [];
+    foreach ($rains as $r) {
+        $rainByPeriod[(string) $r['p']] = (float) $r['rain_total'];
+    }
+
+    foreach ($stats as &$row) {
+        $period = (string) $row['p'];
+        $row['rain_total'] = $rainByPeriod[$period] ?? 0.0;
+    }
+    unset($row);
+
+    return $stats;
+}
