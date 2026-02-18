@@ -75,6 +75,23 @@ try {
     db()->prepare($sql)->execute($row);
 
     $dur = round(microtime(true) - $start, 3);
+    $zip = trim((string) ($w['station_zipcode'] ?? ''));
+    if ($zip !== '') {
+        setting_set('station_zipcode', $zip);
+        if ((setting_get('station_department', '') ?? '') === '') {
+            $digits = preg_replace('/\D+/', '', $zip) ?? '';
+            $dept = '';
+            if (str_starts_with($digits, '97') || str_starts_with($digits, '98')) {
+                $dept = strlen($digits) >= 3 ? substr($digits, 0, 3) : '';
+            } elseif (strlen($digits) >= 2) {
+                $dept = substr($digits, 0, 2);
+            }
+            if ($dept !== '') {
+                setting_set('station_department', $dept);
+            }
+        }
+    }
+
     log_event('info', 'cron.fetch', 'Fetch success', ['dt' => $dt, 'duration_sec' => $dur, 'mods' => [
         'outdoor' => $w['mod_outdoor'],
         'rain' => $w['mod_rain'],

@@ -147,6 +147,9 @@ function netatmo_fetch_weather(): array
         'P' => null,
         'RR' => null, 'R' => null,
         'W' => null, 'G' => null, 'B' => null,
+        'station_zipcode' => null,
+        'station_lat' => null,
+        'station_lon' => null,
         'mod_outdoor' => false,
         'mod_rain' => false,
         'mod_wind' => false,
@@ -171,6 +174,21 @@ function netatmo_fetch_weather(): array
                 if (isset($device['dashboard_data'][$pressureKey])) {
                     $out['P'] = round((float) $device['dashboard_data'][$pressureKey], 3);
                     break;
+                }
+            }
+        }
+
+        if ($out['station_zipcode'] === null) {
+            $place = $device['place'] ?? [];
+            if (is_array($place)) {
+                $zip = (string) ($place['zip_code'] ?? $place['zipcode'] ?? '');
+                if ($zip !== '') {
+                    $out['station_zipcode'] = $zip;
+                }
+                $loc = $place['location'] ?? null;
+                if (is_array($loc) && count($loc) >= 2) {
+                    $out['station_lon'] = is_numeric($loc[0]) ? (float) $loc[0] : null;
+                    $out['station_lat'] = is_numeric($loc[1]) ? (float) $loc[1] : null;
                 }
             }
         }

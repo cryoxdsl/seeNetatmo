@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $browserTitle = trim((string)($_POST['browser_title'] ?? ''));
     $favicon = trim((string)($_POST['favicon_url'] ?? ''));
     $defaultLocale = normalize_locale((string) ($_POST['default_locale'] ?? 'fr_FR'));
+    $stationDepartment = strtoupper(trim((string) ($_POST['station_department'] ?? '')));
     $uploadedFavicon = null;
 
     if (isset($_FILES['favicon_file']) && is_array($_FILES['favicon_file']) && ((int)($_FILES['favicon_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
@@ -67,6 +68,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
     if ($site==='' || !filter_var($mail, FILTER_VALIDATE_EMAIL) || $table==='') {
         $err=t('site.invalid');
+    } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
+        $err=t('site.invalid');
     } elseif ($err === '') {
         setting_set('site_name',$site);
         setting_set('contact_email',$mail);
@@ -74,6 +77,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('browser_title', $browserTitle !== '' ? $browserTitle : $site);
         setting_set('favicon_url', $uploadedFavicon ?? ($favicon !== '' ? $favicon : '/favicon.ico'));
         setting_set('default_locale', $defaultLocale);
+        setting_set('station_department', $stationDepartment);
         $msg=t('site.saved');
     }
 }
@@ -98,6 +102,7 @@ admin_header(t('admin.site'));
       <option value="en_EN" <?= $currentDefault === 'en_EN' ? 'selected' : '' ?>>en_EN</option>
     </select>
   </label><br><br>
+  <label><?= h(t('site.station_department')) ?><br><input name="station_department" value="<?=h(station_department_setting())?>" placeholder="13"></label><br><br>
   <button type="submit"><?= h(t('site.save')) ?></button>
 </form>
 <?php admin_footer();

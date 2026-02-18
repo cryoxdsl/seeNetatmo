@@ -42,3 +42,13 @@ function favicon_url(): string
 {
     return setting_get('favicon_url', '/favicon.ico') ?? '/favicon.ico';
 }
+
+function station_zipcode(): string
+{
+    return setting_get('station_zipcode', '') ?? '';
+}
+
+function station_department_setting(): string
+{
+    return setting_get('station_department', '') ?? '';
+}

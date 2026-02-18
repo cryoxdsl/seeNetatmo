@@ -5,6 +5,7 @@ require_once __DIR__ . '/inc/bootstrap.php';
 require_once __DIR__ . '/inc/db.php';
 require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
+require_once __DIR__ . '/inc/vigilance.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -73,10 +74,35 @@ $seasonUrl = '/assets/img/seasons/' . $season . '.svg';
 if (is_file($seasonFile)) {
     $seasonUrl .= '?v=' . filemtime($seasonFile);
 }
+$alert = vigilance_current();
+$alertLevel = (string) ($alert['level'] ?? 'green');
+$alertLabel = match ($alertLevel) {
+    'yellow' => t('dashboard.alert_level_yellow'),
+    'orange' => t('dashboard.alert_level_orange'),
+    'red' => t('dashboard.alert_level_red'),
+    default => t('dashboard.alert_level_green'),
+};
+$alertType = trim((string) ($alert['phenomenon'] ?? ''));
+$tooltip = t('dashboard.alert_label') . ': ' . $alertLabel;
+if ($alertType !== '') {
+    $tooltip .= "\n" . t('dashboard.alert_type') . ': ' . $alertType;
+}
+if (($alert['period_text'] ?? '') !== '') {
+    $tooltip .= "\n" . t('dashboard.alert_period') . ': ' . (string) $alert['period_text'];
+}
+if (($alert['updated_text'] ?? '') !== '') {
+    $tooltip .= "\n" . t('dashboard.alert_updated') . ': ' . (string) $alert['updated_text'];
+}
+$tooltip .= "\n" . t('dashboard.alert_source');
+$alertIcon = vigilance_icon((string) ($alert['type'] ?? 'generic'));
+$alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 
 front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
+  <a class="vigi-badge vigi-<?= h($alertLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" title="<?= h($tooltip) ?>" data-tooltip="<?= h($tooltip) ?>">
+    <span class="vigi-icon"><?= $alertIcon ?></span>
+  </a>
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">
