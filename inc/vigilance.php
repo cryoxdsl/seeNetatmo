@@ -59,30 +59,62 @@ function vigilance_icon(string $type): string
         'storm' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 15a4 4 0 1 1 .8-7.9A5.5 5.5 0 0 1 18.5 9 3.5 3.5 0 0 1 18 16H7z" fill="currentColor"/><path d="M12 13l-2 4h2l-1 4 4-6h-2l1-2z" fill="#fff"/></svg>',
         'heat' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M17 7l2.1-2.1M4.9 19.1L7 17" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
         'cold' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M6 6l12 12M18 6L6 18M4 12h16" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+        'avalanche' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18h16L13 6z" fill="currentColor"/><circle cx="10" cy="17" r="2" fill="#fff"/></svg>',
+        'wave' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 14c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M2 18c2 0 2-2 4-2s2 2 4 2 2-2 4-2 2 2 4 2 2-2 4-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
         'flood' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h18v6H3z" fill="currentColor"/><path d="M4 19c1.3 0 1.3-1 2.6-1s1.3 1 2.6 1 1.3-1 2.6-1 1.3 1 2.6 1 1.3-1 2.6-1 1.3 1 2.6 1" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/></svg>',
         default => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M12 7v6m0 4h.01" stroke="#fff" stroke-width="2" stroke-linecap="round"/></svg>',
     };
 }
 
-function vigilance_type_from_label(string $label): string
+function vigilance_normalize_text(string $value): string
 {
-    $v = strtolower($label);
-    if (str_contains($v, 'pluie')) return 'rain';
-    if (str_contains($v, 'vent')) return 'wind';
-    if (str_contains($v, 'neige') || str_contains($v, 'verglas')) return 'snow';
-    if (str_contains($v, 'orage')) return 'storm';
-    if (str_contains($v, 'canicule')) return 'heat';
-    if (str_contains($v, 'froid')) return 'cold';
-    if (str_contains($v, 'crues') || str_contains($v, 'submersion')) return 'flood';
-    return 'generic';
+    $map = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ä' => 'a',
+        'ç' => 'c',
+        'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ñ' => 'n',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'ö' => 'o',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ÿ' => 'y',
+        'œ' => 'oe',
+    ];
+    $value = strtr(strtolower($value), $map);
+    return preg_replace('/\s+/', ' ', $value) ?? $value;
 }
 
-function vigilance_extract_entry(string $text, string $level, string $dept): ?array
+function vigilance_types_from_label(string $label): array
 {
+    $v = vigilance_normalize_text($label);
+    $types = [];
+
+    if (str_contains($v, 'orages') || str_contains($v, 'orage')) $types[] = 'storm';
+    if (str_contains($v, 'pluie')) $types[] = 'rain';
+    if (str_contains($v, 'inondation') || str_contains($v, 'crues') || str_contains($v, 'crue')) $types[] = 'flood';
+    if (str_contains($v, 'vagues-submersion') || str_contains($v, 'vague-submersion') || str_contains($v, 'submersion')) $types[] = 'wave';
+    if (str_contains($v, 'vent')) $types[] = 'wind';
+    if (str_contains($v, 'neige') || str_contains($v, 'verglas')) $types[] = 'snow';
+    if (str_contains($v, 'canicule')) $types[] = 'heat';
+    if (str_contains($v, 'grand froid') || str_contains($v, 'froid')) $types[] = 'cold';
+    if (str_contains($v, 'avalanche')) $types[] = 'avalanche';
+
+    $types = array_values(array_unique($types));
+    return $types !== [] ? $types : ['generic'];
+}
+
+function vigilance_type_from_label(string $label): string
+{
+    $types = vigilance_types_from_label($label);
+    return $types[0] ?? 'generic';
+}
+
+function vigilance_extract_entries(string $text, string $level, string $dept): array
+{
+    $out = [];
     $start = 'Nom des départements en vigilance ' . $level . ' :';
     $p = stripos($text, $start);
     if ($p === false) {
-        return null;
+        return [];
     }
     $slice = substr($text, $p + strlen($start), 4000);
     if (preg_match('/Nom des départements en vigilance (?:orange|jaune|rouge)\s*:/iu', $slice, $m, PREG_OFFSET_CAPTURE) === 1) {
@@ -97,10 +129,16 @@ function vigilance_extract_entry(string $text, string $level, string $dept): ?ar
             }
             $name = trim((string) $entry[1]);
             $phen = trim((string) $entry[3]);
-            return ['level' => $level, 'dept' => $code, 'dept_name' => $name, 'phenomenon' => $phen];
+            $out[] = ['level' => $level, 'dept' => $code, 'dept_name' => $name, 'phenomenon' => $phen];
         }
     }
-    return null;
+    return $out;
+}
+
+function vigilance_extract_entry(string $text, string $level, string $dept): ?array
+{
+    $entries = vigilance_extract_entries($text, $level, $dept);
+    return $entries[0] ?? null;
 }
 
 function vigilance_slug(string $value): string
@@ -155,6 +193,8 @@ function vigilance_current(bool $allowRemote = false): array
         'level_label' => 'green',
         'phenomenon' => '',
         'type' => 'generic',
+        'types' => [],
+        'phenomena' => [],
         'period_text' => '',
         'updated_text' => '',
         'url' => vigilance_department_url($dept),
@@ -195,16 +235,38 @@ function vigilance_current(bool $allowRemote = false): array
             $result['period_text'] = trim((string) $m[1]);
         }
 
-        $entry = vigilance_extract_entry($text, 'rouge', $dept)
-            ?? vigilance_extract_entry($text, 'orange', $dept)
-            ?? vigilance_extract_entry($text, 'jaune', $dept);
+        $entries = vigilance_extract_entries($text, 'rouge', $dept);
+        if ($entries === []) {
+            $entries = vigilance_extract_entries($text, 'orange', $dept);
+        }
+        if ($entries === []) {
+            $entries = vigilance_extract_entries($text, 'jaune', $dept);
+        }
+        $entry = $entries[0] ?? null;
 
         if ($entry !== null) {
             $result['active'] = true;
             $result['level'] = $entry['level'];
             $result['level_label'] = $entry['level'];
-            $result['phenomenon'] = $entry['phenomenon'];
-            $result['type'] = vigilance_type_from_label($entry['phenomenon']);
+            $labels = [];
+            $types = [];
+            foreach ($entries as $e) {
+                $label = trim((string) ($e['phenomenon'] ?? ''));
+                if ($label !== '') {
+                    $labels[] = $label;
+                }
+                $types = array_merge($types, vigilance_types_from_label($label));
+            }
+            $labels = array_values(array_unique($labels));
+            $types = array_values(array_unique($types));
+            if ($types === []) {
+                $types = [vigilance_type_from_label((string) $entry['phenomenon'])];
+            }
+
+            $result['phenomena'] = $labels;
+            $result['phenomenon'] = implode(', ', $labels);
+            $result['types'] = $types;
+            $result['type'] = $types[0] ?? 'generic';
             $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
         }
     } catch (Throwable $e) {

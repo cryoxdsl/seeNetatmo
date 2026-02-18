@@ -20,6 +20,9 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .vigi-badge:hover::after{opacity:1;transform:translateY(0)}
 .vigi-icon{width:18px;height:18px;display:inline-flex}
 .vigi-icon svg{width:18px;height:18px;display:block}
+.vigi-icons{display:inline-flex;align-items:center;gap:2px}
+.vigi-icons .vigi-icon{width:14px;height:14px}
+.vigi-icons .vigi-icon svg{width:14px;height:14px}
 .vigi-green{background:rgba(39,126,56,.72)}
 .vigi-yellow{background:rgba(203,152,10,.78)}
 .vigi-orange{background:rgba(211,102,24,.8)}

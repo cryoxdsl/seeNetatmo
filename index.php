@@ -91,19 +91,29 @@ $alertLabel = match ($alertLevel) {
     'red' => t('dashboard.alert_level_red'),
     default => t('dashboard.alert_level_green'),
 };
-$alertType = trim((string) ($alert['phenomenon'] ?? ''));
-$tooltip = t('dashboard.alert_label') . ': ' . $alertLabel;
-if ($alertType !== '') {
-    $tooltip .= "\n" . t('dashboard.alert_type') . ': ' . $alertType;
+$alertDesc = match ($alertLevel) {
+    'yellow' => t('dashboard.alert_desc_yellow'),
+    'orange' => t('dashboard.alert_desc_orange'),
+    'red' => t('dashboard.alert_desc_red'),
+    default => t('dashboard.alert_desc_green'),
+};
+$tooltip = $alertLabel . ': ' . $alertDesc;
+$alertTypes = [];
+if ($alertLevel !== 'green') {
+    if (isset($alert['types']) && is_array($alert['types'])) {
+        foreach ($alert['types'] as $type) {
+            $type = trim((string) $type);
+            if ($type !== '') {
+                $alertTypes[] = $type;
+            }
+        }
+    }
+    if ($alertTypes === []) {
+        $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
+        $alertTypes[] = $fallbackType !== '' ? $fallbackType : 'generic';
+    }
+    $alertTypes = array_values(array_unique($alertTypes));
 }
-if (($alert['period_text'] ?? '') !== '') {
-    $tooltip .= "\n" . t('dashboard.alert_period') . ': ' . (string) $alert['period_text'];
-}
-if (($alert['updated_text'] ?? '') !== '') {
-    $tooltip .= "\n" . t('dashboard.alert_updated') . ': ' . (string) $alert['updated_text'];
-}
-$tooltip .= "\n" . t('dashboard.alert_source');
-$alertIcon = vigilance_icon((string) ($alert['type'] ?? 'generic'));
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
@@ -117,7 +127,15 @@ front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <a class="vigi-badge vigi-<?= h($alertLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($tooltip) ?>">
-    <span class="vigi-icon"><?= $alertIcon ?></span>
+    <?php if ($alertTypes !== []): ?>
+      <span class="vigi-icons">
+        <?php foreach ($alertTypes as $vType): ?>
+          <span class="vigi-icon"><?= vigilance_icon($vType) ?></span>
+        <?php endforeach; ?>
+      </span>
+    <?php else: ?>
+      <span class="vigi-icon"><?= vigilance_icon('generic') ?></span>
+    <?php endif; ?>
   </a>
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
