@@ -110,10 +110,13 @@ front_header(t('dashboard.title'));
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">
     <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
-    <div class="auto-refresh" id="autoRefreshBox">
-      <span id="autoRefreshLabel"><?= h(t('dashboard.auto_refresh')) ?>: ON</span>
-      <span class="code" id="autoRefreshCountdown">05:00</span>
-      <button type="button" class="btn-lite" id="autoRefreshToggle"><?= h(t('dashboard.disable')) ?></button>
+    <div class="auto-refresh-mini" id="autoRefreshBox">
+      <button type="button" class="auto-chip" id="autoRefreshToggle" aria-label="<?= h(t('dashboard.auto_refresh')) ?>">
+        <span class="dot" id="autoRefreshDot"></span>
+        <span class="label"><?= h(t('dashboard.auto_refresh')) ?></span>
+        <span class="count" id="autoRefreshCountdown">05:00</span>
+      </button>
+      <span class="auto-progress"><span id="autoRefreshProgress"></span></span>
     </div>
   </div>
 </section>
@@ -174,10 +177,11 @@ foreach ($metrics as $metric => $value):
   enabled = enabled === null ? true : enabled === '1';
   var remaining = PERIOD;
 
-  var label = document.getElementById('autoRefreshLabel');
+  var dot = document.getElementById('autoRefreshDot');
+  var progress = document.getElementById('autoRefreshProgress');
   var countdown = document.getElementById('autoRefreshCountdown');
   var toggle = document.getElementById('autoRefreshToggle');
-  if (!label || !countdown || !toggle) return;
+  if (!dot || !progress || !countdown || !toggle) return;
 
   function fmt(sec) {
     var m = Math.floor(sec / 60);
@@ -186,9 +190,10 @@ foreach ($metrics as $metric => $value):
   }
 
   function render() {
-    label.textContent = '<?= h(t('dashboard.auto_refresh')) ?>: ' + (enabled ? 'ON' : 'OFF');
     countdown.textContent = fmt(remaining);
-    toggle.textContent = enabled ? '<?= h(t('dashboard.disable')) ?>' : '<?= h(t('dashboard.enable')) ?>';
+    toggle.classList.toggle('is-off', !enabled);
+    dot.textContent = enabled ? '' : '||';
+    progress.style.width = (enabled ? ((PERIOD - remaining) / PERIOD) : 0) * 100 + '%';
   }
 
   toggle.addEventListener('click', function () {
