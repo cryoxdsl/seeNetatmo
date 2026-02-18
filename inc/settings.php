@@ -52,3 +52,18 @@ function station_department_setting(): string
 {
     return setting_get('station_department', '') ?? '';
 }
+
+function station_latitude_setting(): string
+{
+    return setting_get('station_lat', '') ?? '';
+}
+
+function station_longitude_setting(): string
+{
+    return setting_get('station_lon', '') ?? '';
+}
+
+function station_position_locked(): bool
+{
+    return (setting_get('station_lock_position', '0') ?? '0') === '1';
+}

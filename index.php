@@ -54,12 +54,12 @@ if (function_exists('weather_condition_from_row')) {
     }
 }
 
-$rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
+$rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
 if (function_exists('rain_totals')) {
     try {
         $rain = rain_totals();
     } catch (Throwable $e) {
-        $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
+        $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
     }
 }
 $dayTemp = ['min' => null, 'max' => null];
@@ -189,6 +189,7 @@ foreach ($metrics as $metric => $value):
     <article class="card"><h3><?= h(t('rain.day_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['day'])) ?></div></article>
     <article class="card"><h3><?= h(t('rain.month_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['month'])) ?></div></article>
     <article class="card"><h3><?= h(t('rain.year_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['year'])) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.rolling_year_base') . ' (' . units_symbol('R') . ')') ?></h3><div><?= h(units_format('R', $rain['rolling_year'] ?? 0.0)) ?></div></article>
   </div>
 </section>
 <script>

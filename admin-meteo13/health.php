@@ -6,6 +6,7 @@ require_once __DIR__ . '/../inc/db.php';
 require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/data.php';
 require_once __DIR__ . '/../inc/netatmo.php';
+require_once __DIR__ . '/../inc/settings.php';
 require_once __DIR__ . '/../inc/admin_ui.php';
 
 admin_require_login();
@@ -17,6 +18,12 @@ $token = netatmo_token_status();
 $lastFetch = db()->query("SELECT created_at,message FROM app_logs WHERE channel='cron.fetch' ORDER BY id DESC LIMIT 1")->fetch();
 $lastDaily = db()->query("SELECT created_at,message FROM app_logs WHERE channel='cron.daily' ORDER BY id DESC LIMIT 1")->fetch();
 $err24h = (int)db()->query("SELECT COUNT(*) FROM app_logs WHERE level='error' AND created_at >= (NOW() - INTERVAL 24 HOUR)")->fetchColumn();
+$source = station_position_locked() ? t('health.position_manual') : t('health.position_auto');
+$lockStatus = station_position_locked() ? t('health.position_on') : t('health.position_off');
+$dept = station_department_setting();
+$zip = station_zipcode();
+$lat = station_latitude_setting();
+$lon = station_longitude_setting();
 
 admin_header(t('admin.health'));
 ?>
@@ -28,5 +35,11 @@ admin_header(t('admin.health'));
   <p><?= h(t('health.last_daily')) ?>: <?= h($lastDaily['created_at'] ?? t('common.na')) ?> (<?= h($lastDaily['message'] ?? '') ?>)</p>
   <p><?= h(t('health.token_status')) ?>: <?= $token['configured'] ? h(t('netatmo.configured')) : h(t('netatmo.missing')) ?><?= $token['expired'] ? ' (' . h(t('netatmo.expired')) . ')' : '' ?></p>
   <p><?= h(t('health.error_24h')) ?>: <?= $err24h ?></p>
+  <hr>
+  <p><strong><?= h(t('health.position')) ?></strong></p>
+  <p><?= h(t('health.position_source')) ?>: <?= h($source) ?></p>
+  <p><?= h(t('health.position_lock')) ?>: <?= h($lockStatus) ?></p>
+  <p>Dept: <?= h($dept !== '' ? $dept : t('common.na')) ?> | ZIP: <?= h($zip !== '' ? $zip : t('common.na')) ?></p>
+  <p>Lat: <?= h($lat !== '' ? $lat : t('common.na')) ?> | Lon: <?= h($lon !== '' ? $lon : t('common.na')) ?></p>
 </div>
 <?php admin_footer();

@@ -18,6 +18,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $favicon = trim((string)($_POST['favicon_url'] ?? ''));
     $defaultLocale = normalize_locale((string) ($_POST['default_locale'] ?? 'fr_FR'));
     $stationDepartment = strtoupper(trim((string) ($_POST['station_department'] ?? '')));
+    $stationZip = trim((string) ($_POST['station_zipcode'] ?? ''));
+    $stationLat = trim((string) ($_POST['station_lat'] ?? ''));
+    $stationLon = trim((string) ($_POST['station_lon'] ?? ''));
+    $stationLock = isset($_POST['station_lock_position']) ? '1' : '0';
     $uploadedFavicon = null;
 
     if (isset($_FILES['favicon_file']) && is_array($_FILES['favicon_file']) && ((int)($_FILES['favicon_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
@@ -70,6 +74,12 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $err=t('site.invalid');
     } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
         $err=t('site.invalid');
+    } elseif ($stationLat !== '' && (!is_numeric($stationLat) || (float) $stationLat < -90 || (float) $stationLat > 90)) {
+        $err=t('site.invalid');
+    } elseif ($stationLon !== '' && (!is_numeric($stationLon) || (float) $stationLon < -180 || (float) $stationLon > 180)) {
+        $err=t('site.invalid');
+    } elseif (($stationLat === '') xor ($stationLon === '')) {
+        $err=t('site.invalid');
     } elseif ($err === '') {
         setting_set('site_name',$site);
         setting_set('contact_email',$mail);
@@ -78,6 +88,10 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('favicon_url', $uploadedFavicon ?? ($favicon !== '' ? $favicon : '/favicon.ico'));
         setting_set('default_locale', $defaultLocale);
         setting_set('station_department', $stationDepartment);
+        setting_set('station_zipcode', $stationZip);
+        setting_set('station_lat', $stationLat !== '' ? (string) ((float) $stationLat) : '');
+        setting_set('station_lon', $stationLon !== '' ? (string) ((float) $stationLon) : '');
+        setting_set('station_lock_position', $stationLock);
         $msg=t('site.saved');
     }
 }
@@ -102,7 +116,11 @@ admin_header(t('admin.site'));
       <option value="en_EN" <?= $currentDefault === 'en_EN' ? 'selected' : '' ?>>en_EN</option>
     </select>
   </label><br><br>
+  <label><?= h(t('site.station_zipcode')) ?><br><input name="station_zipcode" value="<?=h(station_zipcode())?>" placeholder="13590"></label><br><br>
   <label><?= h(t('site.station_department')) ?><br><input name="station_department" value="<?=h(station_department_setting())?>" placeholder="13"></label><br><br>
+  <label><?= h(t('site.station_lat')) ?><br><input name="station_lat" value="<?=h(station_latitude_setting())?>" placeholder="43.53"></label><br><br>
+  <label><?= h(t('site.station_lon')) ?><br><input name="station_lon" value="<?=h(station_longitude_setting())?>" placeholder="5.45"></label><br><br>
+  <label><input type="checkbox" name="station_lock_position" value="1" <?= station_position_locked() ? 'checked' : '' ?>> <?= h(t('site.station_lock_position')) ?></label><br><br>
   <button type="submit"><?= h(t('site.save')) ?></button>
 </form>
 <?php admin_footer();

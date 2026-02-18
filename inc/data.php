@@ -63,6 +63,7 @@ function rain_totals(): array
     $today = $now->format('Y-m-d');
     $monthStartDate = $now->modify('first day of this month')->format('Y-m-d');
     $yearStartDate = $now->setDate((int) $now->format('Y'), 1, 1)->format('Y-m-d');
+    $rollingStartDate = $now->modify('-365 days')->format('Y-m-d');
 
     // Day total: prefer Netatmo daily cumulative (R), fallback to sum(RR).
     $dayStmt = db()->prepare(
@@ -99,10 +100,23 @@ function rain_totals(): array
     $yearStmt->execute([':start' => $yearStartDate, ':end' => $today]);
     $yearTotal = (float) ($yearStmt->fetchColumn() ?: 0);
 
+    $rollingStmt = db()->prepare(
+        "SELECT COALESCE(SUM(day_total),0) AS total FROM (
+            SELECT DATE(`DateTime`) AS d,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            WHERE DATE(`DateTime`) BETWEEN :start AND :end
+            GROUP BY DATE(`DateTime`)
+        ) x"
+    );
+    $rollingStmt->execute([':start' => $rollingStartDate, ':end' => $today]);
+    $rollingTotal = (float) ($rollingStmt->fetchColumn() ?: 0);
+
     return [
         'day' => round($dayTotal, 3),
         'month' => round($monthTotal, 3),
         'year' => round($yearTotal, 3),
+        'rolling_year' => round($rollingTotal, 3),
     ];
 }
 
