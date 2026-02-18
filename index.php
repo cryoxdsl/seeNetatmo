@@ -107,6 +107,11 @@ $alertIcon = vigilance_icon((string) ($alert['type'] ?? 'generic'));
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
+$stationLat = station_latitude_setting();
+$stationLon = station_longitude_setting();
+$stationAlt = station_altitude_setting();
+$stationPosition = ($stationLat !== '' && $stationLon !== '') ? ($stationLat . ', ' . $stationLon) : t('common.na');
+$stationAltDisplay = $stationAlt !== '' ? (number_format((float) $stationAlt, 0, '.', '') . ' m') : t('common.na');
 
 front_header(t('dashboard.title'));
 ?>
@@ -151,6 +156,21 @@ front_header(t('dashboard.title'));
   </div>
 </section>
 <section class="cards">
+  <article class="card station-card">
+    <h3><?= h(t('station.card_title')) ?></h3>
+    <div class="station-visual">
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <path d="M32 6c-9.4 0-17 7.6-17 17 0 12.4 17 35 17 35s17-22.6 17-35c0-9.4-7.6-17-17-17zm0 24a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" fill="#2f6ea4"/>
+      </svg>
+      <div class="alt-meter"><span style="height: <?= h((string) max(10, min(100, (int) round(((float) ($stationAlt !== '' ? $stationAlt : '0')) / 30)))) ?>%"></span></div>
+    </div>
+    <p class="small-muted"><?= h(t('station.location')) ?>: <span class="code"><?= h($stationPosition) ?></span></p>
+    <p class="small-muted"><?= h(t('station.altitude')) ?>: <strong><?= h($stationAltDisplay) ?></strong></p>
+    <p class="small-muted"><?= h(t('station.status')) ?>:
+      <span class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></span>
+    </p>
+    <p class="small-muted"><?= h(t('station.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
+  </article>
   <article class="card">
     <h3><?= h(t('sea.title')) ?></h3>
     <div><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>

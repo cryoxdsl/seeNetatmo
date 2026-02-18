@@ -98,6 +98,9 @@ try {
         if (isset($w['station_lon']) && $w['station_lon'] !== null && is_numeric((string) $w['station_lon'])) {
             setting_set('station_lon', (string) ((float) $w['station_lon']));
         }
+        if (isset($w['station_altitude']) && $w['station_altitude'] !== null && is_numeric((string) $w['station_altitude'])) {
+            setting_set('station_altitude', (string) ((float) $w['station_altitude']));
+        }
     }
 
     log_event('info', 'cron.fetch', 'Fetch success', ['dt' => $dt, 'duration_sec' => $dur, 'mods' => [

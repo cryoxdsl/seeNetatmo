@@ -150,6 +150,7 @@ function netatmo_fetch_weather(): array
         'station_zipcode' => null,
         'station_lat' => null,
         'station_lon' => null,
+        'station_altitude' => null,
         'mod_outdoor' => false,
         'mod_rain' => false,
         'mod_wind' => false,
@@ -189,6 +190,9 @@ function netatmo_fetch_weather(): array
                 if (is_array($loc) && count($loc) >= 2) {
                     $out['station_lon'] = is_numeric($loc[0]) ? (float) $loc[0] : null;
                     $out['station_lat'] = is_numeric($loc[1]) ? (float) $loc[1] : null;
+                }
+                if (isset($place['altitude']) && is_numeric((string) $place['altitude'])) {
+                    $out['station_altitude'] = (float) $place['altitude'];
                 }
             }
         }

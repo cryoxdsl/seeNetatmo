@@ -63,6 +63,11 @@ function station_longitude_setting(): string
     return setting_get('station_lon', '') ?? '';
 }
 
+function station_altitude_setting(): string
+{
+    return setting_get('station_altitude', '') ?? '';
+}
+
 function station_position_locked(): bool
 {
     return (setting_get('station_lock_position', '0') ?? '0') === '1';
