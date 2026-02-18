@@ -200,3 +200,20 @@ function climat_yearly_stats(): array
 
     return $stats;
 }
+
+function current_day_temp_range(): array
+{
+    $t = data_table();
+    $today = now_paris()->format('Y-m-d');
+    $stmt = db()->prepare(
+        "SELECT MIN(`T`) AS t_min, MAX(`T`) AS t_max
+         FROM `{$t}`
+         WHERE DATE(`DateTime`) = :d"
+    );
+    $stmt->execute([':d' => $today]);
+    $row = $stmt->fetch();
+    return [
+        'min' => isset($row['t_min']) && $row['t_min'] !== null ? (float) $row['t_min'] : null,
+        'max' => isset($row['t_max']) && $row['t_max'] !== null ? (float) $row['t_max'] : null,
+    ];
+}

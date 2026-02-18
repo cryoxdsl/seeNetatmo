@@ -62,6 +62,14 @@ if (function_exists('rain_totals')) {
         $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
     }
 }
+$dayTemp = ['min' => null, 'max' => null];
+if (function_exists('current_day_temp_range')) {
+    try {
+        $dayTemp = current_day_temp_range();
+    } catch (Throwable $e) {
+        $dayTemp = ['min' => null, 'max' => null];
+    }
+}
 
 $month = (int) now_paris()->format('n');
 $season = match (true) {
@@ -126,6 +134,20 @@ front_header(t('dashboard.title'));
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>
     <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : t('weather.trend.unavailable')) ?></p>
+  </div>
+  <div class="weather-temp-side">
+    <div class="current-label"><?= h(t('dashboard.current_temp')) ?></div>
+    <div class="current-value"><?= h(units_format('T', $row['T'] ?? null)) ?><small><?= h(units_symbol('T')) ?></small></div>
+    <div class="day-minmax">
+      <div class="min">
+        <span class="arrow">↓</span>
+        <span class="v"><?= h(units_format('T', $dayTemp['min'])) ?></span>
+      </div>
+      <div class="max">
+        <span class="arrow">↑</span>
+        <span class="v"><?= h(units_format('T', $dayTemp['max'])) ?></span>
+      </div>
+    </div>
   </div>
 </section>
 <section class="cards">
