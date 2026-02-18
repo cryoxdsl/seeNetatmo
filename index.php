@@ -61,9 +61,17 @@ if (function_exists('rain_totals')) {
     }
 }
 
+$month = (int) now_paris()->format('n');
+$season = match (true) {
+    in_array($month, [3, 4, 5], true) => 'spring',
+    in_array($month, [6, 7, 8], true) => 'summer',
+    in_array($month, [9, 10, 11], true) => 'autumn',
+    default => 'winter',
+};
+
 front_header(t('dashboard.title'));
 ?>
-<section class="panel">
+<section class="panel panel-dashboard season-<?= h($season) ?>">
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">

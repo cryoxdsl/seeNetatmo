@@ -3,6 +3,13 @@
 .wrap{width:min(1120px,94vw);margin:0 auto}.top{background:#0b2f52;color:#fff;padding:.8rem 0}.head-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}.brand{font-weight:700}
 nav a{color:#fff;text-decoration:none;padding:.35rem .6rem;border-radius:8px}nav a:hover{background:rgba(255,255,255,.14)}
 main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--space);flex:1}.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem;margin:0;box-shadow:0 6px 18px rgba(8,42,78,.06)}
+.panel-dashboard{position:relative;background-color:#f6f9fc;background-size:cover;background-position:center;border-color:#c9d8e8;overflow:hidden}
+.panel-dashboard::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.93),rgba(255,255,255,.72));pointer-events:none}
+.panel-dashboard>*{position:relative;z-index:1}
+.panel-dashboard.season-spring{background-image:url('/assets/img/seasons/spring.svg')}
+.panel-dashboard.season-summer{background-image:url('/assets/img/seasons/summer.svg')}
+.panel-dashboard.season-autumn{background-image:url('/assets/img/seasons/autumn.svg')}
+.panel-dashboard.season-winter{background-image:url('/assets/img/seasons/winter.svg')}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
 .weather-hero{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
 .weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
