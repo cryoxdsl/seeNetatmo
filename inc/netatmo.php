@@ -136,8 +136,8 @@ function netatmo_token_status(): array
 function netatmo_fetch_weather(): array
 {
     $res = curl_json(NETATMO_API_STATIONS, null, ['Authorization: Bearer ' . netatmo_access_token()]);
-    $device = $res['body']['devices'][0] ?? null;
-    if (!is_array($device)) {
+    $devices = $res['body']['devices'] ?? [];
+    if (!is_array($devices) || !$devices) {
         throw new RuntimeException('No device in Netatmo response');
     }
 
@@ -151,42 +151,48 @@ function netatmo_fetch_weather(): array
         'mod_wind' => false,
     ];
 
-    if (isset($device['dashboard_data']['Pressure'])) {
-        $out['P'] = round((float) $device['dashboard_data']['Pressure'], 3);
-    }
-
-    foreach (($device['modules'] ?? []) as $mod) {
-        if (!is_array($mod)) {
+    foreach ($devices as $device) {
+        if (!is_array($device)) {
             continue;
         }
-        $type = (string) ($mod['type'] ?? '');
-        $reachable = ($mod['reachable'] ?? true) ? true : false;
-        $dash = $mod['dashboard_data'] ?? [];
 
-        if ($type === 'NAModule1') {
-            $out['mod_outdoor'] = $reachable;
-            if ($reachable) {
-                $out['T'] = isset($dash['Temperature']) ? round((float) $dash['Temperature'], 1) : null;
-                $out['H'] = isset($dash['Humidity']) ? round((float) $dash['Humidity'], 1) : null;
-            }
+        if ($out['P'] === null && isset($device['dashboard_data']['Pressure'])) {
+            $out['P'] = round((float) $device['dashboard_data']['Pressure'], 3);
         }
 
-        if ($type === 'NAModule3' || $type === 'NARainGauge') {
-            $out['mod_rain'] = $reachable;
-            if ($reachable) {
-                $rr = $dash['sum_rain_1'] ?? $dash['Rain'] ?? null;
-                $r = $dash['sum_rain_24'] ?? null;
-                $out['RR'] = $rr !== null ? round((float) $rr, 3) : null;
-                $out['R'] = $r !== null ? round((float) $r, 3) : null;
+        foreach (($device['modules'] ?? []) as $mod) {
+            if (!is_array($mod)) {
+                continue;
             }
-        }
+            $type = (string) ($mod['type'] ?? '');
+            $reachable = ($mod['reachable'] ?? true) ? true : false;
+            $dash = $mod['dashboard_data'] ?? [];
 
-        if ($type === 'NAModule2' || $type === 'NAWindGauge') {
-            $out['mod_wind'] = $reachable;
-            if ($reachable) {
-                $out['W'] = isset($dash['WindStrength']) ? round((float) $dash['WindStrength'], 1) : null;
-                $out['G'] = isset($dash['GustStrength']) ? round((float) $dash['GustStrength'], 1) : null;
-                $out['B'] = isset($dash['WindAngle']) ? round((float) $dash['WindAngle'], 1) : null;
+            if ($type === 'NAModule1') {
+                $out['mod_outdoor'] = $reachable;
+                if ($reachable) {
+                    $out['T'] = isset($dash['Temperature']) ? round((float) $dash['Temperature'], 1) : null;
+                    $out['H'] = isset($dash['Humidity']) ? round((float) $dash['Humidity'], 1) : null;
+                }
+            }
+
+            if ($type === 'NAModule3' || $type === 'NARainGauge') {
+                $out['mod_rain'] = $reachable;
+                if ($reachable) {
+                    $rr = $dash['sum_rain_1'] ?? $dash['Rain'] ?? null;
+                    $r = $dash['sum_rain_24'] ?? null;
+                    $out['RR'] = $rr !== null ? round((float) $rr, 3) : null;
+                    $out['R'] = $r !== null ? round((float) $r, 3) : null;
+                }
+            }
+
+            if ($type === 'NAModule2' || $type === 'NAWindGauge') {
+                $out['mod_wind'] = $reachable;
+                if ($reachable) {
+                    $out['W'] = isset($dash['WindStrength']) ? round((float) $dash['WindStrength'], 1) : null;
+                    $out['G'] = isset($dash['GustStrength']) ? round((float) $dash['GustStrength'], 1) : null;
+                    $out['B'] = isset($dash['WindAngle']) ? round((float) $dash['WindAngle'], 1) : null;
+                }
             }
         }
     }
