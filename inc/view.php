@@ -18,9 +18,8 @@ function front_header(string $title): void
     echo '</head><body>';
     echo '<header class="top"><div class="wrap head-row"><div class="brand">' . h(app_name()) . '</div><nav>';
     echo '<a href="/index.php">' . h(t('nav.live')) . '</a><a href="/charts.php">' . h(t('nav.charts')) . '</a><a href="/history.php">' . h(t('nav.history')) . '</a>';
-    echo '<a href="' . h(locale_switch_url('fr_FR')) . '">' . h(t('lang.fr')) . '</a><a href="' . h(locale_switch_url('en_EN')) . '">' . h(t('lang.en')) . '</a>';
-    echo '<a href="' . h(units_switch_url('si')) . '"' . ($units === 'si' ? ' style="text-decoration:underline"' : '') . '>' . h(t('units.si')) . '</a>';
-    echo '<a href="' . h(units_switch_url('imperial')) . '"' . ($units === 'imperial' ? ' style="text-decoration:underline"' : '') . '>' . h(t('units.imperial')) . '</a>';
+    echo '<span class="nav-switch"><a href="' . h(locale_switch_url('fr_FR')) . '"' . (locale_current() === 'fr_FR' ? ' class="active"' : '') . '>' . h(t('lang.fr')) . '</a><span class="sep">|</span><a href="' . h(locale_switch_url('en_EN')) . '"' . (locale_current() === 'en_EN' ? ' class="active"' : '') . '>' . h(t('lang.en')) . '</a></span>';
+    echo '<span class="nav-switch"><a href="' . h(units_switch_url('si')) . '"' . ($units === 'si' ? ' class="active"' : '') . '>' . h(t('units.si')) . '</a><span class="sep">|</span><a href="' . h(units_switch_url('imperial')) . '"' . ($units === 'imperial' ? ' class="active"' : '') . '>' . h(t('units.imperial')) . '</a></span>';
     echo '</nav></div></header><main class="wrap">';
 }
 
