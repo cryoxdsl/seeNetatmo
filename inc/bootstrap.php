@@ -6,8 +6,12 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/session.php';
 
+if (!headers_sent()) {
+    header('X-Frame-Options: SAMEORIGIN');
+    header('X-Content-Type-Options: nosniff');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
+}
+
 date_default_timezone_set(APP_TIMEZONE);
 
-if (app_is_installed()) {
-    start_secure_session();
-}
+app_session_start();

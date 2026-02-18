@@ -1,0 +1,51 @@
+# Configuration and Secrets (Never commit)
+config/config.php
+config/secrets.php
+config/installed.lock
+
+# Environment variables
+.env
+.env.local
+
+# Logs and Storage
+logs/*
+!logs/.gitkeep
+storage/*
+!storage/.gitkeep
+storage/logs/*
+!storage/logs/.gitkeep
+
+# IDE and Editor
+.vscode/launch.json.local
+.vscode/settings.json.local
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Vendor and dependencies (if using composer)
+vendor/
+composer.lock
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Node modules (if using any front-end tools)
+node_modules/
+npm-debug.log
+yarn.lock
+
+# Session files
+*.sess
+
+# Database
+*.db
+*.sqlite
+*.sqlite3

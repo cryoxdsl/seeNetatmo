@@ -1,71 +1,76 @@
 <?php
 declare(strict_types=1);
 
+$start = microtime(true);
+
 require_once __DIR__ . '/../inc/bootstrap.php';
 require_once __DIR__ . '/../inc/db.php';
 require_once __DIR__ . '/../inc/settings.php';
+require_once __DIR__ . '/../inc/crypto.php';
 require_once __DIR__ . '/../inc/weather_math.php';
-require_once __DIR__ . '/../inc/logger.php';
 require_once __DIR__ . '/../inc/lock.php';
+require_once __DIR__ . '/../inc/logger.php';
 
 header('Content-Type: text/plain; charset=utf-8');
-
 if (!app_is_installed()) {
     http_response_code(403);
     exit("Not installed\n");
 }
 
-$key = (string) ($_GET['key'] ?? '');
-$expected = (string) app_setting('cron_key_daily', '');
-if ($key === '' || !hash_equals($expected, $key)) {
+$provided = (string) ($_GET['key'] ?? '');
+$expected = secret_get('cron_key_daily') ?? '';
+if ($provided === '' || $expected === '' || !hash_equals($expected, $provided)) {
     http_response_code(403);
     exit("Forbidden\n");
 }
 
-$lock = acquire_lock('cron_daily');
+$lock = lock_acquire('cron_daily');
 if ($lock === null) {
     http_response_code(429);
-    app_log('warning', 'cron.daily', 'Daily skipped because lock is already held');
-    exit("Already running\n");
+    exit("Busy\n");
 }
 
-$start = microtime(true);
-
 try {
-    $table = alldata_table();
-    $today = now_paris()->format('Y-m-d');
-
-    $stmt = db()->prepare("SELECT MAX(T) AS tmax, MIN(T) AS tmin FROM `{$table}` WHERE DATE(`DateTime`) = :d AND T IS NOT NULL");
-    $stmt->execute([':d' => $today]);
-    $agg = $stmt->fetch() ?: ['tmax' => null, 'tmin' => null];
-    $tmax = $agg['tmax'] !== null ? (float) $agg['tmax'] : null;
-    $tmin = $agg['tmin'] !== null ? (float) $agg['tmin'] : null;
-
-    $rowsStmt = db()->prepare("SELECT `DateTime`, `T`, `H`, `W` FROM `{$table}` WHERE DATE(`DateTime`) = :d");
-    $rowsStmt->execute([':d' => $today]);
-    $rows = $rowsStmt->fetchAll();
-
-    $upd = db()->prepare("UPDATE `{$table}` SET `Tmax`=:tmax, `Tmin`=:tmin, `D`=:d, `A`=:a WHERE `DateTime`=:dt");
-    foreach ($rows as $row) {
-        $t = $row['T'] !== null ? (float) $row['T'] : null;
-        $h = $row['H'] !== null ? (float) $row['H'] : null;
-        $w = $row['W'] !== null ? (float) $row['W'] : null;
-        $upd->execute([
-            ':tmax' => $tmax,
-            ':tmin' => $tmin,
-            ':d' => dew_point($t, $h),
-            ':a' => apparent_temperature($t, $h, $w),
-            ':dt' => $row['DateTime'],
-        ]);
+    $table = data_table();
+    $dates = [now_paris()->format('Y-m-d')];
+    if ((string) ($_GET['recalc_yesterday'] ?? '1') === '1') {
+        $dates[] = now_paris()->modify('-1 day')->format('Y-m-d');
     }
 
-    $durationMs = (int) ((microtime(true) - $start) * 1000);
-    app_log('info', 'cron.daily', 'Daily recompute done', ['duration_ms' => $durationMs, 'date' => $today, 'rows' => count($rows)]);
-    echo "OK {$today}\n";
+    $update = db()->prepare("UPDATE `{$table}` SET `Tmax`=:tmax, `Tmin`=:tmin, `D`=:d, `A`=:a WHERE `DateTime`=:dt");
+
+    foreach ($dates as $date) {
+        $agg = db()->prepare("SELECT MAX(T) tmax, MIN(T) tmin FROM `{$table}` WHERE DATE(`DateTime`)=:d AND T IS NOT NULL");
+        $agg->execute([':d' => $date]);
+        $mm = $agg->fetch() ?: ['tmax' => null, 'tmin' => null];
+
+        $rows = db()->prepare("SELECT `DateTime`,`T`,`H`,`W` FROM `{$table}` WHERE DATE(`DateTime`)=:d");
+        $rows->execute([':d' => $date]);
+
+        foreach ($rows->fetchAll() as $r) {
+            $t = $r['T'] !== null ? (float) $r['T'] : null;
+            $h = $r['H'] !== null ? (float) $r['H'] : null;
+            $w = $r['W'] !== null ? (float) $r['W'] : null;
+            $update->execute([
+                ':tmax' => $mm['tmax'] !== null ? (float) $mm['tmax'] : null,
+                ':tmin' => $mm['tmin'] !== null ? (float) $mm['tmin'] : null,
+                ':d' => dew_point_magnus($t, $h),
+                ':a' => apparent_temp($t, $h, $w),
+                ':dt' => $r['DateTime'],
+            ]);
+        }
+    }
+
+    $dur = round(microtime(true) - $start, 3);
+    log_event('info', 'cron.daily', 'Daily recompute success', ['dates' => $dates, 'duration_sec' => $dur]);
+    if ($dur > CRON_MAX_SECONDS) {
+        log_event('warning', 'cron.daily', 'Execution exceeded target', ['duration_sec' => $dur]);
+    }
+    echo "OK\n";
 } catch (Throwable $e) {
-    app_log('error', 'cron.daily', $e->getMessage());
+    log_event('error', 'cron.daily', $e->getMessage());
     http_response_code(500);
-    echo 'Error: ' . $e->getMessage() . "\n";
+    echo 'ERR ' . $e->getMessage() . "\n";
 } finally {
-    release_lock($lock);
+    lock_release($lock);
 }

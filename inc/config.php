@@ -1,55 +1,52 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/constants.php';
+function installed_lock_path(): string
+{
+    return __DIR__ . '/../config/installed.lock';
+}
 
 function app_is_installed(): bool
 {
-    return is_file(__DIR__ . '/../config/installed.lock');
+    return is_file(installed_lock_path());
 }
 
 function app_config(): array
 {
-    static $config;
-    if ($config !== null) {
-        return $config;
+    static $cfg;
+    if ($cfg !== null) {
+        return $cfg;
     }
-
     $file = __DIR__ . '/../config/config.php';
     if (!is_file($file)) {
-        return $config = [];
+        return $cfg = [];
     }
-
-    $loaded = require $file;
-    if (!is_array($loaded)) {
-        throw new RuntimeException('Invalid config/config.php file.');
+    $data = require $file;
+    if (!is_array($data)) {
+        throw new RuntimeException('Invalid config/config.php');
     }
-
-    return $config = $loaded;
+    return $cfg = $data;
 }
 
-function app_secret_config(): array
+function app_secrets_config(): array
 {
-    static $secret;
-    if ($secret !== null) {
-        return $secret;
+    static $cfg;
+    if ($cfg !== null) {
+        return $cfg;
     }
-
     $file = __DIR__ . '/../config/secrets.php';
     if (!is_file($file)) {
-        return $secret = [];
+        return $cfg = [];
     }
-
-    $loaded = require $file;
-    if (!is_array($loaded)) {
-        throw new RuntimeException('Invalid config/secrets.php file.');
+    $data = require $file;
+    if (!is_array($data)) {
+        throw new RuntimeException('Invalid config/secrets.php');
     }
-
-    return $secret = $loaded;
+    return $cfg = $data;
 }
 
-function app_setting(string $key, mixed $default = null): mixed
+function cfg(string $key, mixed $default = null): mixed
 {
-    $config = app_config();
-    return $config[$key] ?? $default;
+    $c = app_config();
+    return $c[$key] ?? $default;
 }

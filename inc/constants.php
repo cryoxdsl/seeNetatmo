@@ -1,12 +1,15 @@
 <?php
 declare(strict_types=1);
 
-const APP_DEFAULT_VERSION = '1.0.0';
+const APP_NAME_DEFAULT = 'meteo13-netatmo';
+const APP_VERSION = '1.0.0';
 const APP_TIMEZONE = 'Europe/Paris';
-const NETATMO_AUTH_URL = 'https://api.netatmo.com/oauth2/authorize';
-const NETATMO_TOKEN_URL = 'https://api.netatmo.com/oauth2/token';
-const NETATMO_STATION_URL = 'https://api.netatmo.com/api/getstationsdata';
-const DISCONNECTED_AFTER_MINUTES = 15;
+const APP_ADMIN_PATH = '/admin-meteo13';
+const NETATMO_OAUTH_AUTHORIZE = 'https://api.netatmo.com/oauth2/authorize';
+const NETATMO_OAUTH_TOKEN = 'https://api.netatmo.com/oauth2/token';
+const NETATMO_API_STATIONS = 'https://api.netatmo.com/api/getstationsdata';
 const SESSION_TIMEOUT_SECONDS = 1800;
 const LOCKOUT_ATTEMPTS = 10;
-const LOCKOUT_MINUTES = 10;
+const LOCKOUT_WINDOW_MINUTES = 10;
+const DISCONNECT_THRESHOLD_MINUTES = 15;
+const CRON_MAX_SECONDS = 10;

@@ -2,104 +2,111 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/crypto.php';
+require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/constants.php';
+require_once __DIR__ . '/crypto.php';
+require_once __DIR__ . '/totp.php';
 
-function auth_is_logged_in(): bool
+function admin_logged_in(): bool
 {
-    return !empty($_SESSION['auth_ok']) && !empty($_SESSION['user_id']);
+    return !empty($_SESSION['admin_ok']) && !empty($_SESSION['admin_uid']);
 }
 
-function auth_require_login(): void
+function admin_require_login(): void
 {
-    if (!auth_is_logged_in()) {
-        header('Location: login.php');
-        exit;
+    if (!admin_logged_in()) {
+        redirect(APP_ADMIN_PATH . '/login.php');
     }
 }
 
-function auth_logout(): void
+function auth_lockout_active(string $username, string $ip): bool
 {
-    $_SESSION = [];
-    if (ini_get('session.use_cookies')) {
-        $params = session_get_cookie_params();
-        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], (bool) $params['secure'], (bool) $params['httponly']);
-    }
-    session_destroy();
+    $since = now_paris()->modify('-' . LOCKOUT_WINDOW_MINUTES . ' minutes')->format('Y-m-d H:i:s');
+    $stmt = db()->prepare('SELECT COUNT(*) FROM login_attempts WHERE username=:u AND ip_address=:ip AND success=0 AND created_at>=:s');
+    $stmt->execute([':u' => $username, ':ip' => $ip, ':s' => $since]);
+    return ((int) $stmt->fetchColumn()) >= LOCKOUT_ATTEMPTS;
 }
 
-function auth_get_user(string $username): ?array
+function auth_log_attempt(string $username, string $ip, bool $success): void
 {
-    $stmt = db()->prepare('SELECT * FROM users WHERE username = :u AND is_active = 1 LIMIT 1');
+    $stmt = db()->prepare('INSERT INTO login_attempts(username,ip_address,success,created_at) VALUES(:u,:ip,:s,NOW())');
+    $stmt->execute([':u' => $username, ':ip' => $ip, ':s' => $success ? 1 : 0]);
+}
+
+function auth_login_password(string $username, string $password): array
+{
+    $ip = client_ip();
+    if (auth_lockout_active($username, $ip)) {
+        return ['ok' => false, 'error' => 'Too many failed attempts. Retry in 10 minutes.'];
+    }
+
+    $stmt = db()->prepare('SELECT * FROM users WHERE username=:u AND is_active=1 LIMIT 1');
     $stmt->execute([':u' => $username]);
     $user = $stmt->fetch();
-    return $user ?: null;
-}
 
-function auth_record_attempt(string $username, bool $success): void
-{
-    $stmt = db()->prepare('INSERT INTO login_attempts (username, ip_address, success, created_at) VALUES (:u, :ip, :s, NOW())');
-    $stmt->execute([
-        ':u' => $username,
-        ':ip' => client_ip(),
-        ':s' => $success ? 1 : 0,
-    ]);
-}
-
-function auth_is_locked(string $username): bool
-{
-    $since = (new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE)))
-        ->modify('-' . LOCKOUT_MINUTES . ' minutes')
-        ->format('Y-m-d H:i:s');
-    $stmt = db()->prepare('SELECT COUNT(*) AS c FROM login_attempts WHERE username = :u AND success = 0 AND created_at >= :since');
-    $stmt->execute([':u' => $username, ':since' => $since]);
-    $count = (int) $stmt->fetchColumn();
-    return $count >= LOCKOUT_ATTEMPTS;
-}
-
-function auth_login_password(string $username, string $password): bool
-{
-    if (auth_is_locked($username)) {
-        return false;
-    }
-
-    $user = auth_get_user($username);
     if (!$user || !password_verify($password, $user['password_hash'])) {
-        auth_record_attempt($username, false);
-        return false;
+        auth_log_attempt($username, $ip, false);
+        return ['ok' => false, 'error' => 'Invalid credentials.'];
     }
 
-    $_SESSION['pending_2fa_user_id'] = (int) $user['id'];
-    $_SESSION['pending_2fa_username'] = $user['username'];
-    auth_record_attempt($username, true);
-    return true;
+    auth_log_attempt($username, $ip, true);
+    $_SESSION['pending_uid'] = (int) $user['id'];
+    $_SESSION['pending_user'] = (string) $user['username'];
+    return ['ok' => true];
 }
 
-function auth_complete_2fa(): void
+function auth_pending_user(): ?array
 {
-    $userId = (int) ($_SESSION['pending_2fa_user_id'] ?? 0);
-    if ($userId <= 0) {
-        return;
-    }
-
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['username'] = (string) $_SESSION['pending_2fa_username'];
-    $_SESSION['auth_ok'] = 1;
-    unset($_SESSION['pending_2fa_user_id'], $_SESSION['pending_2fa_username']);
-
-    $stmt = db()->prepare('UPDATE users SET last_login_at = NOW() WHERE id = :id');
-    $stmt->execute([':id' => $userId]);
-}
-
-function auth_pending_2fa_user(): ?array
-{
-    $id = (int) ($_SESSION['pending_2fa_user_id'] ?? 0);
-    if ($id <= 0) {
+    $uid = (int) ($_SESSION['pending_uid'] ?? 0);
+    if ($uid <= 0) {
         return null;
     }
-    $stmt = db()->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $id]);
-    $row = $stmt->fetch();
-    return $row ?: null;
+    $stmt = db()->prepare('SELECT * FROM users WHERE id=:id LIMIT 1');
+    $stmt->execute([':id' => $uid]);
+    $u = $stmt->fetch();
+    return $u ?: null;
+}
+
+function auth_verify_2fa(string $codeOrBackup): array
+{
+    $u = auth_pending_user();
+    if (!$u) {
+        return ['ok' => false, 'error' => 'No pending login'];
+    }
+
+    $input = trim($codeOrBackup);
+    $totpSecret = decrypt_string((string) $u['totp_secret_enc']);
+    if ($totpSecret && totp_verify($totpSecret, $input)) {
+        $_SESSION['admin_uid'] = (int) $u['id'];
+        $_SESSION['admin_username'] = (string) $u['username'];
+        $_SESSION['admin_ok'] = 1;
+        unset($_SESSION['pending_uid'], $_SESSION['pending_user']);
+        db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $u['id']]);
+        session_regenerate_id(true);
+        return ['ok' => true, 'backup_used' => false];
+    }
+
+    $codes = db()->prepare('SELECT id, code_hash FROM backup_codes WHERE user_id=:u AND used_at IS NULL');
+    $codes->execute([':u' => $u['id']]);
+    foreach ($codes->fetchAll() as $row) {
+        if (password_verify($input, (string) $row['code_hash'])) {
+            db()->prepare('UPDATE backup_codes SET used_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
+            $_SESSION['admin_uid'] = (int) $u['id'];
+            $_SESSION['admin_username'] = (string) $u['username'];
+            $_SESSION['admin_ok'] = 1;
+            unset($_SESSION['pending_uid'], $_SESSION['pending_user']);
+            db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $u['id']]);
+            session_regenerate_id(true);
+            return ['ok' => true, 'backup_used' => true];
+        }
+    }
+
+    return ['ok' => false, 'error' => 'Invalid TOTP/backup code'];
+}
+
+function admin_logout(): void
+{
+    app_session_destroy();
+    redirect(APP_ADMIN_PATH . '/login.php');
 }

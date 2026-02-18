@@ -1,28 +1,26 @@
 <?php
 declare(strict_types=1);
 
-function acquire_lock(string $name)
+function lock_acquire(string $name)
 {
-    $path = __DIR__ . '/../storage/' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $name) . '.lock';
-    $handle = fopen($path, 'c+');
-    if (!$handle) {
-        throw new RuntimeException('Cannot open lock file.');
+    $path = __DIR__ . '/../logs/' . preg_replace('/[^a-z0-9_-]/i', '_', $name) . '.lock';
+    $fp = fopen($path, 'c+');
+    if (!$fp) {
+        throw new RuntimeException('Cannot open lock file');
     }
-
-    if (!flock($handle, LOCK_EX | LOCK_NB)) {
-        fclose($handle);
+    if (!flock($fp, LOCK_EX | LOCK_NB)) {
+        fclose($fp);
         return null;
     }
-
-    ftruncate($handle, 0);
-    fwrite($handle, (string) getmypid());
-    return $handle;
+    ftruncate($fp, 0);
+    fwrite($fp, (string) getmypid());
+    return $fp;
 }
 
-function release_lock($handle): void
+function lock_release($fp): void
 {
-    if (is_resource($handle)) {
-        flock($handle, LOCK_UN);
-        fclose($handle);
+    if (is_resource($fp)) {
+        flock($fp, LOCK_UN);
+        fclose($fp);
     }
 }

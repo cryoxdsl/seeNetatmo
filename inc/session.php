@@ -1,60 +1,62 @@
 <?php
 declare(strict_types=1);
 
-require_once __DIR__ . '/helpers.php';
-require_once __DIR__ . '/constants.php';
-
-function start_secure_session(): void
+function app_session_start(): void
 {
     if (session_status() === PHP_SESSION_ACTIVE) {
         return;
     }
 
+    session_name('meteo13_sid');
     session_set_cookie_params([
         'lifetime' => 0,
         'path' => '/',
         'domain' => '',
         'secure' => is_https(),
         'httponly' => true,
-        'samesite' => 'Lax',
+        'samesite' => 'Strict',
     ]);
 
-    session_name('seenetatmo_sid');
     session_start();
-
     $now = time();
-    if (!isset($_SESSION['last_activity'])) {
-        $_SESSION['last_activity'] = $now;
+
+    if (!isset($_SESSION['last_seen'])) {
+        $_SESSION['last_seen'] = $now;
+        session_regenerate_id(true);
     }
 
-    if (($now - (int) $_SESSION['last_activity']) > SESSION_TIMEOUT_SECONDS) {
-        $_SESSION = [];
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], (bool) $params['secure'], (bool) $params['httponly']);
-        }
-        session_destroy();
+    if (($now - (int) $_SESSION['last_seen']) > SESSION_TIMEOUT_SECONDS) {
+        app_session_destroy();
         session_start();
     }
 
-    $_SESSION['last_activity'] = $now;
+    $_SESSION['last_seen'] = $now;
+}
+
+function app_session_destroy(): void
+{
+    $_SESSION = [];
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 3600, $params['path'], $params['domain'], (bool) $params['secure'], (bool) $params['httponly']);
+    }
+    session_destroy();
 }
 
 function csrf_token(): string
 {
     if (empty($_SESSION['csrf_token'])) {
-        $_SESSION['csrf_token'] = random_token(24);
+        $_SESSION['csrf_token'] = random_hex(24);
     }
-
     return (string) $_SESSION['csrf_token'];
 }
 
-function verify_csrf_or_fail(): void
+function require_csrf(): void
 {
-    $posted = (string) ($_POST['csrf_token'] ?? '');
-    $expected = (string) ($_SESSION['csrf_token'] ?? '');
-    if ($posted === '' || $expected === '' || !hash_equals($expected, $posted)) {
+    $sent = (string) ($_POST['csrf_token'] ?? '');
+    $expect = (string) ($_SESSION['csrf_token'] ?? '');
+    if ($sent === '' || $expect === '' || !hash_equals($expect, $sent)) {
         http_response_code(400);
-        exit('Invalid CSRF token');
+        exit('Bad CSRF token');
     }
 }

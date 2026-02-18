@@ -2,37 +2,33 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/db.php';
-require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/constants.php';
 
-function setting_get(string $name, ?string $default = null): ?string
+function setting_get(string $key, ?string $default = null): ?string
 {
-    $stmt = db()->prepare('SELECT setting_value FROM settings WHERE setting_key = :k LIMIT 1');
-    $stmt->execute([':k' => $name]);
-    $value = $stmt->fetchColumn();
-    if ($value === false || $value === null) {
-        return $default;
-    }
-    return (string) $value;
+    $stmt = db()->prepare('SELECT setting_value FROM settings WHERE setting_key=:k LIMIT 1');
+    $stmt->execute([':k' => $key]);
+    $v = $stmt->fetchColumn();
+    return ($v === false || $v === null) ? $default : (string) $v;
 }
 
-function setting_set(string $name, string $value): void
+function setting_set(string $key, string $value): void
 {
-    $sql = 'INSERT INTO settings (setting_key, setting_value, updated_at) VALUES (:k, :v, NOW()) ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()';
-    $stmt = db()->prepare($sql);
-    $stmt->execute([':k' => $name, ':v' => $value]);
+    $stmt = db()->prepare('INSERT INTO settings(setting_key,setting_value,updated_at) VALUES(:k,:v,NOW()) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value), updated_at=NOW()');
+    $stmt->execute([':k' => $key, ':v' => $value]);
 }
 
 function app_name(): string
 {
-    return setting_get('site_name', (string) app_setting('site_name', 'seeNetatmo')) ?? 'seeNetatmo';
+    return setting_get('site_name', APP_NAME_DEFAULT) ?? APP_NAME_DEFAULT;
+}
+
+function data_table(): string
+{
+    return setting_get('data_table', 'alldata') ?? 'alldata';
 }
 
 function contact_email(): string
 {
-    return setting_get('contact_email', (string) app_setting('contact_email', 'contact@example.com')) ?? 'contact@example.com';
-}
-
-function alldata_table(): string
-{
-    return setting_get('table_name', (string) app_setting('table_name', 'alldata')) ?? 'alldata';
+    return setting_get('contact_email', 'contact@meteo13.fr') ?? 'contact@meteo13.fr';
 }

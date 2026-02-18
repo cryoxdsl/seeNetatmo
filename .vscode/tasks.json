@@ -1,0 +1,90 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "PHP Lint All Files",
+      "type": "shell",
+      "command": "php",
+      "windows": {
+        "command": "php"
+      },
+      "args": [
+        "-l",
+        "${file}"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": {
+        "owner": "php",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^.*Parse error.*in (.+) on line (\\d+)$",
+          "file": 1,
+          "line": 2
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "PHP Lint Workspace",
+      "type": "shell",
+      "command": "powershell",
+      "windows": {
+        "command": "powershell"
+      },
+      "args": [
+        "-NoProfile",
+        "-Command",
+        "Get-ChildItem -Recurse -Filter '*.php' -Exclude 'vendor' | ForEach-Object { Write-Host \"Linting $($_.FullName)\"; php -l $_.FullName }"
+      ],
+      "group": "build",
+      "problemMatcher": {
+        "owner": "php",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^.*Parse error.*in (.+) on line (\\d+)$",
+          "file": 1,
+          "line": 2
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      }
+    },
+    {
+      "label": "Start PHP Built-in Server",
+      "type": "shell",
+      "command": "php",
+      "windows": {
+        "command": "php"
+      },
+      "args": [
+        "-S",
+        "localhost:8000",
+        "-t",
+        "."
+      ],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^.*$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Development Server",
+          "endsPattern": "Press Ctrl\\+C to quit"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "new"
+      }
+    }
+  ]
+}

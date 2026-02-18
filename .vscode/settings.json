@@ -1,0 +1,28 @@
+{
+  "php.validate.executablePath": "php",
+  "php.validate.run": "onSave",
+  "php.validate.validate": true,
+  "php.format.provider": "intelephense",
+  "[php]": {
+    "editor.defaultFormatter": "intelephense.intelephense",
+    "editor.formatOnSave": true,
+    "editor.tabSize": 4,
+    "editor.insertSpaces": true
+  },
+  "intelephense.phpstan.enableStaticAnalysis": true,
+  "intelephense.environment.phpVersion": "8.0",
+  "files.associations": {
+    "*.sql": "sql",
+    "*.php": "php"
+  },
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/.git": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/vendor": true,
+    "logs": true,
+    "storage": true
+  }
+}
