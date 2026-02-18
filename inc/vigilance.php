@@ -121,7 +121,7 @@ function vigilance_extract_entries(string $text, string $level, string $dept): a
         $slice = substr($slice, 0, (int) $m[0][1]);
     }
 
-    if (preg_match_all('/([A-Za-zÀ-ÿ\'\-\s]+)\((\d{2,3}|2A|2B)\)\s*([A-Za-zÀ-ÿ\-\s]+)/u', $slice, $all, PREG_SET_ORDER)) {
+    if (preg_match_all('/([A-Za-zÀ-ÿ\'\-\s]+)\((\d{2,3}|2A|2B)\)\s*([^()]+?)(?=(?:[A-Za-zÀ-ÿ\'\-\s]+\((?:\d{2,3}|2A|2B)\))|$)/u', $slice, $all, PREG_SET_ORDER)) {
         foreach ($all as $entry) {
             $code = strtoupper(trim((string) $entry[2]));
             if ($code !== strtoupper($dept)) {
@@ -129,6 +129,7 @@ function vigilance_extract_entries(string $text, string $level, string $dept): a
             }
             $name = trim((string) $entry[1]);
             $phen = trim((string) $entry[3]);
+            $phen = trim($phen, " \t\n\r\0\x0B,;.");
             $out[] = ['level' => $level, 'dept' => $code, 'dept_name' => $name, 'phenomenon' => $phen];
         }
     }
@@ -235,19 +236,24 @@ function vigilance_current(bool $allowRemote = false): array
             $result['period_text'] = trim((string) $m[1]);
         }
 
-        $entries = vigilance_extract_entries($text, 'rouge', $dept);
-        if ($entries === []) {
-            $entries = vigilance_extract_entries($text, 'orange', $dept);
-        }
-        if ($entries === []) {
-            $entries = vigilance_extract_entries($text, 'jaune', $dept);
-        }
+        $entriesRed = vigilance_extract_entries($text, 'rouge', $dept);
+        $entriesOrange = vigilance_extract_entries($text, 'orange', $dept);
+        $entriesYellow = vigilance_extract_entries($text, 'jaune', $dept);
+        $entries = array_values(array_merge($entriesRed, $entriesOrange, $entriesYellow));
         $entry = $entries[0] ?? null;
 
         if ($entry !== null) {
             $result['active'] = true;
-            $result['level'] = $entry['level'];
-            $result['level_label'] = $entry['level'];
+            if ($entriesRed !== []) {
+                $result['level'] = 'red';
+                $result['level_label'] = 'red';
+            } elseif ($entriesOrange !== []) {
+                $result['level'] = 'orange';
+                $result['level_label'] = 'orange';
+            } else {
+                $result['level'] = 'yellow';
+                $result['level_label'] = 'yellow';
+            }
             $labels = [];
             $types = [];
             foreach ($entries as $e) {
