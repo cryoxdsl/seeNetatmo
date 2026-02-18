@@ -401,24 +401,29 @@ function vigilance_current(bool $allowRemote = false): array
             $result['phenomenon'] = implode(', ', $labels);
             $result['types'] = $types;
             $result['type'] = $types[0] ?? 'generic';
-            $alertsByType = [];
+            $alertsByPhenomenon = [];
             foreach ($entries as $e) {
                 $lvl = vigilance_level_code((string) ($e['level'] ?? 'yellow'));
                 $label = trim((string) ($e['phenomenon'] ?? ''));
-                foreach (vigilance_types_from_label($label) as $tp) {
-                    if (!isset($alertsByType[$tp]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByType[$tp]['level'])) {
-                        $alertsByType[$tp] = [
-                            'level' => $lvl,
-                            'type' => $tp,
-                            'label' => $label,
-                        ];
-                    }
+                if ($label === '') {
+                    continue;
+                }
+                $typesForLabel = vigilance_types_from_label($label);
+                $primaryType = $typesForLabel[0] ?? 'generic';
+                $key = function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label);
+                if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
+                    $alertsByPhenomenon[$key] = [
+                        'level' => $lvl,
+                        'type' => $primaryType,
+                        'label' => $label,
+                    ];
                 }
             }
-            usort($alertsByType, static function (array $a, array $b): int {
+            $alerts = array_values($alertsByPhenomenon);
+            usort($alerts, static function (array $a, array $b): int {
                 return vigilance_level_rank((string) ($b['level'] ?? 'green')) <=> vigilance_level_rank((string) ($a['level'] ?? 'green'));
             });
-            $result['alerts'] = array_values($alertsByType);
+            $result['alerts'] = $alerts;
             $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
         }
     } catch (Throwable $e) {
