@@ -6,6 +6,7 @@ require_once __DIR__ . '/helpers.php';
 require_once __DIR__ . '/config.php';
 require_once __DIR__ . '/session.php';
 require_once __DIR__ . '/i18n.php';
+require_once __DIR__ . '/units.php';
 
 if (!headers_sent()) {
     header('X-Frame-Options: SAMEORIGIN');
@@ -17,3 +18,4 @@ date_default_timezone_set(APP_TIMEZONE);
 
 app_session_start();
 i18n_bootstrap();
+units_bootstrap();
