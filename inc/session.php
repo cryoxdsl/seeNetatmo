@@ -8,8 +8,13 @@ function app_session_start(): void
     }
 
     session_name('meteo13_sid');
+    $timeout = (int) cfg('session_timeout_seconds', SESSION_TIMEOUT_SECONDS);
+    if ($timeout < 300) {
+        $timeout = SESSION_TIMEOUT_SECONDS;
+    }
+
     session_set_cookie_params([
-        'lifetime' => 0,
+        'lifetime' => $timeout,
         'path' => '/',
         'domain' => '',
         'secure' => is_https(),
@@ -25,7 +30,7 @@ function app_session_start(): void
         session_regenerate_id(true);
     }
 
-    if (($now - (int) $_SESSION['last_seen']) > SESSION_TIMEOUT_SECONDS) {
+    if (($now - (int) $_SESSION['last_seen']) > $timeout) {
         app_session_destroy();
         session_start();
     }

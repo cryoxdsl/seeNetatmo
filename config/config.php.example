@@ -8,4 +8,5 @@ return [
     'domain' => 'meteo13.fr',
     'admin_path' => '/admin-meteo13',
     'app_version' => '1.0.0',
+    'session_timeout_seconds' => 2592000,
 ];
