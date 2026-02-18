@@ -40,7 +40,9 @@ foreach ($candidates as $expected) {
 }
 if ($provided === '' || !$ok) {
     http_response_code(403);
-    exit("Forbidden (invalid key)\n");
+    $n = count($candidates);
+    $len = strlen($provided);
+    exit("Forbidden (invalid key; loaded_keys={$n}; provided_len={$len})\n");
 }
 
 $lock = lock_acquire('cron_external');
