@@ -2,16 +2,20 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../inc/bootstrap.php';
-require_once __DIR__ . '/../inc/auth.php';
 require_once __DIR__ . '/../inc/netatmo.php';
+require_once __DIR__ . '/../inc/crypto.php';
 require_once __DIR__ . '/../inc/logger.php';
 
-admin_require_login();
-
 $state = (string)($_GET['state'] ?? '');
-if ($state==='' || !hash_equals(csrf_token(), $state)) {
+$expectedState = secret_get('netatmo_oauth_state') ?? '';
+$stateTs = (int) (secret_get('netatmo_oauth_state_ts') ?? 0);
+if ($state === '' || $expectedState === '' || !hash_equals($expectedState, $state)) {
     http_response_code(400);
     exit('Invalid state');
+}
+if ($stateTs <= 0 || (time() - $stateTs) > 900) {
+    http_response_code(400);
+    exit('Expired state');
 }
 $code = (string)($_GET['code'] ?? '');
 if ($code==='') {
@@ -21,6 +25,8 @@ if ($code==='') {
 
 try {
     netatmo_exchange_code($code);
+    secret_set('netatmo_oauth_state', random_hex(16));
+    secret_set('netatmo_oauth_state_ts', '0');
     log_event('info','admin.netatmo','OAuth connected');
     redirect(APP_ADMIN_PATH . '/netatmo.php?ok=1');
 } catch (Throwable $e) {

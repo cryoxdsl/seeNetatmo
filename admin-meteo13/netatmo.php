@@ -25,7 +25,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 if (isset($_GET['ok'])) $msg='OAuth connection successful';
 if (isset($_GET['error'])) $err=(string)$_GET['error'];
 
-$stateToken = csrf_token();
+$stateToken = random_hex(24);
+secret_set('netatmo_oauth_state', $stateToken);
+secret_set('netatmo_oauth_state_ts', (string) time());
 $authUrl = netatmo_authorize_url($stateToken);
 $status = netatmo_token_status();
 
