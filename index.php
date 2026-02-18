@@ -68,10 +68,15 @@ $season = match (true) {
     in_array($month, [9, 10, 11], true) => 'autumn',
     default => 'winter',
 };
+$seasonFile = __DIR__ . '/assets/img/seasons/' . $season . '.svg';
+$seasonUrl = '/assets/img/seasons/' . $season . '.svg';
+if (is_file($seasonFile)) {
+    $seasonUrl .= '?v=' . filemtime($seasonFile);
+}
 
 front_header(t('dashboard.title'));
 ?>
-<section class="panel panel-dashboard season-<?= h($season) ?>">
+<section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">

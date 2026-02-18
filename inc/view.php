@@ -14,7 +14,9 @@ function front_header(string $title): void
     echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<title>' . h($fullTitle) . '</title>';
     echo '<link rel="icon" href="' . h(favicon_url()) . '" type="image/x-icon">';
-    echo '<link rel="stylesheet" href="/assets/css/style.css">';
+    $cssPath = __DIR__ . '/../assets/css/style.css';
+    $cssVersion = is_file($cssPath) ? (string) filemtime($cssPath) : APP_VERSION;
+    echo '<link rel="stylesheet" href="/assets/css/style.css?v=' . h($cssVersion) . '">';
     echo '</head><body>';
     echo '<header class="top"><div class="wrap head-row"><div class="brand">' . h(app_name()) . '</div><nav>';
     echo '<a href="/index.php">' . h(t('nav.live')) . '</a><a href="/charts.php">' . h(t('nav.charts')) . '</a><a href="/history.php">' . h(t('nav.history')) . '</a>';
