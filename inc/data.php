@@ -12,6 +12,16 @@ function latest_row(): ?array
     return $row ?: null;
 }
 
+function latest_rows(int $limit = 2): array
+{
+    $limit = max(1, min(50, $limit));
+    $t = data_table();
+    $stmt = db()->prepare("SELECT * FROM `{$t}` ORDER BY `DateTime` DESC LIMIT :l");
+    $stmt->bindValue(':l', $limit, PDO::PARAM_INT);
+    $stmt->execute();
+    return $stmt->fetchAll();
+}
+
 function last_update_state(): array
 {
     $row = latest_row();

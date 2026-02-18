@@ -4,6 +4,18 @@
 nav a{color:#fff;text-decoration:none;padding:.35rem .6rem;border-radius:8px}nav a:hover{background:rgba(255,255,255,.14)}
 main{padding:1rem 0 2rem}.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem;margin-bottom:1rem;box-shadow:0 6px 18px rgba(8,42,78,.06)}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
+.weather-hero{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
+.weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
+.weather-icon svg{width:100px;height:100px}
+.weather-copy h3{margin:.1rem 0 .35rem;font-size:1.3rem}
+.weather-copy p{margin:.15rem 0;color:var(--muted)}
+.weather-trend{font-weight:700;color:#26496a!important}
+.weather-sunny{background:linear-gradient(125deg,#fff9e6,#fff3c8)}
+.weather-rain{background:linear-gradient(125deg,#edf5fd,#dcefff)}
+.weather-snow{background:linear-gradient(125deg,#f6fbff,#e7f3ff)}
+.weather-wind{background:linear-gradient(125deg,#f2f8ff,#e1ecfb)}
+.weather-very_cloudy,.weather-cloudy{background:linear-gradient(125deg,#f2f6fa,#e5edf5)}
+.weather-offline{background:linear-gradient(125deg,#f5f7fa,#eceff3)}
 .pill{display:inline-block;padding:.25rem .7rem;border-radius:999px;font-weight:700}.pill-ok{background:#e4f4e7;color:var(--good)}.pill-bad{background:#fbe4e4;color:var(--bad)}
 .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}select,input,button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.5rem .7rem;border-radius:8px;text-decoration:none}
 button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
@@ -11,4 +23,4 @@ button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;curso
 .foot{padding:1.2rem 0 2rem;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
 .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.admin-nav{background:#102946;color:#dbe9f7;padding:1rem}.admin-nav h1{margin:.2rem 0 .8rem;font-size:1.2rem}.admin-nav a{display:block;color:#dbe9f7;text-decoration:none;margin:.38rem 0}.admin-main{padding:1rem}.alert{padding:.65rem .8rem;border-radius:8px;margin-bottom:.8rem}.alert-ok{background:#e4f4e7;color:#1e6e2f}.alert-bad{background:#f8e4e4;color:#8e1f1f}
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
-@media (max-width:820px){.admin-layout{grid-template-columns:1fr}}
+@media (max-width:820px){.admin-layout{grid-template-columns:1fr}.weather-hero{grid-template-columns:1fr}.weather-icon{width:100%;max-width:120px}}
