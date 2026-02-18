@@ -97,15 +97,25 @@ $metrics = [
   'Apparent (°C)' => $row['A'] ?? null,
 ];
 foreach ($metrics as $label => $value): ?>
-  <article class="card"><h3><?= h($label) ?></h3><div><?= $value === null ? 'N/A' : h((string) $value) ?></div></article>
+  <?php
+    $display = 'N/A';
+    if ($value !== null) {
+        if ($label === 'Rain 1h (mm)' || $label === 'Rain day (mm)') {
+            $display = number_format((float) $value, 1, '.', '');
+        } else {
+            $display = (string) $value;
+        }
+    }
+  ?>
+  <article class="card"><h3><?= h($label) ?></h3><div><?= h($display) ?></div></article>
 <?php endforeach; ?>
 </section>
 <section class="panel">
   <h3>Pluviometrie cumulee</h3>
   <div class="cards">
-    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 3, '.', '')) ?></div></article>
-    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 3, '.', '')) ?></div></article>
-    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 3, '.', '')) ?></div></article>
+    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 1, '.', '')) ?></div></article>
   </div>
 </section>
 <script>

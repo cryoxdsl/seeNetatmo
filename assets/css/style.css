@@ -3,7 +3,7 @@
 .wrap{width:min(1120px,94vw);margin:0 auto}.top{background:#0b2f52;color:#fff;padding:.8rem 0}.head-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;flex-wrap:wrap}.brand{font-weight:700}
 nav a{color:#fff;text-decoration:none;padding:.35rem .6rem;border-radius:8px}nav a:hover{background:rgba(255,255,255,.14)}
 main{padding:1rem 0 2rem}.panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem;margin-bottom:1rem;box-shadow:0 6px 18px rgba(8,42,78,.06)}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:.75rem}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1rem;margin:0 0 1rem}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
 .weather-hero{display:grid;grid-template-columns:130px 1fr;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
 .weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
 .weather-icon svg{width:100px;height:100px}

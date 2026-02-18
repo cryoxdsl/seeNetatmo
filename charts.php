@@ -24,8 +24,8 @@ $payload = [
     'T' => array_map(fn($r) => $r['T'] !== null ? (float)$r['T'] : null, $rows),
     'H' => array_map(fn($r) => $r['H'] !== null ? (float)$r['H'] : null, $rows),
     'P' => array_map(fn($r) => $r['P'] !== null ? (float)$r['P'] : null, $rows),
-    'RR' => array_map(fn($r) => $r['RR'] !== null ? (float)$r['RR'] : null, $rows),
-    'R' => array_map(fn($r) => $r['R'] !== null ? (float)$r['R'] : null, $rows),
+    'RR' => array_map(fn($r) => $r['RR'] !== null ? round((float)$r['RR'], 1) : null, $rows),
+    'R' => array_map(fn($r) => $r['R'] !== null ? round((float)$r['R'], 1) : null, $rows),
     'W' => array_map(fn($r) => $r['W'] !== null ? (float)$r['W'] : null, $rows),
     'G' => array_map(fn($r) => $r['G'] !== null ? (float)$r['G'] : null, $rows),
 ];

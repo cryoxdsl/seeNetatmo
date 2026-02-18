@@ -57,7 +57,7 @@ front_header('History');
 <thead><tr><th>DateTime</th><th>T</th><th>Tmax</th><th>Tmin</th><th>H</th><th>D</th><th>W</th><th>G</th><th>B</th><th>RR</th><th>R</th><th>P</th><th>S</th><th>A</th></tr></thead>
 <tbody>
 <?php foreach ($chunk as $r): ?><tr>
-<td><?= h($r['DateTime']) ?></td><td><?= h($r['T']) ?></td><td><?= h($r['Tmax']) ?></td><td><?= h($r['Tmin']) ?></td><td><?= h($r['H']) ?></td><td><?= h($r['D']) ?></td><td><?= h($r['W']) ?></td><td><?= h($r['G']) ?></td><td><?= h($r['B']) ?></td><td><?= h($r['RR']) ?></td><td><?= h($r['R']) ?></td><td><?= h($r['P']) ?></td><td><?= h($r['S']) ?></td><td><?= h($r['A']) ?></td>
+<td><?= h($r['DateTime']) ?></td><td><?= h($r['T']) ?></td><td><?= h($r['Tmax']) ?></td><td><?= h($r['Tmin']) ?></td><td><?= h($r['H']) ?></td><td><?= h($r['D']) ?></td><td><?= h($r['W']) ?></td><td><?= h($r['G']) ?></td><td><?= h($r['B']) ?></td><td><?= $r['RR'] === null ? 'N/A' : h(number_format((float) $r['RR'], 1, '.', '')) ?></td><td><?= $r['R'] === null ? 'N/A' : h(number_format((float) $r['R'], 1, '.', '')) ?></td><td><?= h($r['P']) ?></td><td><?= h($r['S']) ?></td><td><?= h($r['A']) ?></td>
 </tr><?php endforeach; ?>
 </tbody>
 </table>
