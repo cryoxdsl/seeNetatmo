@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $table = trim((string)($_POST['data_table'] ?? 'alldata'));
     $browserTitle = trim((string)($_POST['browser_title'] ?? ''));
     $favicon = trim((string)($_POST['favicon_url'] ?? ''));
+    $weatherIconStyle = trim((string) ($_POST['weather_icon_style'] ?? weather_icon_style_setting()));
     $defaultLocale = normalize_locale((string) ($_POST['default_locale'] ?? 'fr_FR'));
     $stationDepartment = strtoupper(trim((string) ($_POST['station_department'] ?? '')));
     $stationZip = trim((string) ($_POST['station_zipcode'] ?? ''));
@@ -73,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
     if ($site==='' || !filter_var($mail, FILTER_VALIDATE_EMAIL) || $table==='') {
         $err=t('site.invalid');
+    } elseif (!in_array($weatherIconStyle, ['realistic', 'minimal'], true)) {
+        $err=t('site.invalid');
     } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
         $err=t('site.invalid');
     } elseif ($stationLat !== '' && (!is_numeric($stationLat) || (float) $stationLat < -90 || (float) $stationLat > 90)) {
@@ -89,6 +92,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('data_table',$table);
         setting_set('browser_title', $browserTitle !== '' ? $browserTitle : $site);
         setting_set('favicon_url', $uploadedFavicon ?? ($favicon !== '' ? $favicon : '/favicon.ico'));
+        setting_set('weather_icon_style', $weatherIconStyle);
         setting_set('default_locale', $defaultLocale);
         setting_set('station_department', $stationDepartment);
         setting_set('station_zipcode', $stationZip);
@@ -109,6 +113,13 @@ admin_header(t('admin.site'));
   <label><?= h(t('site.name')) ?><br><input name="site_name" value="<?=h(app_name())?>" required></label><br><br>
   <label><?= h(t('site.browser_title')) ?><br><input name="browser_title" value="<?=h(browser_title_base())?>" placeholder="meteo13.fr" required></label><br><br>
   <label><?= h(t('site.favicon_url')) ?><br><input name="favicon_url" value="<?=h(favicon_url())?>" placeholder="/favicon.ico"></label><br><br>
+  <label><?= h(t('site.weather_icon_style')) ?><br>
+    <?php $iconStyle = weather_icon_style_setting(); ?>
+    <select name="weather_icon_style">
+      <option value="realistic" <?= $iconStyle === 'realistic' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_realistic')) ?></option>
+      <option value="minimal" <?= $iconStyle === 'minimal' ? 'selected' : '' ?>><?= h(t('site.weather_icon_style_minimal')) ?></option>
+    </select>
+  </label><br><br>
   <label><?= h(t('site.favicon_upload')) ?><br><input type="file" name="favicon_file" accept=".ico,.png,.jpg,.jpeg,.webp,image/x-icon,image/png,image/jpeg,image/webp"></label><br><br>
   <p><?= h(t('site.favicon_current')) ?>: <span class="code"><?=h(favicon_url())?></span></p>
   <label><?= h(t('site.contact')) ?><br><input type="email" name="contact_email" value="<?=h(contact_email())?>" required></label><br><br>

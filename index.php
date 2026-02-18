@@ -134,7 +134,7 @@ front_header(t('dashboard.title'));
   </div>
 </section>
 <section class="panel weather-hero weather-<?= h($weather['type']) ?>">
-  <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weather['type']) : '' ?></div>
+  <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weather['type'], weather_icon_style_setting()) : '' ?></div>
   <div class="weather-copy">
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>

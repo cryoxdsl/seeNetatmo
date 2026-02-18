@@ -70,8 +70,20 @@ function weather_trend_label(string $trend): string
     };
 }
 
-function weather_icon_svg(string $type): string
+function weather_icon_svg(string $type, string $style = 'realistic'): string
 {
+    if ($style === 'minimal') {
+        return match ($type) {
+            'sunny' => '<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="12" fill="#f4b400"/><g stroke="#f4b400" stroke-width="3" stroke-linecap="round"><line x1="32" y1="6" x2="32" y2="16"/><line x1="32" y1="48" x2="32" y2="58"/><line x1="6" y1="32" x2="16" y2="32"/><line x1="48" y1="32" x2="58" y2="32"/><line x1="13" y1="13" x2="20" y2="20"/><line x1="44" y1="44" x2="51" y2="51"/><line x1="13" y1="51" x2="20" y2="44"/><line x1="44" y1="20" x2="51" y2="13"/></g></svg>',
+            'cloudy', 'very_cloudy', 'voile' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="28" cy="36" rx="12" ry="9" fill="#b9c7d6"/><ellipse cx="40" cy="36" rx="11" ry="8" fill="#9fb2c4"/><rect x="18" y="36" width="32" height="10" rx="5" fill="#9fb2c4"/></svg>',
+            'rain' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="28" cy="30" rx="12" ry="9" fill="#b9c7d6"/><ellipse cx="40" cy="30" rx="11" ry="8" fill="#9fb2c4"/><rect x="18" y="30" width="32" height="10" rx="5" fill="#9fb2c4"/><g stroke="#3b82c4" stroke-width="3" stroke-linecap="round"><line x1="24" y1="46" x2="22" y2="54"/><line x1="32" y1="46" x2="30" y2="54"/><line x1="40" y1="46" x2="38" y2="54"/></g></svg>',
+            'snow' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="28" cy="30" rx="12" ry="9" fill="#c7d3de"/><ellipse cx="40" cy="30" rx="11" ry="8" fill="#afbfcd"/><rect x="18" y="30" width="32" height="10" rx="5" fill="#afbfcd"/><g stroke="#f3f8ff" stroke-width="2" stroke-linecap="round"><line x1="24" y1="48" x2="30" y2="54"/><line x1="30" y1="48" x2="24" y2="54"/><line x1="36" y1="48" x2="42" y2="54"/><line x1="42" y1="48" x2="36" y2="54"/></g></svg>',
+            'wind' => '<svg viewBox="0 0 64 64" aria-hidden="true"><g fill="none" stroke="#6b89a8" stroke-width="4" stroke-linecap="round"><path d="M8 24h34c7 0 10-8 4-12"/><path d="M8 34h44c8 0 12 8 5 12"/><path d="M8 44h28c6 0 9-5 5-9"/></g></svg>',
+            'offline' => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="32" rx="16" ry="12" fill="#c6d0db"/><line x1="20" y1="20" x2="44" y2="44" stroke="#7f90a2" stroke-width="5" stroke-linecap="round"/></svg>',
+            default => '<svg viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="34" rx="14" ry="10" fill="#b7c7d6"/></svg>',
+        };
+    }
+
     return match ($type) {
         'sunny' => '<svg viewBox="0 0 160 130" aria-hidden="true"><defs><radialGradient id="sunCore" cx="50%" cy="50%"><stop offset="0%" stop-color="#fff4b2"/><stop offset="60%" stop-color="#ffd355"/><stop offset="100%" stop-color="#f6a500"/></radialGradient><filter id="glow"><feGaussianBlur stdDeviation="3"/></filter></defs><circle cx="80" cy="62" r="44" fill="#ffd66a" opacity=".25" filter="url(#glow)"/><circle cx="80" cy="62" r="30" fill="url(#sunCore)"/><g stroke="#f8b400" stroke-width="6" stroke-linecap="round" opacity=".9"><line x1="80" y1="8" x2="80" y2="24"/><line x1="80" y1="100" x2="80" y2="116"/><line x1="24" y1="62" x2="40" y2="62"/><line x1="120" y1="62" x2="136" y2="62"/><line x1="41" y1="23" x2="52" y2="34"/><line x1="108" y1="90" x2="119" y2="101"/><line x1="41" y1="101" x2="52" y2="90"/><line x1="108" y1="34" x2="119" y2="23"/></g></svg>',
         'cloudy' => '<svg viewBox="0 0 170 130" aria-hidden="true"><defs><linearGradient id="cloudA" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#e8eff6"/><stop offset="100%" stop-color="#b8c8d8"/></linearGradient></defs><ellipse cx="74" cy="72" rx="34" ry="23" fill="url(#cloudA)"/><ellipse cx="106" cy="74" rx="38" ry="26" fill="#c5d3e0"/><ellipse cx="50" cy="82" rx="28" ry="19" fill="#d3dde8"/><ellipse cx="88" cy="88" rx="55" ry="18" fill="#aebfd0" opacity=".55"/></svg>',

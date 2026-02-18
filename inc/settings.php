@@ -72,3 +72,9 @@ function station_position_locked(): bool
 {
     return (setting_get('station_lock_position', '0') ?? '0') === '1';
 }
+
+function weather_icon_style_setting(): string
+{
+    $style = setting_get('weather_icon_style', 'realistic') ?? 'realistic';
+    return in_array($style, ['realistic', 'minimal'], true) ? $style : 'realistic';
+}
