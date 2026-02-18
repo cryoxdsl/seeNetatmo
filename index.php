@@ -13,10 +13,25 @@ if (!app_is_installed()) {
     redirect('/install/index.php');
 }
 
-$state = last_update_state();
-$rows = latest_rows(2);
-$row = $rows[0] ?? null;
-$prev = $rows[1] ?? null;
+$state = ['last' => null, 'age' => null, 'disconnected' => true];
+$row = null;
+$prev = null;
+try {
+    if (function_exists('last_update_state')) {
+        $state = last_update_state();
+    }
+    if (function_exists('latest_rows')) {
+        $rows = latest_rows(2);
+        $row = $rows[0] ?? null;
+        $prev = $rows[1] ?? null;
+    } elseif (function_exists('latest_row')) {
+        $row = latest_row();
+    }
+} catch (Throwable $e) {
+    $state = ['last' => null, 'age' => null, 'disconnected' => true];
+    $row = null;
+    $prev = null;
+}
 $weather = [
   'type' => 'offline',
   'label' => 'Meteo indisponible',
@@ -24,12 +39,25 @@ $weather = [
   'trend' => 'unknown',
 ];
 if (function_exists('weather_condition_from_row')) {
-    $weather = weather_condition_from_row($row, $state, $prev);
+    try {
+        $weather = weather_condition_from_row($row, $state, $prev);
+    } catch (Throwable $e) {
+        $weather = [
+          'type' => 'offline',
+          'label' => 'Meteo indisponible',
+          'detail' => 'Erreur de chargement de la tendance',
+          'trend' => 'unknown',
+        ];
+    }
 }
 
 $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
 if (function_exists('rain_totals')) {
-    $rain = rain_totals();
+    try {
+        $rain = rain_totals();
+    } catch (Throwable $e) {
+        $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
+    }
 }
 
 front_header('Dashboard');
