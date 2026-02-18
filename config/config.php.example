@@ -9,4 +9,6 @@ return [
     'admin_path' => '/admin-meteo13',
     'app_version' => '1.0.0',
     'session_timeout_seconds' => 2592000,
+    'admin_session_timeout_seconds' => 1800,
+    'trusted_proxy_ips' => [],
 ];

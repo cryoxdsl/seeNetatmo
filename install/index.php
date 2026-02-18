@@ -201,10 +201,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $totpUri = '';
-$qrUrl = '';
 if (!empty($st['totp_secret']) && !empty($st['admin_username'])) {
     $totpUri = totp_uri($st['totp_secret'], $st['admin_username'], 'meteo13-netatmo');
-    $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($totpUri);
 }
 ?><!doctype html><html lang="fr"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= h(t('install.title')) ?></title>
@@ -238,8 +236,8 @@ if (!empty($st['totp_secret']) && !empty($st['admin_username'])) {
   <p>Cron fetch URL: <span class="code">https://meteo13.fr/cron/fetch.php?key=<?=h($st['cron_key_fetch'])?></span></p>
   <p>Cron daily URL: <span class="code">https://meteo13.fr/cron/daily.php?key=<?=h($st['cron_key_daily'])?></span></p>
   <p>Cron external URL: <span class="code">https://meteo13.fr/cron/external.php?key=<?=h($st['cron_key_external'])?></span></p>
+  <p><?= h(t('twofa.scan_qr')) ?></p>
   <p>2FA TOTP URI: <span class="code"><?=h($totpUri)?></span></p>
-  <?php if($qrUrl):?><p><img src="<?=h($qrUrl)?>" alt="TOTP QR"></p><?php endif;?>
   <p>Backup codes (store securely): <span class="code"><?=h(implode(' ', $st['backup_plain'] ?? []))?></span></p>
   <p>Delete `/install/` directory if desired. `config/installed.lock` already blocks installer execution.</p>
 </div>

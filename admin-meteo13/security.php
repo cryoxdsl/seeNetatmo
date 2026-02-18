@@ -55,8 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $issuer = app_name();
             $uri = totp_uri($secret, (string) $user['username'], $issuer);
-            $qr = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($uri);
-            $setup = ['secret' => $secret, 'uri' => $uri, 'qr' => $qr, 'codes' => $codesPlain];
+            $setup = ['secret' => $secret, 'uri' => $uri, 'codes' => $codesPlain];
             $msg = t('twofa.enabled');
         }
     } catch (Throwable $e) {
@@ -105,7 +104,6 @@ admin_header(t('twofa.manage_title'));
 <?php if ($setup): ?>
 <div class="panel">
   <p><?= h(t('twofa.scan_qr')) ?></p>
-  <p><img src="<?= h($setup['qr']) ?>" alt="QR TOTP"></p>
   <p><?= h(t('twofa.secret')) ?>: <span class="code"><?= h($setup['secret']) ?></span></p>
   <p>TOTP URI: <span class="code"><?= h($setup['uri']) ?></span></p>
   <p><?= h(t('twofa.backup_codes')) ?>: <span class="code"><?= h(implode(' ', $setup['codes'])) ?></span></p>

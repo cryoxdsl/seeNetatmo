@@ -47,13 +47,21 @@ function base_url_root(): string
 
 function client_ip(): string
 {
-    if (!empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
+    $remote = (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    $trusted = cfg('trusted_proxy_ips', []);
+    if (!is_array($trusted)) {
+        $trusted = [];
+    }
+    $trusted = array_map(static fn($v): string => (string) $v, $trusted);
+    $isTrustedProxy = in_array($remote, $trusted, true);
+
+    if ($isTrustedProxy && !empty($_SERVER['HTTP_CF_CONNECTING_IP'])) {
         return (string) $_SERVER['HTTP_CF_CONNECTING_IP'];
     }
-    if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    if ($isTrustedProxy && !empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
         return trim(explode(',', (string) $_SERVER['HTTP_X_FORWARDED_FOR'])[0]);
     }
-    return (string) ($_SERVER['REMOTE_ADDR'] ?? '0.0.0.0');
+    return $remote;
 }
 
 function redirect(string $path): never
