@@ -145,13 +145,16 @@ front_header(t('dashboard.title'));
         'red' => t('dashboard.alert_level_red'),
         default => t('dashboard.alert_level_green'),
       };
-      $bDesc = match ($bLevel) {
-        'yellow' => t('dashboard.alert_desc_yellow'),
-        'orange' => t('dashboard.alert_desc_orange'),
-        'red' => t('dashboard.alert_desc_red'),
-        default => t('dashboard.alert_desc_green'),
-      };
-      $bTooltip = $bLabel . ': ' . $bDesc;
+      $bPhen = trim((string) ($badge['label'] ?? ''));
+      if ($bPhen === '') {
+        $bPhen = match ($bLevel) {
+          'yellow' => t('dashboard.alert_desc_yellow'),
+          'orange' => t('dashboard.alert_desc_orange'),
+          'red' => t('dashboard.alert_desc_red'),
+          default => t('dashboard.alert_desc_green'),
+        };
+      }
+      $bTooltip = $bLabel . ' : ' . $bPhen;
     ?>
       <a class="vigi-badge vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
         <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
