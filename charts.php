@@ -22,12 +22,12 @@ $state = last_update_state();
 $payload = [
     'labels' => array_map(fn($r) => $r['DateTime'], $rows),
     'T' => array_map(fn($r) => $r['T'] !== null ? (float)$r['T'] : null, $rows),
-    'H' => array_map(fn($r) => $r['H'] !== null ? (float)$r['H'] : null, $rows),
-    'P' => array_map(fn($r) => $r['P'] !== null ? (float)$r['P'] : null, $rows),
+    'H' => array_map(fn($r) => $r['H'] !== null ? round((float)$r['H'], 0) : null, $rows),
+    'P' => array_map(fn($r) => $r['P'] !== null ? round((float)$r['P'], 0) : null, $rows),
     'RR' => array_map(fn($r) => $r['RR'] !== null ? round((float)$r['RR'], 1) : null, $rows),
     'R' => array_map(fn($r) => $r['R'] !== null ? round((float)$r['R'], 1) : null, $rows),
-    'W' => array_map(fn($r) => $r['W'] !== null ? (float)$r['W'] : null, $rows),
-    'G' => array_map(fn($r) => $r['G'] !== null ? (float)$r['G'] : null, $rows),
+    'W' => array_map(fn($r) => $r['W'] !== null ? round((float)$r['W'], 0) : null, $rows),
+    'G' => array_map(fn($r) => $r['G'] !== null ? round((float)$r['G'], 0) : null, $rows),
 ];
 
 front_header('Charts');

@@ -102,6 +102,8 @@ foreach ($metrics as $label => $value): ?>
     if ($value !== null) {
         if ($label === 'Rain 1h (mm)' || $label === 'Rain day (mm)') {
             $display = number_format((float) $value, 1, '.', '');
+        } elseif (in_array($label, ['Humidity (%)', 'Pressure (hPa)', 'Wind avg (km/h)', 'Wind gust (km/h)', 'Wind dir (°)'], true)) {
+            $display = number_format((float) $value, 0, '.', '');
         } else {
             $display = (string) $value;
         }
