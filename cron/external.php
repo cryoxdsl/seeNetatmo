@@ -19,11 +19,19 @@ if (!app_is_installed()) {
 }
 
 $provided = (string) ($_GET['key'] ?? '');
-$expected = secret_get('cron_key_external') ?? '';
-if ($expected === '') {
-    $expected = secret_get('cron_key_daily') ?? '';
+$candidates = array_values(array_filter([
+    secret_get('cron_key_external') ?? '',
+    secret_get('cron_key_daily') ?? '',
+    secret_get('cron_key_fetch') ?? '',
+], static fn(string $v): bool => $v !== ''));
+$ok = false;
+foreach ($candidates as $expected) {
+    if (hash_equals($expected, $provided)) {
+        $ok = true;
+        break;
+    }
 }
-if ($provided === '' || $expected === '' || !hash_equals($expected, $provided)) {
+if ($provided === '' || !$ok) {
     http_response_code(403);
     exit("Forbidden\n");
 }
@@ -65,4 +73,3 @@ try {
 } finally {
     lock_release($lock);
 }
-
