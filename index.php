@@ -111,7 +111,7 @@ foreach ($metrics as $label => $value): ?>
 <?php endforeach; ?>
 </section>
 <section class="panel">
-  <h3>Pluviometrie cumulee</h3>
+  <h3>Pluviométrie cumulée</h3>
   <div class="cards">
     <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 1, '.', '')) ?></div></article>
     <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 1, '.', '')) ?></div></article>
