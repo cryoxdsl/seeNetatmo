@@ -60,29 +60,48 @@ function rain_totals(): array
 {
     $t = data_table();
     $now = now_paris();
-    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $monthStart = $now->modify('first day of this month')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $yearStart = $now->setDate((int) $now->format('Y'), 1, 1)->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $nowStr = $now->format('Y-m-d H:i:s');
+    $today = $now->format('Y-m-d');
+    $monthStartDate = $now->modify('first day of this month')->format('Y-m-d');
+    $yearStartDate = $now->setDate((int) $now->format('Y'), 1, 1)->format('Y-m-d');
 
-    $stmt = db()->prepare(
+    // Day total: prefer Netatmo daily cumulative (R), fallback to sum(RR).
+    $dayStmt = db()->prepare(
         "SELECT
-            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :day_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS day_total,
-            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :month_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS month_total,
-            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :year_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS year_total
-         FROM `{$t}`"
+            COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+         FROM `{$t}`
+         WHERE DATE(`DateTime`) = :d"
     );
-    $stmt->execute([
-        ':day_start' => $dayStart,
-        ':month_start' => $monthStart,
-        ':year_start' => $yearStart,
-        ':now' => $nowStr,
-    ]);
-    $row = $stmt->fetch() ?: [];
+    $dayStmt->execute([':d' => $today]);
+    $dayTotal = (float) ($dayStmt->fetchColumn() ?: 0);
+
+    // Month/year totals: sum daily totals (max(R) per day, fallback sum(RR) per day).
+    $monthStmt = db()->prepare(
+        "SELECT COALESCE(SUM(day_total),0) AS total FROM (
+            SELECT DATE(`DateTime`) AS d,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            WHERE DATE(`DateTime`) BETWEEN :start AND :end
+            GROUP BY DATE(`DateTime`)
+        ) x"
+    );
+    $monthStmt->execute([':start' => $monthStartDate, ':end' => $today]);
+    $monthTotal = (float) ($monthStmt->fetchColumn() ?: 0);
+
+    $yearStmt = db()->prepare(
+        "SELECT COALESCE(SUM(day_total),0) AS total FROM (
+            SELECT DATE(`DateTime`) AS d,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            WHERE DATE(`DateTime`) BETWEEN :start AND :end
+            GROUP BY DATE(`DateTime`)
+        ) x"
+    );
+    $yearStmt->execute([':start' => $yearStartDate, ':end' => $today]);
+    $yearTotal = (float) ($yearStmt->fetchColumn() ?: 0);
 
     return [
-        'day' => round((float) ($row['day_total'] ?? 0), 3),
-        'month' => round((float) ($row['month_total'] ?? 0), 3),
-        'year' => round((float) ($row['year_total'] ?? 0), 3),
+        'day' => round($dayTotal, 3),
+        'month' => round($monthTotal, 3),
+        'year' => round($yearTotal, 3),
     ];
 }
