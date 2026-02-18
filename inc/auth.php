@@ -89,8 +89,9 @@ function auth_verify_2fa(string $codeOrBackup): array
 
     $codes = db()->prepare('SELECT id, code_hash FROM backup_codes WHERE user_id=:u AND used_at IS NULL');
     $codes->execute([':u' => $u['id']]);
+    $backupCandidate = strtoupper(str_replace([' ', '-'], '', $input));
     foreach ($codes->fetchAll() as $row) {
-        if (password_verify($input, (string) $row['code_hash'])) {
+        if (password_verify($backupCandidate, (string) $row['code_hash'])) {
             db()->prepare('UPDATE backup_codes SET used_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
             $_SESSION['admin_uid'] = (int) $u['id'];
             $_SESSION['admin_username'] = (string) $u['username'];
