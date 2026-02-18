@@ -5,7 +5,9 @@ require_once __DIR__ . '/inc/bootstrap.php';
 require_once __DIR__ . '/inc/db.php';
 require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
-require_once __DIR__ . '/inc/weather_condition.php';
+if (is_file(__DIR__ . '/inc/weather_condition.php')) {
+    require_once __DIR__ . '/inc/weather_condition.php';
+}
 
 if (!app_is_installed()) {
     redirect('/install/index.php');
@@ -15,8 +17,20 @@ $state = last_update_state();
 $rows = latest_rows(2);
 $row = $rows[0] ?? null;
 $prev = $rows[1] ?? null;
-$weather = weather_condition_from_row($row, $state, $prev);
-$rain = rain_totals();
+$weather = [
+  'type' => 'offline',
+  'label' => 'Meteo indisponible',
+  'detail' => 'Module visuel non charge',
+  'trend' => 'unknown',
+];
+if (function_exists('weather_condition_from_row')) {
+    $weather = weather_condition_from_row($row, $state, $prev);
+}
+
+$rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0];
+if (function_exists('rain_totals')) {
+    $rain = rain_totals();
+}
 
 front_header('Dashboard');
 ?>
@@ -26,11 +40,11 @@ front_header('Dashboard');
   <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
 </section>
 <section class="panel weather-hero weather-<?= h($weather['type']) ?>">
-  <div class="weather-icon"><?= weather_icon_svg($weather['type']) ?></div>
+  <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weather['type']) : '' ?></div>
   <div class="weather-copy">
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>
-    <p class="weather-trend"><?= h(weather_trend_label($weather['trend'])) ?></p>
+    <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : 'Tendance indisponible') ?></p>
   </div>
 </section>
 <section class="panel">
