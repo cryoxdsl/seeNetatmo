@@ -10,7 +10,7 @@ function front_header(string $title): void
     $fullTitle = $title !== '' ? ($title . ' - ' . $baseTitle) : $baseTitle;
     $units = units_current();
 
-    echo '<!doctype html><html lang="fr"><head><meta charset="utf-8">';
+    echo '<!doctype html><html lang="' . h(locale_current()) . '"><head><meta charset="utf-8">';
     echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<title>' . h($fullTitle) . '</title>';
     echo '<link rel="icon" href="' . h(favicon_url()) . '" type="image/x-icon">';

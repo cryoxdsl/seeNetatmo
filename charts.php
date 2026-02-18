@@ -19,15 +19,34 @@ if (!in_array($period, $allowed, true)) {
 $rows = period_rows($period);
 $state = last_update_state();
 
+$metricSeries = static function (string $metric) use ($rows): array {
+    $decimals = units_decimals($metric);
+    return array_map(static function (array $r) use ($metric, $decimals): ?float {
+        $raw = $r[$metric] ?? null;
+        if ($raw === null) {
+            return null;
+        }
+        $converted = units_convert($metric, (float) $raw);
+        return $converted === null ? null : round($converted, $decimals);
+    }, $rows);
+};
+
 $payload = [
     'labels' => array_map(fn($r) => $r['DateTime'], $rows),
-    'T' => array_map(fn($r) => $r['T'] !== null ? (float)$r['T'] : null, $rows),
-    'H' => array_map(fn($r) => $r['H'] !== null ? round((float)$r['H'], 0) : null, $rows),
-    'P' => array_map(fn($r) => $r['P'] !== null ? round((float)$r['P'], 0) : null, $rows),
-    'RR' => array_map(fn($r) => $r['RR'] !== null ? round((float)$r['RR'], 1) : null, $rows),
-    'R' => array_map(fn($r) => $r['R'] !== null ? round((float)$r['R'], 1) : null, $rows),
-    'W' => array_map(fn($r) => $r['W'] !== null ? round((float)$r['W'], 0) : null, $rows),
-    'G' => array_map(fn($r) => $r['G'] !== null ? round((float)$r['G'], 0) : null, $rows),
+    'T' => $metricSeries('T'),
+    'H' => $metricSeries('H'),
+    'P' => $metricSeries('P'),
+    'RR' => $metricSeries('RR'),
+    'R' => $metricSeries('R'),
+    'W' => $metricSeries('W'),
+    'G' => $metricSeries('G'),
+    'chart_labels' => [
+        'T' => units_metric_label('T'),
+        'H' => units_metric_label('H'),
+        'P' => units_metric_label('P'),
+        'R' => units_metric_name('R') . ' (' . units_symbol('R') . ')',
+        'W' => units_metric_name('W') . ' (' . units_symbol('W') . ')',
+    ],
 ];
 
 $periodLabels = [
