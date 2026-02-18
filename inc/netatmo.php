@@ -186,6 +186,8 @@ function netatmo_fetch_weather(): array
         }
     }
 
+    $outdoorCandidates = [];
+
     foreach ($allModules as $mod) {
         if (!is_array($mod)) {
             continue;
@@ -193,47 +195,79 @@ function netatmo_fetch_weather(): array
         $type = (string) ($mod['type'] ?? '');
         $moduleName = (string) ($mod['module_name'] ?? '');
         $place = (string) ($mod['place_in_house'] ?? '');
+        $rfStatus = (int) ($mod['rf_status'] ?? 0);
         $reachable = ($mod['reachable'] ?? true) ? true : false;
+        if ($rfStatus === 90) {
+            $reachable = false;
+        }
         $dash = $mod['dashboard_data'] ?? [];
+        $dataTypes = array_map('strtolower', (array) ($mod['data_type'] ?? []));
         $out['module_debug'][] = [
             'type' => $type,
             'name' => $moduleName,
             'place' => $place,
             'reachable' => $reachable ? 1 : 0,
+            'rf_status' => $rfStatus,
             'has_temp' => isset($dash['Temperature']) ? 1 : 0,
             'has_hum' => isset($dash['Humidity']) ? 1 : 0,
             'has_rain' => (isset($dash['sum_rain_1']) || isset($dash['sum_rain_24']) || isset($dash['Rain'])) ? 1 : 0,
             'has_wind' => (isset($dash['WindStrength']) || isset($dash['GustStrength']) || isset($dash['WindAngle'])) ? 1 : 0,
+            'data_type' => implode(',', $dataTypes),
         ];
 
         $isRain = in_array($type, ['NAModule3', 'NARainGauge'], true)
             || isset($dash['Rain']) || isset($dash['sum_rain_1']) || isset($dash['sum_rain_24']);
         $isWind = in_array($type, ['NAModule2', 'NAWindGauge'], true)
             || isset($dash['WindStrength']) || isset($dash['GustStrength']) || isset($dash['WindAngle']);
-        $nameHint = strtolower($moduleName . ' ' . $place);
+        $nameHint = strtolower(trim($moduleName . ' ' . $place));
         $outdoorHint = str_contains($nameHint, 'outdoor')
             || str_contains($nameHint, 'outside')
-            || str_contains($nameHint, 'exterieur')
-            || str_contains($nameHint, 'extérieur')
+            || str_contains($nameHint, 'ext')
             || str_contains($nameHint, 'dehors')
             || str_contains($nameHint, 'garden')
             || str_contains($nameHint, 'jardin');
+        $indoorHint = str_contains($nameHint, 'indoor')
+            || str_contains($nameHint, 'inside')
+            || str_contains($nameHint, 'salon')
+            || str_contains($nameHint, 'living')
+            || str_contains($nameHint, 'bedroom')
+            || str_contains($nameHint, 'chambre');
 
-        $hasTempHum = isset($dash['Temperature']) || isset($dash['Humidity']);
-        $isOutdoor = ($type === 'NAModule1')
-            || ($hasTempHum && !$isRain && !$isWind && $outdoorHint);
+        $hasTemp = (isset($dash['Temperature']) && $dash['Temperature'] !== null);
+        $hasHum = (isset($dash['Humidity']) && $dash['Humidity'] !== null);
+        $hasTempType = in_array('temperature', $dataTypes, true);
+        $hasHumType = in_array('humidity', $dataTypes, true);
 
-        if ($isOutdoor) {
-            $seenOutdoor = true;
-            if ($reachable) {
-                $reachableOutdoor = true;
-                if (isset($dash['Temperature']) && $dash['Temperature'] !== null) {
-                    $out['T'] = round((float) $dash['Temperature'], 1);
-                }
-                if (isset($dash['Humidity']) && $dash['Humidity'] !== null) {
-                    $out['H'] = round((float) $dash['Humidity'], 1);
-                }
+        // Build candidates and choose the best likely outdoor module after the scan.
+        if (($hasTemp || $hasHum || $hasTempType || $hasHumType) && !$isRain && !$isWind) {
+            $score = 0;
+            if ($type === 'NAModule1') {
+                $score += 100;
             }
+            if ($outdoorHint) {
+                $score += 50;
+            }
+            if ($indoorHint) {
+                $score -= 40;
+            }
+            if ($hasTemp && $hasHum) {
+                $score += 20;
+            }
+            if ($hasTempType && $hasHumType) {
+                $score += 10;
+            }
+            if ($reachable) {
+                $score += 5;
+            }
+            $outdoorCandidates[] = [
+                'score' => $score,
+                'reachable' => $reachable,
+                'T' => $hasTemp ? round((float) $dash['Temperature'], 1) : null,
+                'H' => $hasHum ? round((float) $dash['Humidity'], 1) : null,
+                'type' => $type,
+                'name' => $moduleName,
+                'place' => $place,
+            ];
         }
 
         if ($isRain) {
@@ -265,6 +299,17 @@ function netatmo_fetch_weather(): array
                     $out['B'] = round((float) $dash['WindAngle'], 1);
                 }
             }
+        }
+    }
+
+    if ($outdoorCandidates) {
+        usort($outdoorCandidates, static fn(array $a, array $b): int => $b['score'] <=> $a['score']);
+        $best = $outdoorCandidates[0];
+        $seenOutdoor = true;
+        $reachableOutdoor = (bool) $best['reachable'];
+        if ($best['reachable']) {
+            $out['T'] = $best['T'];
+            $out['H'] = $best['H'];
         }
     }
 
