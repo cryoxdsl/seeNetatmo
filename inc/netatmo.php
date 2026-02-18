@@ -140,6 +140,7 @@ function netatmo_fetch_weather(): array
     if (!is_array($devices) || !$devices) {
         throw new RuntimeException('No device in Netatmo response');
     }
+    $bodyModules = $res['body']['modules'] ?? [];
 
     $out = [
         'T' => null, 'H' => null,
@@ -151,51 +152,101 @@ function netatmo_fetch_weather(): array
         'mod_wind' => false,
     ];
 
+    $seenOutdoor = false;
+    $reachableOutdoor = false;
+    $seenRain = false;
+    $reachableRain = false;
+    $seenWind = false;
+    $reachableWind = false;
+
+    $allModules = [];
     foreach ($devices as $device) {
         if (!is_array($device)) {
             continue;
         }
 
-        if ($out['P'] === null && isset($device['dashboard_data']['Pressure'])) {
-            $out['P'] = round((float) $device['dashboard_data']['Pressure'], 3);
+        if ($out['P'] === null) {
+            foreach (['Pressure', 'AbsolutePressure', 'pressure'] as $pressureKey) {
+                if (isset($device['dashboard_data'][$pressureKey])) {
+                    $out['P'] = round((float) $device['dashboard_data'][$pressureKey], 3);
+                    break;
+                }
+            }
         }
 
         foreach (($device['modules'] ?? []) as $mod) {
-            if (!is_array($mod)) {
-                continue;
-            }
-            $type = (string) ($mod['type'] ?? '');
-            $reachable = ($mod['reachable'] ?? true) ? true : false;
-            $dash = $mod['dashboard_data'] ?? [];
+            $allModules[] = $mod;
+        }
+    }
 
-            if ($type === 'NAModule1') {
-                $out['mod_outdoor'] = $reachable;
-                if ($reachable) {
-                    $out['T'] = isset($dash['Temperature']) ? round((float) $dash['Temperature'], 1) : null;
-                    $out['H'] = isset($dash['Humidity']) ? round((float) $dash['Humidity'], 1) : null;
+    if (is_array($bodyModules)) {
+        foreach ($bodyModules as $mod) {
+            $allModules[] = $mod;
+        }
+    }
+
+    foreach ($allModules as $mod) {
+        if (!is_array($mod)) {
+            continue;
+        }
+        $type = (string) ($mod['type'] ?? '');
+        $reachable = ($mod['reachable'] ?? true) ? true : false;
+        $dash = $mod['dashboard_data'] ?? [];
+
+        $isRain = in_array($type, ['NAModule3', 'NARainGauge'], true)
+            || isset($dash['Rain']) || isset($dash['sum_rain_1']) || isset($dash['sum_rain_24']);
+        $isWind = in_array($type, ['NAModule2', 'NAWindGauge'], true)
+            || isset($dash['WindStrength']) || isset($dash['GustStrength']) || isset($dash['WindAngle']);
+        $isOutdoor = ($type === 'NAModule1');
+
+        if ($isOutdoor) {
+            $seenOutdoor = true;
+            if ($reachable) {
+                $reachableOutdoor = true;
+                if (isset($dash['Temperature']) && $dash['Temperature'] !== null) {
+                    $out['T'] = round((float) $dash['Temperature'], 1);
+                }
+                if (isset($dash['Humidity']) && $dash['Humidity'] !== null) {
+                    $out['H'] = round((float) $dash['Humidity'], 1);
                 }
             }
+        }
 
-            if ($type === 'NAModule3' || $type === 'NARainGauge') {
-                $out['mod_rain'] = $reachable;
-                if ($reachable) {
-                    $rr = $dash['sum_rain_1'] ?? $dash['Rain'] ?? null;
-                    $r = $dash['sum_rain_24'] ?? null;
-                    $out['RR'] = $rr !== null ? round((float) $rr, 3) : null;
-                    $out['R'] = $r !== null ? round((float) $r, 3) : null;
+        if ($isRain) {
+            $seenRain = true;
+            if ($reachable) {
+                $reachableRain = true;
+                $rr = $dash['sum_rain_1'] ?? $dash['Rain'] ?? null;
+                $r = $dash['sum_rain_24'] ?? null;
+                if ($rr !== null) {
+                    $out['RR'] = round((float) $rr, 3);
+                }
+                if ($r !== null) {
+                    $out['R'] = round((float) $r, 3);
                 }
             }
+        }
 
-            if ($type === 'NAModule2' || $type === 'NAWindGauge') {
-                $out['mod_wind'] = $reachable;
-                if ($reachable) {
-                    $out['W'] = isset($dash['WindStrength']) ? round((float) $dash['WindStrength'], 1) : null;
-                    $out['G'] = isset($dash['GustStrength']) ? round((float) $dash['GustStrength'], 1) : null;
-                    $out['B'] = isset($dash['WindAngle']) ? round((float) $dash['WindAngle'], 1) : null;
+        if ($isWind) {
+            $seenWind = true;
+            if ($reachable) {
+                $reachableWind = true;
+                if (isset($dash['WindStrength']) && $dash['WindStrength'] !== null) {
+                    $out['W'] = round((float) $dash['WindStrength'], 1);
+                }
+                if (isset($dash['GustStrength']) && $dash['GustStrength'] !== null) {
+                    $out['G'] = round((float) $dash['GustStrength'], 1);
+                }
+                if (isset($dash['WindAngle']) && $dash['WindAngle'] !== null) {
+                    $out['B'] = round((float) $dash['WindAngle'], 1);
                 }
             }
         }
     }
+
+    $out['mod_outdoor'] = $seenOutdoor && $reachableOutdoor;
+    $out['mod_rain'] = $seenRain && $reachableRain;
+    $out['mod_wind'] = $seenWind && $reachableWind;
 
     return $out;
 }

@@ -84,6 +84,13 @@ try {
     if ($dur > CRON_MAX_SECONDS) {
         log_event('warning', 'cron.fetch', 'Execution exceeded target', ['duration_sec' => $dur]);
     }
+    if ($row['T'] === null || $row['H'] === null) {
+        log_event('warning', 'cron.fetch', 'Outdoor data missing (T/H is null)', ['mods' => [
+            'outdoor' => $w['mod_outdoor'],
+            'rain' => $w['mod_rain'],
+            'wind' => $w['mod_wind'],
+        ]]);
+    }
 
     echo "OK {$dt}\n";
 } catch (Throwable $e) {
