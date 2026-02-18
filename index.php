@@ -16,6 +16,7 @@ $rows = latest_rows(2);
 $row = $rows[0] ?? null;
 $prev = $rows[1] ?? null;
 $weather = weather_condition_from_row($row, $state, $prev);
+$rain = rain_totals();
 
 front_header('Dashboard');
 ?>
@@ -30,6 +31,14 @@ front_header('Dashboard');
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>
     <p class="weather-trend"><?= h(weather_trend_label($weather['trend'])) ?></p>
+  </div>
+</section>
+<section class="panel">
+  <h3>Pluviometrie cumulee</h3>
+  <div class="cards">
+    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 3, '.', '')) ?></div></article>
+    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 3, '.', '')) ?></div></article>
+    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 3, '.', '')) ?></div></article>
   </div>
 </section>
 <section class="cards">

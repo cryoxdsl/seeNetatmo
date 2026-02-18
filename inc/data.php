@@ -55,3 +55,34 @@ function period_rows(string $period): array
     $stmt->execute([':f' => $from->format('Y-m-d H:i:s'), ':to' => $to->format('Y-m-d H:i:s')]);
     return $stmt->fetchAll();
 }
+
+function rain_totals(): array
+{
+    $t = data_table();
+    $now = now_paris();
+    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $monthStart = $now->modify('first day of this month')->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $yearStart = $now->setDate((int) $now->format('Y'), 1, 1)->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $nowStr = $now->format('Y-m-d H:i:s');
+
+    $stmt = db()->prepare(
+        "SELECT
+            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :day_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS day_total,
+            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :month_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS month_total,
+            COALESCE(SUM(CASE WHEN `DateTime` BETWEEN :year_start AND :now THEN COALESCE(`RR`,0) ELSE 0 END),0) AS year_total
+         FROM `{$t}`"
+    );
+    $stmt->execute([
+        ':day_start' => $dayStart,
+        ':month_start' => $monthStart,
+        ':year_start' => $yearStart,
+        ':now' => $nowStr,
+    ]);
+    $row = $stmt->fetch() ?: [];
+
+    return [
+        'day' => round((float) ($row['day_total'] ?? 0), 3),
+        'month' => round((float) ($row['month_total'] ?? 0), 3),
+        'year' => round((float) ($row['year_total'] ?? 0), 3),
+    ];
+}
