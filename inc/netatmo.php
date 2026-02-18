@@ -150,6 +150,7 @@ function netatmo_fetch_weather(): array
         'mod_outdoor' => false,
         'mod_rain' => false,
         'mod_wind' => false,
+        'module_debug' => [],
     ];
 
     $seenOutdoor = false;
@@ -190,14 +191,37 @@ function netatmo_fetch_weather(): array
             continue;
         }
         $type = (string) ($mod['type'] ?? '');
+        $moduleName = (string) ($mod['module_name'] ?? '');
+        $place = (string) ($mod['place_in_house'] ?? '');
         $reachable = ($mod['reachable'] ?? true) ? true : false;
         $dash = $mod['dashboard_data'] ?? [];
+        $out['module_debug'][] = [
+            'type' => $type,
+            'name' => $moduleName,
+            'place' => $place,
+            'reachable' => $reachable ? 1 : 0,
+            'has_temp' => isset($dash['Temperature']) ? 1 : 0,
+            'has_hum' => isset($dash['Humidity']) ? 1 : 0,
+            'has_rain' => (isset($dash['sum_rain_1']) || isset($dash['sum_rain_24']) || isset($dash['Rain'])) ? 1 : 0,
+            'has_wind' => (isset($dash['WindStrength']) || isset($dash['GustStrength']) || isset($dash['WindAngle'])) ? 1 : 0,
+        ];
 
         $isRain = in_array($type, ['NAModule3', 'NARainGauge'], true)
             || isset($dash['Rain']) || isset($dash['sum_rain_1']) || isset($dash['sum_rain_24']);
         $isWind = in_array($type, ['NAModule2', 'NAWindGauge'], true)
             || isset($dash['WindStrength']) || isset($dash['GustStrength']) || isset($dash['WindAngle']);
-        $isOutdoor = ($type === 'NAModule1');
+        $nameHint = strtolower($moduleName . ' ' . $place);
+        $outdoorHint = str_contains($nameHint, 'outdoor')
+            || str_contains($nameHint, 'outside')
+            || str_contains($nameHint, 'exterieur')
+            || str_contains($nameHint, 'extérieur')
+            || str_contains($nameHint, 'dehors')
+            || str_contains($nameHint, 'garden')
+            || str_contains($nameHint, 'jardin');
+
+        $hasTempHum = isset($dash['Temperature']) || isset($dash['Humidity']);
+        $isOutdoor = ($type === 'NAModule1')
+            || ($hasTempHum && !$isRain && !$isWind && $outdoorHint);
 
         if ($isOutdoor) {
             $seenOutdoor = true;

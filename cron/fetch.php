@@ -79,7 +79,7 @@ try {
         'outdoor' => $w['mod_outdoor'],
         'rain' => $w['mod_rain'],
         'wind' => $w['mod_wind'],
-    ]]);
+    ], 'modules' => $w['module_debug'] ?? []]);
 
     if ($dur > CRON_MAX_SECONDS) {
         log_event('warning', 'cron.fetch', 'Execution exceeded target', ['duration_sec' => $dur]);
@@ -89,7 +89,7 @@ try {
             'outdoor' => $w['mod_outdoor'],
             'rain' => $w['mod_rain'],
             'wind' => $w['mod_wind'],
-        ]]);
+        ], 'modules' => $w['module_debug'] ?? []]);
     }
 
     echo "OK {$dt}\n";
