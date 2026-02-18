@@ -6,8 +6,8 @@ function weather_condition_from_row(?array $row, array $state, ?array $prev = nu
     if (!$row || $state['disconnected']) {
         return [
             'type' => 'offline',
-            'label' => 'Station deconnectee',
-            'detail' => 'Aucune mesure recente du module exterieur',
+            'label' => t('weather.label.offline'),
+            'detail' => t('weather.detail.offline'),
             'trend' => 'unknown',
         ];
     }
@@ -18,33 +18,33 @@ function weather_condition_from_row(?array $row, array $state, ?array $prev = nu
     $w = $row['W'] !== null ? (float) $row['W'] : 0.0;
 
     $type = 'voile';
-    $label = 'Voile';
-    $detail = 'Ciel partiellement couvert';
+    $label = t('weather.label.voile');
+    $detail = t('weather.detail.voile');
 
     if ($rr > 0.05 && $t !== null && $t <= 1.5) {
         $type = 'snow';
-        $label = 'Neige';
-        $detail = 'Precipitations froides detectees';
+        $label = t('weather.label.snow');
+        $detail = t('weather.detail.snow');
     } elseif ($rr > 0.1) {
         $type = 'rain';
-        $label = 'Pluie';
-        $detail = 'Precipitations en cours';
+        $label = t('weather.label.rain');
+        $detail = t('weather.detail.rain');
     } elseif ($w >= 40) {
         $type = 'wind';
-        $label = 'Vent fort';
-        $detail = 'Rafales soutenues';
+        $label = t('weather.label.wind');
+        $detail = t('weather.detail.wind');
     } elseif ($h !== null && $h >= 90) {
         $type = 'very_cloudy';
-        $label = 'Tres nuageux';
-        $detail = 'Humidite elevee';
+        $label = t('weather.label.very_cloudy');
+        $detail = t('weather.detail.very_cloudy');
     } elseif ($h !== null && $h >= 75) {
         $type = 'cloudy';
-        $label = 'Nuageux';
-        $detail = 'Ciel charge';
+        $label = t('weather.label.cloudy');
+        $detail = t('weather.detail.cloudy');
     } elseif ($h !== null && $h < 55) {
         $type = 'sunny';
-        $label = 'Grand soleil';
-        $detail = 'Air plutot sec';
+        $label = t('weather.label.sunny');
+        $detail = t('weather.detail.sunny');
     }
 
     $trend = 'stable';
@@ -63,10 +63,10 @@ function weather_condition_from_row(?array $row, array $state, ?array $prev = nu
 function weather_trend_label(string $trend): string
 {
     return match ($trend) {
-        'up' => 'Tendance temperature: hausse',
-        'down' => 'Tendance temperature: baisse',
-        'stable' => 'Tendance temperature: stable',
-        default => 'Tendance temperature: inconnue',
+        'up' => t('weather.trend.up'),
+        'down' => t('weather.trend.down'),
+        'stable' => t('weather.trend.stable'),
+        default => t('weather.trend.unknown'),
     };
 }
 

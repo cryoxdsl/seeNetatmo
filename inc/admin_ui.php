@@ -13,14 +13,15 @@ function admin_header(string $title): void
     echo '<title>' . h($fullTitle) . '</title>';
     echo '<link rel="icon" href="' . h(favicon_url()) . '" type="image/x-icon">';
     echo '<link rel="stylesheet" href="/assets/css/style.css"></head><body>';
-    echo '<div class="admin-layout"><aside class="admin-nav"><h1>Admin</h1>';
-    echo '<a href="' . APP_ADMIN_PATH . '/index.php">Dashboard</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/site.php">Site</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/netatmo.php">Netatmo</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/health.php">Health</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/logs.php">Logs</a>';
-    echo '<a href="/upgrade.php">Upgrade</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/logout.php">Logout</a>';
+    echo '<div class="admin-layout"><aside class="admin-nav"><h1>' . h(t('admin.title')) . '</h1>';
+    echo '<a href="' . APP_ADMIN_PATH . '/index.php">' . h(t('admin.dashboard')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/site.php">' . h(t('admin.site')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/netatmo.php">' . h(t('admin.netatmo')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/health.php">' . h(t('admin.health')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/logs.php">' . h(t('admin.logs')) . '</a>';
+    echo '<a href="/upgrade.php">' . h(t('admin.upgrade')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/logout.php">' . h(t('admin.logout')) . '</a>';
+    echo '<a href="' . h(locale_switch_url('fr_FR')) . '">' . h(t('lang.fr')) . '</a><a href="' . h(locale_switch_url('en_EN')) . '">' . h(t('lang.en')) . '</a>';
     echo '</aside><main class="admin-main">';
 }
 

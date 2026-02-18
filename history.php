@@ -38,33 +38,42 @@ if ($page > $pages) {
 }
 $chunk = array_slice($rows, ($page - 1) * $perPage, $perPage);
 
-front_header('History');
+$periodLabels = [
+    '24h' => t('period.24h'),
+    '7d' => t('period.7d'),
+    '30d' => t('period.30d'),
+    'month' => t('period.month'),
+    'year' => t('period.year'),
+    '365d' => t('period.365d'),
+];
+
+front_header(t('history.title'));
 ?>
 <section class="panel">
-  <h2>History</h2>
+  <h2><?= h(t('history.title')) ?></h2>
   <form class="row" method="get">
     <select name="period">
       <?php foreach ($allowed as $p): ?>
-        <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($p) ?></option>
+        <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($periodLabels[$p]) ?></option>
       <?php endforeach; ?>
     </select>
-    <button type="submit">Apply</button>
-    <a class="btn" href="/history.php?period=<?= h($period) ?>&export=csv">Export CSV</a>
+    <button type="submit"><?= h(t('btn.apply')) ?></button>
+    <a class="btn" href="/history.php?period=<?= h($period) ?>&export=csv"><?= h(t('btn.export_csv')) ?></a>
   </form>
 </section>
 <section class="panel table-wrap">
 <table>
-<thead><tr><th>DateTime</th><th>T</th><th>Tmax</th><th>Tmin</th><th>H</th><th>D</th><th>W</th><th>G</th><th>B</th><th>RR</th><th>R</th><th>P</th><th>S</th><th>A</th></tr></thead>
+<thead><tr><th><?= h(t('table.datetime')) ?></th><th><?= h(t('table.temperature')) ?></th><th><?= h(t('table.tmax')) ?></th><th><?= h(t('table.tmin')) ?></th><th><?= h(t('table.humidity')) ?></th><th><?= h(t('table.dewpoint')) ?></th><th><?= h(t('table.wind_avg')) ?></th><th><?= h(t('table.wind_gust')) ?></th><th><?= h(t('table.wind_dir')) ?></th><th><?= h(t('table.rain_1h')) ?></th><th><?= h(t('table.rain_day')) ?></th><th><?= h(t('table.pressure')) ?></th><th><?= h(t('table.s')) ?></th><th><?= h(t('table.apparent')) ?></th></tr></thead>
 <tbody>
 <?php foreach ($chunk as $r): ?><tr>
-<td><?= h($r['DateTime']) ?></td><td><?= h($r['T']) ?></td><td><?= h($r['Tmax']) ?></td><td><?= h($r['Tmin']) ?></td><td><?= $r['H'] === null ? 'N/A' : h(number_format((float) $r['H'], 0, '.', '')) ?></td><td><?= h($r['D']) ?></td><td><?= $r['W'] === null ? 'N/A' : h(number_format((float) $r['W'], 0, '.', '')) ?></td><td><?= $r['G'] === null ? 'N/A' : h(number_format((float) $r['G'], 0, '.', '')) ?></td><td><?= $r['B'] === null ? 'N/A' : h(number_format((float) $r['B'], 0, '.', '')) ?></td><td><?= $r['RR'] === null ? 'N/A' : h(number_format((float) $r['RR'], 1, '.', '')) ?></td><td><?= $r['R'] === null ? 'N/A' : h(number_format((float) $r['R'], 1, '.', '')) ?></td><td><?= $r['P'] === null ? 'N/A' : h(number_format((float) $r['P'], 0, '.', '')) ?></td><td><?= h($r['S']) ?></td><td><?= h($r['A']) ?></td>
+<td><?= h($r['DateTime']) ?></td><td><?= h($r['T']) ?></td><td><?= h($r['Tmax']) ?></td><td><?= h($r['Tmin']) ?></td><td><?= $r['H'] === null ? h(t('common.na')) : h(number_format((float) $r['H'], 0, '.', '')) ?></td><td><?= h($r['D']) ?></td><td><?= $r['W'] === null ? h(t('common.na')) : h(number_format((float) $r['W'], 0, '.', '')) ?></td><td><?= $r['G'] === null ? h(t('common.na')) : h(number_format((float) $r['G'], 0, '.', '')) ?></td><td><?= $r['B'] === null ? h(t('common.na')) : h(number_format((float) $r['B'], 0, '.', '')) ?></td><td><?= $r['RR'] === null ? h(t('common.na')) : h(number_format((float) $r['RR'], 1, '.', '')) ?></td><td><?= $r['R'] === null ? h(t('common.na')) : h(number_format((float) $r['R'], 1, '.', '')) ?></td><td><?= $r['P'] === null ? h(t('common.na')) : h(number_format((float) $r['P'], 0, '.', '')) ?></td><td><?= h($r['S']) ?></td><td><?= h($r['A']) ?></td>
 </tr><?php endforeach; ?>
 </tbody>
 </table>
 </section>
 <section class="panel row">
-  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= max(1, $page-1) ?>">Prev</a>
-  <span>Page <?= $page ?>/<?= $pages ?></span>
-  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= min($pages, $page+1) ?>">Next</a>
+  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= max(1, $page-1) ?>"><?= h(t('pagination.prev')) ?></a>
+  <span><?= h(t('pagination.page')) ?> <?= $page ?>/<?= $pages ?></span>
+  <a class="btn" href="/history.php?period=<?= h($period) ?>&page=<?= min($pages, $page+1) ?>"><?= h(t('pagination.next')) ?></a>
 </section>
 <?php front_footer();

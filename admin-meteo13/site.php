@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $table = trim((string)($_POST['data_table'] ?? 'alldata'));
     $browserTitle = trim((string)($_POST['browser_title'] ?? ''));
     $favicon = trim((string)($_POST['favicon_url'] ?? ''));
+    $defaultLocale = normalize_locale((string) ($_POST['default_locale'] ?? 'fr_FR'));
     $uploadedFavicon = null;
 
     if (isset($_FILES['favicon_file']) && is_array($_FILES['favicon_file']) && ((int)($_FILES['favicon_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
@@ -65,30 +66,38 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     }
 
     if ($site==='' || !filter_var($mail, FILTER_VALIDATE_EMAIL) || $table==='') {
-        $err='Invalid values';
+        $err=t('site.invalid');
     } elseif ($err === '') {
         setting_set('site_name',$site);
         setting_set('contact_email',$mail);
         setting_set('data_table',$table);
         setting_set('browser_title', $browserTitle !== '' ? $browserTitle : $site);
         setting_set('favicon_url', $uploadedFavicon ?? ($favicon !== '' ? $favicon : '/favicon.ico'));
-        $msg='Saved';
+        setting_set('default_locale', $defaultLocale);
+        $msg=t('site.saved');
     }
 }
-admin_header('Site');
+admin_header(t('admin.site'));
 ?>
-<h2>Site settings</h2>
+<h2><?= h(t('site.title')) ?></h2>
 <?php if($msg):?><div class="alert alert-ok"><?=h($msg)?></div><?php endif;?>
 <?php if($err):?><div class="alert alert-bad"><?=h($err)?></div><?php endif;?>
 <form method="post" class="panel" enctype="multipart/form-data">
   <input type="hidden" name="csrf_token" value="<?=h(csrf_token())?>">
-  <label>Site name<br><input name="site_name" value="<?=h(app_name())?>" required></label><br><br>
-  <label>Browser title<br><input name="browser_title" value="<?=h(browser_title_base())?>" placeholder="meteo13.fr" required></label><br><br>
-  <label>Favicon URL/path<br><input name="favicon_url" value="<?=h(favicon_url())?>" placeholder="/favicon.ico"></label><br><br>
-  <label>Upload favicon (ICO/PNG/JPG/WEBP, max 1 MB)<br><input type="file" name="favicon_file" accept=".ico,.png,.jpg,.jpeg,.webp,image/x-icon,image/png,image/jpeg,image/webp"></label><br><br>
-  <p>Current favicon: <span class="code"><?=h(favicon_url())?></span></p>
-  <label>Contact email<br><input type="email" name="contact_email" value="<?=h(contact_email())?>" required></label><br><br>
-  <label>Data table<br><input name="data_table" value="<?=h(data_table())?>" required></label><br><br>
-  <button type="submit">Save</button>
+  <label><?= h(t('site.name')) ?><br><input name="site_name" value="<?=h(app_name())?>" required></label><br><br>
+  <label><?= h(t('site.browser_title')) ?><br><input name="browser_title" value="<?=h(browser_title_base())?>" placeholder="meteo13.fr" required></label><br><br>
+  <label><?= h(t('site.favicon_url')) ?><br><input name="favicon_url" value="<?=h(favicon_url())?>" placeholder="/favicon.ico"></label><br><br>
+  <label><?= h(t('site.favicon_upload')) ?><br><input type="file" name="favicon_file" accept=".ico,.png,.jpg,.jpeg,.webp,image/x-icon,image/png,image/jpeg,image/webp"></label><br><br>
+  <p><?= h(t('site.favicon_current')) ?>: <span class="code"><?=h(favicon_url())?></span></p>
+  <label><?= h(t('site.contact')) ?><br><input type="email" name="contact_email" value="<?=h(contact_email())?>" required></label><br><br>
+  <label><?= h(t('site.table')) ?><br><input name="data_table" value="<?=h(data_table())?>" required></label><br><br>
+  <label><?= h(t('site.default_locale')) ?><br>
+    <select name="default_locale">
+      <?php $currentDefault = normalize_locale(setting_get('default_locale', 'fr_FR')); ?>
+      <option value="fr_FR" <?= $currentDefault === 'fr_FR' ? 'selected' : '' ?>>fr_FR</option>
+      <option value="en_EN" <?= $currentDefault === 'en_EN' ? 'selected' : '' ?>>en_EN</option>
+    </select>
+  </label><br><br>
+  <button type="submit"><?= h(t('site.save')) ?></button>
 </form>
 <?php admin_footer();

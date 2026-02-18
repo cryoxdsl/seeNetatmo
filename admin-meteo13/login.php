@@ -22,17 +22,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($res['ok']) {
         redirect(APP_ADMIN_PATH . '/2fa.php');
     }
-    $error = (string) ($res['error'] ?? 'Login failed');
+    $error = (string) ($res['error'] ?? t('login.failed'));
 }
 
-admin_header('Login');
+admin_header(t('login.title'));
 ?>
-<h2>Admin login</h2>
+<h2><?= h(t('login.title')) ?></h2>
 <?php if ($error): ?><div class="alert alert-bad"><?= h($error) ?></div><?php endif; ?>
 <form method="post" class="panel">
   <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-  <label>Username<br><input name="username" required></label><br><br>
-  <label>Password<br><input type="password" name="password" required minlength="12"></label><br><br>
-  <button type="submit">Continue</button>
+  <label><?= h(t('login.username')) ?><br><input name="username" required></label><br><br>
+  <label><?= h(t('login.password')) ?><br><input type="password" name="password" required minlength="12"></label><br><br>
+  <button type="submit"><?= h(t('login.continue')) ?></button>
 </form>
 <?php admin_footer();

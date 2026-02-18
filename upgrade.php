@@ -9,7 +9,7 @@ require_once __DIR__ . '/inc/logger.php';
 
 if (!app_is_installed()) {
     http_response_code(403);
-    exit('Not installed');
+    exit(t('upgrade.not_installed'));
 }
 admin_require_login();
 
@@ -68,10 +68,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         log_event('info', 'upgrade', 'Upgrade executed', ['applied' => $applied]);
     }
 }
-?><!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Upgrade</title><link rel="stylesheet" href="/assets/css/style.css"></head><body><main class="wrap"><section class="panel"><h1>Upgrade</h1>
-<p>Target version: <?= h(APP_VERSION) ?></p>
-<?php foreach($applied as $v):?><div class="alert alert-ok">Migration applied: <?= (int)$v ?></div><?php endforeach; ?>
+?><!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= h(t('upgrade.title')) ?></title><link rel="stylesheet" href="/assets/css/style.css"></head><body><main class="wrap"><section class="panel"><h1><?= h(t('upgrade.title')) ?></h1>
+<p><?= h(t('upgrade.target_version')) ?>: <?= h(APP_VERSION) ?></p>
+<?php foreach($applied as $v):?><div class="alert alert-ok"><?= h(t('upgrade.applied')) ?>: <?= (int)$v ?></div><?php endforeach; ?>
 <?php foreach($errors as $e):?><div class="alert alert-bad"><?= h($e) ?></div><?php endforeach; ?>
-<form method="post"><input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>"><button type="submit">Run upgrade</button></form>
-<p><a class="btn" href="<?= h(APP_ADMIN_PATH) ?>/index.php">Back admin</a></p>
+<form method="post"><input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>"><button type="submit"><?= h(t('upgrade.run')) ?></button></form>
+<p><a class="btn" href="<?= h(APP_ADMIN_PATH) ?>/index.php"><?= h(t('upgrade.back_admin')) ?></a></p>
 </section></main></body></html>

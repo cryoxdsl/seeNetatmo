@@ -4,14 +4,17 @@ declare(strict_types=1);
 require_once __DIR__ . '/../inc/constants.php';
 require_once __DIR__ . '/../inc/helpers.php';
 require_once __DIR__ . '/../inc/totp.php';
+require_once __DIR__ . '/../inc/config.php';
+require_once __DIR__ . '/../inc/i18n.php';
 
 if (is_file(__DIR__ . '/../config/installed.lock')) {
     http_response_code(403);
-    exit('Installer disabled (installed.lock exists).');
+    exit(t('install.disabled'));
 }
 
 session_name('meteo13_install');
 session_start();
+i18n_bootstrap();
 
 $step = max(1, min(8, (int)($_GET['step'] ?? 1)));
 $error = '';
@@ -202,32 +205,32 @@ if (!empty($st['totp_secret']) && !empty($st['admin_username'])) {
     $qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=' . rawurlencode($totpUri);
 }
 ?><!doctype html><html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Installer</title>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title><?= h(t('install.title')) ?></title>
 <link rel="stylesheet" href="/assets/css/style.css"></head><body><main class="wrap"><section class="panel">
-<h1>Installer - meteo13-netatmo</h1>
-<p>Step <?= $step ?>/8</p>
+<h1><?= h(t('install.title')) ?> - meteo13-netatmo</h1>
+<p><?= h(t('install.step')) ?> <?= $step ?>/8</p>
 <?php if($error):?><div class="alert alert-bad"><?=h($error)?></div><?php endif;?>
 <?php if($ok):?><div class="alert alert-ok"><?=h($ok)?></div><?php endif;?>
 
-<?php if($step===1):?><form method="post"><p>Check PHP, extensions and /config write access.</p><button type="submit">Run checks</button></form><?php endif;?>
+<?php if($step===1):?><form method="post"><p><?= h(t('install.check_desc')) ?></p><button type="submit"><?= h(t('install.run_checks')) ?></button></form><?php endif;?>
 
-<?php if($step===2):?><form method="post"><label>DB host<br><input name="db_host" value="<?=h($st['db_host']??'localhost')?>" required></label><br><br><label>DB port<br><input name="db_port" value="<?=h($st['db_port']??'3306')?>" required></label><br><br><label>DB name<br><input name="db_name" value="<?=h($st['db_name']??'')?>" required></label><br><br><label>DB user<br><input name="db_user" value="<?=h($st['db_user']??'')?>" required></label><br><br><label>DB pass<br><input type="password" name="db_pass"></label><br><br><button type="submit">Connect</button></form><?php endif;?>
+<?php if($step===2):?><form method="post"><label>DB host<br><input name="db_host" value="<?=h($st['db_host']??'localhost')?>" required></label><br><br><label>DB port<br><input name="db_port" value="<?=h($st['db_port']??'3306')?>" required></label><br><br><label>DB name<br><input name="db_name" value="<?=h($st['db_name']??'')?>" required></label><br><br><label>DB user<br><input name="db_user" value="<?=h($st['db_user']??'')?>" required></label><br><br><label>DB pass<br><input type="password" name="db_pass"></label><br><br><button type="submit"><?= h(t('install.connect')) ?></button></form><?php endif;?>
 
-<?php if($step===3):?><form method="post"><label>Data table<br><input name="data_table" value="<?=h($st['data_table']??'alldata')?>" required></label><br><br><button type="submit">Verify table + PK</button></form><?php endif;?>
+<?php if($step===3):?><form method="post"><label>Data table<br><input name="data_table" value="<?=h($st['data_table']??'alldata')?>" required></label><br><br><button type="submit"><?= h(t('install.verify_table')) ?></button></form><?php endif;?>
 
-<?php if($step===4):?><form method="post"><p>Create required app tables if missing.</p><button type="submit">Create tables</button></form><?php endif;?>
+<?php if($step===4):?><form method="post"><p><?= h(t('install.create_tables_desc')) ?></p><button type="submit"><?= h(t('install.create_tables')) ?></button></form><?php endif;?>
 
-<?php if($step===5):?><form method="post"><label>Admin username<br><input name="admin_username" value="<?=h($st['admin_username']??'admin')?>" required></label><br><br><label>Admin password (min 12)<br><input type="password" name="admin_password" minlength="12" required></label><br><br><button type="submit">Create admin + 2FA seed</button></form><?php endif;?>
+<?php if($step===5):?><form method="post"><label>Admin username<br><input name="admin_username" value="<?=h($st['admin_username']??'admin')?>" required></label><br><br><label>Admin password (min 12)<br><input type="password" name="admin_password" minlength="12" required></label><br><br><button type="submit"><?= h(t('install.create_admin')) ?></button></form><?php endif;?>
 
-<?php if($step===6):?><form method="post"><p>Netatmo credentials (can be updated later in admin)</p><label>client_id<br><input name="client_id" value="<?=h($st['netatmo_client_id']??'')?>"></label><br><br><label>client_secret<br><input type="password" name="client_secret"></label><br><br><button type="submit">Save Netatmo credentials</button></form><?php endif;?>
+<?php if($step===6):?><form method="post"><p>Netatmo credentials (can be updated later in admin)</p><label>client_id<br><input name="client_id" value="<?=h($st['netatmo_client_id']??'')?>"></label><br><br><label>client_secret<br><input type="password" name="client_secret"></label><br><br><button type="submit"><?= h(t('install.save_netatmo')) ?></button></form><?php endif;?>
 
-<?php if($step===7):?><form method="post"><p>Generate master key and cron keys.</p><button type="submit">Generate keys</button></form><?php endif;?>
+<?php if($step===7):?><form method="post"><p>Generate master key and cron keys.</p><button type="submit"><?= h(t('install.generate_keys')) ?></button></form><?php endif;?>
 
-<?php if($step===8 && empty($_SESSION['install_done'])):?><form method="post"><p>Finalize installation: create user/settings/secrets/config files + lock.</p><button type="submit">Finalize install</button></form><?php endif;?>
+<?php if($step===8 && empty($_SESSION['install_done'])):?><form method="post"><p><?= h(t('install.finalize_desc')) ?></p><button type="submit"><?= h(t('install.finalize')) ?></button></form><?php endif;?>
 
 <?php if(!empty($_SESSION['install_done'])): ?>
 <div class="panel">
-  <h2>Installation complete</h2>
+  <h2><?= h(t('install.complete')) ?></h2>
   <p>Admin URL: <span class="code">https://meteo13.fr/admin-meteo13/</span></p>
   <p>Netatmo redirect URI: <span class="code">https://meteo13.fr/admin-meteo13/netatmo_callback.php</span></p>
   <p>Cron fetch URL: <span class="code">https://meteo13.fr/cron/fetch.php?key=<?=h($st['cron_key_fetch'])?></span></p>

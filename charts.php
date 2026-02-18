@@ -30,19 +30,28 @@ $payload = [
     'G' => array_map(fn($r) => $r['G'] !== null ? round((float)$r['G'], 0) : null, $rows),
 ];
 
-front_header('Charts');
+$periodLabels = [
+    '24h' => t('period.24h'),
+    '7d' => t('period.7d'),
+    '30d' => t('period.30d'),
+    'month' => t('period.month'),
+    'year' => t('period.year'),
+    '365d' => t('period.365d'),
+];
+
+front_header(t('charts.title'));
 ?>
 <section class="panel">
-  <h2>Charts</h2>
-  <p>Last update: <strong><?= h($state['last'] ?? 'N/A') ?></strong></p>
-  <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
+  <h2><?= h(t('charts.title')) ?></h2>
+  <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
+  <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
   <form class="row" method="get">
     <select name="period">
       <?php foreach ($allowed as $p): ?>
-        <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($p) ?></option>
+        <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($periodLabels[$p]) ?></option>
       <?php endforeach; ?>
     </select>
-    <button type="submit">Apply</button>
+    <button type="submit"><?= h(t('btn.apply')) ?></button>
   </form>
 </section>
 <section class="panel"><canvas id="chartT"></canvas></section>

@@ -32,10 +32,11 @@ try {
     $row = null;
     $prev = null;
 }
+
 $weather = [
   'type' => 'offline',
-  'label' => 'Meteo indisponible',
-  'detail' => 'Module visuel non charge',
+  'label' => t('weather.unavailable'),
+  'detail' => t('weather.unavailable'),
   'trend' => 'unknown',
 ];
 if (function_exists('weather_condition_from_row')) {
@@ -44,8 +45,8 @@ if (function_exists('weather_condition_from_row')) {
     } catch (Throwable $e) {
         $weather = [
           'type' => 'offline',
-          'label' => 'Meteo indisponible',
-          'detail' => 'Erreur de chargement de la tendance',
+          'label' => t('weather.unavailable'),
+          'detail' => t('weather.unavailable'),
           'trend' => 'unknown',
         ];
     }
@@ -60,17 +61,17 @@ if (function_exists('rain_totals')) {
     }
 }
 
-front_header('Dashboard');
+front_header(t('dashboard.title'));
 ?>
 <section class="panel">
-  <h2>Live dashboard</h2>
-  <p>Last update: <strong><?= h($state['last'] ?? 'N/A') ?></strong></p>
+  <h2><?= h(t('dashboard.title')) ?></h2>
+  <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">
-    <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
+    <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
     <div class="auto-refresh" id="autoRefreshBox">
-      <span id="autoRefreshLabel">Auto refresh: ON</span>
+      <span id="autoRefreshLabel"><?= h(t('dashboard.auto_refresh')) ?>: ON</span>
       <span class="code" id="autoRefreshCountdown">05:00</span>
-      <button type="button" class="btn-lite" id="autoRefreshToggle">Desactiver</button>
+      <button type="button" class="btn-lite" id="autoRefreshToggle"><?= h(t('dashboard.disable')) ?></button>
     </div>
   </div>
 </section>
@@ -79,45 +80,44 @@ front_header('Dashboard');
   <div class="weather-copy">
     <h3><?= h($weather['label']) ?></h3>
     <p><?= h($weather['detail']) ?></p>
-    <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : 'Tendance indisponible') ?></p>
+    <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : t('weather.trend.unavailable')) ?></p>
   </div>
 </section>
 <section class="cards">
 <?php
 $metrics = [
-  'Temperature (°C)' => $row['T'] ?? null,
-  'Humidity (%)' => $row['H'] ?? null,
-  'Pressure (hPa)' => $row['P'] ?? null,
-  'Rain 1h (mm)' => $row['RR'] ?? null,
-  'Rain day (mm)' => $row['R'] ?? null,
-  'Wind avg (km/h)' => $row['W'] ?? null,
-  'Wind gust (km/h)' => $row['G'] ?? null,
-  'Wind dir (°)' => $row['B'] ?? null,
-  'Dew point (°C)' => $row['D'] ?? null,
-  'Apparent (°C)' => $row['A'] ?? null,
+  t('metric.temperature') => $row['T'] ?? null,
+  t('metric.humidity') => $row['H'] ?? null,
+  t('metric.pressure') => $row['P'] ?? null,
+  t('metric.rain_1h') => $row['RR'] ?? null,
+  t('metric.rain_day') => $row['R'] ?? null,
+  t('metric.wind_avg') => $row['W'] ?? null,
+  t('metric.wind_gust') => $row['G'] ?? null,
+  t('metric.wind_dir') => $row['B'] ?? null,
+  t('metric.dew_point') => $row['D'] ?? null,
+  t('metric.apparent') => $row['A'] ?? null,
 ];
-foreach ($metrics as $label => $value): ?>
-  <?php
-    $display = 'N/A';
+foreach ($metrics as $label => $value):
+    $display = t('common.na');
     if ($value !== null) {
-        if ($label === 'Rain 1h (mm)' || $label === 'Rain day (mm)') {
+        if ($label === t('metric.rain_1h') || $label === t('metric.rain_day')) {
             $display = number_format((float) $value, 1, '.', '');
-        } elseif (in_array($label, ['Humidity (%)', 'Pressure (hPa)', 'Wind avg (km/h)', 'Wind gust (km/h)', 'Wind dir (°)'], true)) {
+        } elseif (in_array($label, [t('metric.humidity'), t('metric.pressure'), t('metric.wind_avg'), t('metric.wind_gust'), t('metric.wind_dir')], true)) {
             $display = number_format((float) $value, 0, '.', '');
         } else {
             $display = (string) $value;
         }
     }
-  ?>
+?>
   <article class="card"><h3><?= h($label) ?></h3><div><?= h($display) ?></div></article>
 <?php endforeach; ?>
 </section>
 <section class="panel">
-  <h3>Pluviométrie cumulée</h3>
+  <h3><?= h(t('rain.total')) ?></h3>
   <div class="cards">
-    <article class="card"><h3>Jour (mm)</h3><div><?= h(number_format((float) $rain['day'], 1, '.', '')) ?></div></article>
-    <article class="card"><h3>Mois (mm)</h3><div><?= h(number_format((float) $rain['month'], 1, '.', '')) ?></div></article>
-    <article class="card"><h3>Annee (mm)</h3><div><?= h(number_format((float) $rain['year'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.day')) ?></h3><div><?= h(number_format((float) $rain['day'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.month')) ?></h3><div><?= h(number_format((float) $rain['month'], 1, '.', '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.year')) ?></h3><div><?= h(number_format((float) $rain['year'], 1, '.', '')) ?></div></article>
   </div>
 </section>
 <script>
@@ -140,9 +140,9 @@ foreach ($metrics as $label => $value): ?>
   }
 
   function render() {
-    label.textContent = 'Auto refresh: ' + (enabled ? 'ON' : 'OFF');
+    label.textContent = '<?= h(t('dashboard.auto_refresh')) ?>: ' + (enabled ? 'ON' : 'OFF');
     countdown.textContent = fmt(remaining);
-    toggle.textContent = enabled ? 'Desactiver' : 'Activer';
+    toggle.textContent = enabled ? '<?= h(t('dashboard.disable')) ?>' : '<?= h(t('dashboard.enable')) ?>';
   }
 
   toggle.addEventListener('click', function () {

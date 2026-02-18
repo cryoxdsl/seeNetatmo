@@ -24,21 +24,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $res = auth_verify_2fa((string) ($_POST['code'] ?? ''));
     if ($res['ok']) {
         if (!empty($res['backup_used'])) {
-            $msg = 'Backup code used. Generate new one if needed.';
+            $msg = t('twofa.backup_used');
         }
         redirect(APP_ADMIN_PATH . '/index.php');
     }
-    $error = (string) ($res['error'] ?? 'Invalid code');
+    $error = (string) ($res['error'] ?? t('twofa.invalid'));
 }
 
 admin_header('2FA');
 ?>
-<h2>Two-factor authentication</h2>
+<h2><?= h(t('twofa.title')) ?></h2>
 <?php if ($msg): ?><div class="alert alert-ok"><?= h($msg) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-bad"><?= h($error) ?></div><?php endif; ?>
 <form method="post" class="panel">
   <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
-  <label>TOTP or backup code<br><input name="code" required></label><br><br>
-  <button type="submit">Validate</button>
+  <label><?= h(t('twofa.code')) ?><br><input name="code" required></label><br><br>
+  <button type="submit"><?= h(t('twofa.validate')) ?></button>
 </form>
 <?php admin_footer();

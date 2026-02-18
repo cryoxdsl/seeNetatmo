@@ -11,12 +11,12 @@ admin_require_login();
 $state = last_update_state();
 $row = latest_row();
 
-admin_header('Dashboard');
+admin_header(t('admin.dashboard'));
 ?>
-<h2>Dashboard</h2>
+<h2><?= h(t('admin.dashboard')) ?></h2>
 <div class="panel">
-  <p>Last DateTime: <strong><?= h($state['last'] ?? 'N/A') ?></strong></p>
-  <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? 'Disconnected' : 'Connected' ?></p>
-  <p>Temperature: <?= h($row['T'] ?? 'N/A') ?> °C | Pressure: <?= h($row['P'] ?? 'N/A') ?> hPa</p>
+  <p><?= h(t('admin.last_datetime')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
+  <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
+  <p><?= h(t('admin.temperature')) ?>: <?= h($row['T'] ?? t('common.na')) ?> °C | <?= h(t('admin.pressure')) ?>: <?= h($row['P'] ?? t('common.na')) ?> hPa</p>
 </div>
 <?php admin_footer();

@@ -18,15 +18,15 @@ $lastFetch = db()->query("SELECT created_at,message FROM app_logs WHERE channel=
 $lastDaily = db()->query("SELECT created_at,message FROM app_logs WHERE channel='cron.daily' ORDER BY id DESC LIMIT 1")->fetch();
 $err24h = (int)db()->query("SELECT COUNT(*) FROM app_logs WHERE level='error' AND created_at >= (NOW() - INTERVAL 24 HOUR)")->fetchColumn();
 
-admin_header('Health');
+admin_header(t('admin.health'));
 ?>
-<h2>Health</h2>
+<h2><?= h(t('health.title')) ?></h2>
 <div class="panel">
-  <p>DB status: <?= $dbOk ? 'OK' : 'ERROR ' . h($dbErr) ?></p>
-  <p>Last DateTime: <?= h($last['DateTime'] ?? 'N/A') ?></p>
-  <p>Last cron fetch: <?= h($lastFetch['created_at'] ?? 'N/A') ?> (<?= h($lastFetch['message'] ?? '') ?>)</p>
-  <p>Last cron daily: <?= h($lastDaily['created_at'] ?? 'N/A') ?> (<?= h($lastDaily['message'] ?? '') ?>)</p>
-  <p>Token status: <?= $token['configured'] ? 'Configured' : 'Missing' ?><?= $token['expired'] ? ' (expired)' : '' ?></p>
-  <p>Error counter 24h: <?= $err24h ?></p>
+  <p><?= h(t('health.db_status')) ?>: <?= $dbOk ? h(t('status.ok')) : h(t('status.error')) . ' ' . h($dbErr) ?></p>
+  <p><?= h(t('admin.last_datetime')) ?>: <?= h($last['DateTime'] ?? t('common.na')) ?></p>
+  <p><?= h(t('health.last_fetch')) ?>: <?= h($lastFetch['created_at'] ?? t('common.na')) ?> (<?= h($lastFetch['message'] ?? '') ?>)</p>
+  <p><?= h(t('health.last_daily')) ?>: <?= h($lastDaily['created_at'] ?? t('common.na')) ?> (<?= h($lastDaily['message'] ?? '') ?>)</p>
+  <p><?= h(t('health.token_status')) ?>: <?= $token['configured'] ? h(t('netatmo.configured')) : h(t('netatmo.missing')) ?><?= $token['expired'] ? ' (' . h(t('netatmo.expired')) . ')' : '' ?></p>
+  <p><?= h(t('health.error_24h')) ?>: <?= $err24h ?></p>
 </div>
 <?php admin_footer();

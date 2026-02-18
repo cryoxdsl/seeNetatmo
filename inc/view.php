@@ -15,11 +15,12 @@ function front_header(string $title): void
     echo '<link rel="stylesheet" href="/assets/css/style.css">';
     echo '</head><body>';
     echo '<header class="top"><div class="wrap head-row"><div class="brand">' . h(app_name()) . '</div><nav>';
-    echo '<a href="/index.php">Live</a><a href="/charts.php">Charts</a><a href="/history.php">History</a>';
+    echo '<a href="/index.php">' . h(t('nav.live')) . '</a><a href="/charts.php">' . h(t('nav.charts')) . '</a><a href="/history.php">' . h(t('nav.history')) . '</a>';
+    echo '<a href="' . h(locale_switch_url('fr_FR')) . '">' . h(t('lang.fr')) . '</a><a href="' . h(locale_switch_url('en_EN')) . '">' . h(t('lang.en')) . '</a>';
     echo '</nav></div></header><main class="wrap">';
 }
 
 function front_footer(): void
 {
-    echo '</main><footer class="foot"><div class="wrap">License: CC BY 4.0 | Contact: <a href="mailto:' . h(contact_email()) . '">' . h(contact_email()) . '</a></div></footer></body></html>';
+    echo '</main><footer class="foot"><div class="wrap">' . h(t('footer.license')) . ' | ' . h(t('footer.contact')) . ': <a href="mailto:' . h(contact_email()) . '">' . h(contact_email()) . '</a></div></footer></body></html>';
 }

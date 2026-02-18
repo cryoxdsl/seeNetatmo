@@ -82,33 +82,33 @@ function logs_query(array $params): string
     return http_build_query(array_filter($params, static fn($v) => $v !== '' && $v !== null));
 }
 
-admin_header('Logs');
+admin_header(t('admin.logs'));
 ?>
-<h2>Application logs</h2>
+<h2><?= h(t('logs.title')) ?></h2>
 <div class="panel">
 <form method="get" class="row">
-  <label>Level
+  <label><?= h(t('logs.level')) ?>
     <select name="level">
-      <option value="">All</option>
+      <option value=""><?= h(t('logs.all')) ?></option>
       <?php foreach ($levels as $l): $v = (string) $l['level']; ?>
       <option value="<?= h($v) ?>" <?= $level === $v ? 'selected' : '' ?>><?= h($v) ?></option>
       <?php endforeach; ?>
     </select>
   </label>
-  <label>Channel
+  <label><?= h(t('logs.channel')) ?>
     <select name="channel">
-      <option value="">All</option>
+      <option value=""><?= h(t('logs.all')) ?></option>
       <?php foreach ($channels as $c): $v = (string) $c['channel']; ?>
       <option value="<?= h($v) ?>" <?= $channel === $v ? 'selected' : '' ?>><?= h($v) ?></option>
       <?php endforeach; ?>
     </select>
   </label>
-  <label>Search
-    <input type="text" name="q" value="<?= h($q) ?>" placeholder="message/context">
+  <label><?= h(t('logs.search')) ?>
+    <input type="text" name="q" value="<?= h($q) ?>" placeholder="<?= h(t('logs.search_placeholder')) ?>">
   </label>
-  <label>Window
+  <label><?= h(t('logs.window')) ?>
     <select name="hours">
-      <option value="0" <?= $hours === 0 ? 'selected' : '' ?>>All time</option>
+      <option value="0" <?= $hours === 0 ? 'selected' : '' ?>><?= h(t('logs.all')) ?></option>
       <option value="6" <?= $hours === 6 ? 'selected' : '' ?>>6h</option>
       <option value="12" <?= $hours === 12 ? 'selected' : '' ?>>12h</option>
       <option value="24" <?= $hours === 24 ? 'selected' : '' ?>>24h</option>
@@ -118,7 +118,7 @@ admin_header('Logs');
       <option value="720" <?= $hours === 720 ? 'selected' : '' ?>>30d</option>
     </select>
   </label>
-  <label>Rows
+  <label><?= h(t('logs.rows')) ?>
     <select name="per_page">
       <option value="25" <?= $perPage === 25 ? 'selected' : '' ?>>25</option>
       <option value="50" <?= $perPage === 50 ? 'selected' : '' ?>>50</option>
@@ -126,24 +126,24 @@ admin_header('Logs');
       <option value="200" <?= $perPage === 200 ? 'selected' : '' ?>>200</option>
     </select>
   </label>
-  <button type="submit">Filter</button>
-  <a class="btn" href="logs.php">Reset</a>
+  <button type="submit"><?= h(t('logs.filter')) ?></button>
+  <a class="btn" href="logs.php"><?= h(t('logs.reset')) ?></a>
 </form>
-<p><?= (int) $total ?> log(s) found</p>
+<p><?= (int) $total ?> <?= h(t('logs.found')) ?></p>
 </div>
 <div class="panel table-wrap">
 <table>
-<thead><tr><th>ID</th><th>Level</th><th>Channel</th><th>Message</th><th>Context</th><th>Date</th></tr></thead>
+<thead><tr><th>ID</th><th><?= h(t('logs.level')) ?></th><th><?= h(t('logs.channel')) ?></th><th><?= h(t('logs.message')) ?></th><th><?= h(t('logs.context')) ?></th><th><?= h(t('logs.date')) ?></th></tr></thead>
 <tbody><?php foreach($rows as $r): ?><tr>
 <td><?= (int)$r['id'] ?></td><td><?= h($r['level']) ?></td><td><?= h($r['channel']) ?></td><td><?= h($r['message']) ?></td><td class="code"><?= h($r['context_json']) ?></td><td><?= h($r['created_at']) ?></td>
 </tr><?php endforeach; ?>
-<?php if (!$rows): ?><tr><td colspan="6">No logs found.</td></tr><?php endif; ?>
+<?php if (!$rows): ?><tr><td colspan="6"><?= h(t('logs.no_results')) ?></td></tr><?php endif; ?>
 </tbody>
 </table>
 </div>
 <div class="panel row">
-  <a class="btn" href="logs.php?<?= h(logs_query($baseParams + ['page' => max(1, $page - 1)])) ?>">Prev</a>
-  <span>Page <?= (int) $page ?> / <?= (int) $pages ?></span>
-  <a class="btn" href="logs.php?<?= h(logs_query($baseParams + ['page' => min($pages, $page + 1)])) ?>">Next</a>
+  <a class="btn" href="logs.php?<?= h(logs_query($baseParams + ['page' => max(1, $page - 1)])) ?>"><?= h(t('pagination.prev')) ?></a>
+  <span><?= h(t('pagination.page')) ?> <?= (int) $page ?> / <?= (int) $pages ?></span>
+  <a class="btn" href="logs.php?<?= h(logs_query($baseParams + ['page' => min($pages, $page + 1)])) ?>"><?= h(t('pagination.next')) ?></a>
 </div>
 <?php admin_footer();
