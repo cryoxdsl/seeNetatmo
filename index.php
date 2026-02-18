@@ -97,22 +97,29 @@ $alertDesc = match ($alertLevel) {
     'red' => t('dashboard.alert_desc_red'),
     default => t('dashboard.alert_desc_green'),
 };
-$tooltip = $alertLabel . ': ' . $alertDesc;
-$alertTypes = [];
-if ($alertLevel !== 'green') {
-    if (isset($alert['types']) && is_array($alert['types'])) {
-        foreach ($alert['types'] as $type) {
-            $type = trim((string) $type);
-            if ($type !== '') {
-                $alertTypes[] = $type;
-            }
+$alertBadges = [];
+if (isset($alert['alerts']) && is_array($alert['alerts'])) {
+    foreach ($alert['alerts'] as $a) {
+        if (!is_array($a)) {
+            continue;
         }
+        $type = trim((string) ($a['type'] ?? 'generic'));
+        $level = trim((string) ($a['level'] ?? 'green'));
+        if ($type === '') {
+            $type = 'generic';
+        }
+        if (!in_array($level, ['yellow', 'orange', 'red'], true)) {
+            $level = 'green';
+        }
+        $alertBadges[] = ['type' => $type, 'level' => $level];
     }
-    if ($alertTypes === []) {
-        $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
-        $alertTypes[] = $fallbackType !== '' ? $fallbackType : 'generic';
-    }
-    $alertTypes = array_values(array_unique($alertTypes));
+}
+if ($alertBadges === []) {
+    $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
+    $alertBadges[] = [
+        'type' => $fallbackType !== '' ? $fallbackType : 'generic',
+        'level' => $alertLevel,
+    ];
 }
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
@@ -126,17 +133,28 @@ $stationAltDisplay = $stationAlt !== '' ? (number_format((float) $stationAlt, 0,
 front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
-  <a class="vigi-badge vigi-<?= h($alertLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($tooltip) ?>">
-    <?php if ($alertTypes !== []): ?>
-      <span class="vigi-icons">
-        <?php foreach ($alertTypes as $vType): ?>
-          <span class="vigi-icon"><?= vigilance_icon($vType) ?></span>
-        <?php endforeach; ?>
-      </span>
-    <?php else: ?>
-      <span class="vigi-icon"><?= vigilance_icon('generic') ?></span>
-    <?php endif; ?>
-  </a>
+  <div class="vigi-badges">
+    <?php foreach ($alertBadges as $badge):
+      $bLevel = (string) ($badge['level'] ?? 'green');
+      $bLabel = match ($bLevel) {
+        'yellow' => t('dashboard.alert_level_yellow'),
+        'orange' => t('dashboard.alert_level_orange'),
+        'red' => t('dashboard.alert_level_red'),
+        default => t('dashboard.alert_level_green'),
+      };
+      $bDesc = match ($bLevel) {
+        'yellow' => t('dashboard.alert_desc_yellow'),
+        'orange' => t('dashboard.alert_desc_orange'),
+        'red' => t('dashboard.alert_desc_red'),
+        default => t('dashboard.alert_desc_green'),
+      };
+      $bTooltip = $bLabel . ': ' . $bDesc;
+    ?>
+      <a class="vigi-badge vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
+        <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
+      </a>
+    <?php endforeach; ?>
+  </div>
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">

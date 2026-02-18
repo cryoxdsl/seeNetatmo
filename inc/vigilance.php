@@ -164,6 +164,15 @@ function vigilance_slug(string $value): string
 
 function vigilance_department_url(string $dept, string $deptName = ''): string
 {
+    $fallbackByDept = [
+        '13' => 'bouches-du-rhone',
+        '33' => 'gironde',
+    ];
+    $k = strtoupper($dept);
+    if (isset($fallbackByDept[$k])) {
+        return 'https://vigilance.meteofrance.fr/fr/' . $fallbackByDept[$k];
+    }
+
     $deptName = trim($deptName);
     if ($deptName !== '') {
         $slug = vigilance_slug($deptName);
@@ -172,15 +181,17 @@ function vigilance_department_url(string $dept, string $deptName = ''): string
         }
     }
 
-    $fallbackByDept = [
-        '13' => 'bouches-du-rhone',
-    ];
-    $k = strtoupper($dept);
-    if (isset($fallbackByDept[$k])) {
-        return 'https://vigilance.meteofrance.fr/fr/' . $fallbackByDept[$k];
-    }
-
     return 'https://vigilance.meteofrance.fr/fr/widget-vigilance/vigilance-departement/' . rawurlencode($dept);
+}
+
+function vigilance_level_rank(string $level): int
+{
+    return match ($level) {
+        'red' => 3,
+        'orange' => 2,
+        'yellow' => 1,
+        default => 0,
+    };
 }
 
 function vigilance_current(bool $allowRemote = false): array
@@ -196,6 +207,7 @@ function vigilance_current(bool $allowRemote = false): array
         'type' => 'generic',
         'types' => [],
         'phenomena' => [],
+        'alerts' => [],
         'period_text' => '',
         'updated_text' => '',
         'url' => vigilance_department_url($dept),
@@ -273,6 +285,24 @@ function vigilance_current(bool $allowRemote = false): array
             $result['phenomenon'] = implode(', ', $labels);
             $result['types'] = $types;
             $result['type'] = $types[0] ?? 'generic';
+            $alertsByType = [];
+            foreach ($entries as $e) {
+                $lvl = (string) ($e['level'] ?? 'yellow');
+                $label = trim((string) ($e['phenomenon'] ?? ''));
+                foreach (vigilance_types_from_label($label) as $tp) {
+                    if (!isset($alertsByType[$tp]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByType[$tp]['level'])) {
+                        $alertsByType[$tp] = [
+                            'level' => $lvl,
+                            'type' => $tp,
+                            'label' => $label,
+                        ];
+                    }
+                }
+            }
+            usort($alertsByType, static function (array $a, array $b): int {
+                return vigilance_level_rank((string) ($b['level'] ?? 'green')) <=> vigilance_level_rank((string) ($a['level'] ?? 'green'));
+            });
+            $result['alerts'] = array_values($alertsByType);
             $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
         }
     } catch (Throwable $e) {
