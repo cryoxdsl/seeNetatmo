@@ -38,7 +38,8 @@ OVH /www (Document Root)
 │   └── secrets.php.example      # Template (committed)
 ├── cron/                        # Cron jobs (can be restricted)
 │   ├── fetch.php
-│   └── daily.php
+│   ├── daily.php
+│   └── external.php
 ├── inc/                         # Internal includes (not web-accessible)
 │   ├── bootstrap.php
 │   ├── auth.php

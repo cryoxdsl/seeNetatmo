@@ -144,36 +144,10 @@ function vigilance_department_url(string $dept, string $deptName = ''): string
     return 'https://vigilance.meteofrance.fr/fr/widget-vigilance/vigilance-departement/' . rawurlencode($dept);
 }
 
-function vigilance_current(): array
+function vigilance_current(bool $allowRemote = false): array
 {
     $dept = station_department();
-    $rawCache = setting_get('mf_vigilance_cache_json', '');
-    $lastTry = (int) (setting_get('mf_vigilance_last_try', '0') ?? 0);
-    $retryAfter = 300;
-    if ($rawCache !== '') {
-        $cache = json_decode($rawCache, true);
-        if (is_array($cache) && ($cache['dept'] ?? '') === $dept && ((int) ($cache['fetched_at'] ?? 0)) > (time() - 300)) {
-            return $cache;
-        }
-        if (is_array($cache) && ($cache['dept'] ?? '') === $dept && $lastTry > (time() - $retryAfter)) {
-            return $cache;
-        }
-    } elseif ($lastTry > (time() - $retryAfter)) {
-        return [
-            'dept' => $dept,
-            'fetched_at' => time(),
-            'active' => false,
-            'level' => 'green',
-            'level_label' => 'green',
-            'phenomenon' => '',
-            'type' => 'generic',
-            'period_text' => '',
-            'updated_text' => '',
-            'url' => vigilance_department_url($dept),
-        ];
-    }
-
-    $result = [
+    $default = [
         'dept' => $dept,
         'fetched_at' => time(),
         'active' => false,
@@ -185,6 +159,28 @@ function vigilance_current(): array
         'updated_text' => '',
         'url' => vigilance_department_url($dept),
     ];
+    $rawCache = setting_get('mf_vigilance_cache_json', '');
+    $lastTry = (int) (setting_get('mf_vigilance_last_try', '0') ?? 0);
+    $retryAfter = 300;
+    if ($rawCache !== '') {
+        $cache = json_decode($rawCache, true);
+        if (is_array($cache) && ($cache['dept'] ?? '') === $dept && ((int) ($cache['fetched_at'] ?? 0)) > (time() - 300)) {
+            return $cache;
+        }
+        if (is_array($cache) && ($cache['dept'] ?? '') === $dept && $lastTry > (time() - $retryAfter)) {
+            return $cache;
+        }
+        if (!$allowRemote && is_array($cache) && ($cache['dept'] ?? '') === $dept) {
+            return $cache;
+        }
+    } elseif ($lastTry > (time() - $retryAfter)) {
+        return $default;
+    }
+    if (!$allowRemote) {
+        return $default;
+    }
+
+    $result = $default;
 
     try {
         setting_set('mf_vigilance_last_try', (string) time());

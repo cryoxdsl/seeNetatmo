@@ -126,12 +126,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $st['master_key'] = random_hex(32);
             $st['cron_key_fetch'] = random_hex(24);
             $st['cron_key_daily'] = random_hex(24);
+            $st['cron_key_external'] = random_hex(24);
             $_SESSION['install'] = $st;
             header('Location: ?step=8'); exit;
         }
 
         if ($step === 8) {
-            foreach (['db_host','db_name','db_user','data_table','admin_username','admin_password_hash','totp_secret','master_key','cron_key_fetch','cron_key_daily'] as $k) {
+            foreach (['db_host','db_name','db_user','data_table','admin_username','admin_password_hash','totp_secret','master_key','cron_key_fetch','cron_key_daily','cron_key_external'] as $k) {
                 if (empty($st[$k])) throw new RuntimeException('Installer state missing: ' . $k);
             }
 
@@ -162,6 +163,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $secrets = [
                 'cron_key_fetch' => $st['cron_key_fetch'],
                 'cron_key_daily' => $st['cron_key_daily'],
+                'cron_key_external' => $st['cron_key_external'],
                 'netatmo_client_id' => (string)($st['netatmo_client_id'] ?? ''),
                 'netatmo_client_secret' => (string)($st['netatmo_client_secret'] ?? ''),
             ];
@@ -235,6 +237,7 @@ if (!empty($st['totp_secret']) && !empty($st['admin_username'])) {
   <p>Netatmo redirect URI: <span class="code">https://meteo13.fr/admin-meteo13/netatmo_callback.php</span></p>
   <p>Cron fetch URL: <span class="code">https://meteo13.fr/cron/fetch.php?key=<?=h($st['cron_key_fetch'])?></span></p>
   <p>Cron daily URL: <span class="code">https://meteo13.fr/cron/daily.php?key=<?=h($st['cron_key_daily'])?></span></p>
+  <p>Cron external URL: <span class="code">https://meteo13.fr/cron/external.php?key=<?=h($st['cron_key_external'])?></span></p>
   <p>2FA TOTP URI: <span class="code"><?=h($totpUri)?></span></p>
   <?php if($qrUrl):?><p><img src="<?=h($qrUrl)?>" alt="TOTP QR"></p><?php endif;?>
   <p>Backup codes (store securely): <span class="code"><?=h(implode(' ', $st['backup_plain'] ?? []))?></span></p>

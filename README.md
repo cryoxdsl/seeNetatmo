@@ -24,6 +24,7 @@ PHP 8 weather application for OVH shared hosting (`hosting-starter`), without fr
 - Cron HTTP via cron-job.org:
   - `/cron/fetch.php?key=...` (5 min)
   - `/cron/daily.php?key=...` (00:10)
+  - `/cron/external.php?key=...` (10-15 min, vigilance + sea temperature cache)
 
 ## FR - Déploiement OVH (Git vers /www)
 1. Créer la base MySQL OVH.
@@ -45,6 +46,7 @@ PHP 8 weather application for OVH shared hosting (`hosting-starter`), without fr
 8. Configurer cron-job.org:
    - toutes les 5 min: `https://meteo13.fr/cron/fetch.php?key=CRON_KEY_FETCH`
    - tous les jours 00:10: `https://meteo13.fr/cron/daily.php?key=CRON_KEY_DAILY`
+   - toutes les 10-15 min: `https://meteo13.fr/cron/external.php?key=CRON_KEY_EXTERNAL`
 9. Optionnel: supprimer `/install/` (bloqué de toute façon par `installed.lock`).
 
 ## FR - Règles métier météo
@@ -88,6 +90,7 @@ PHP 8 weather application for OVH shared hosting (`hosting-starter`), without fr
 7. Configure cron-job.org:
    - every 5 minutes: `/cron/fetch.php?key=...`
    - daily 00:10: `/cron/daily.php?key=...`
+   - every 10-15 minutes: `/cron/external.php?key=...`
 
 ## Security & secrets
 - `config/.htaccess` denies direct access.

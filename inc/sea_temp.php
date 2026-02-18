@@ -58,7 +58,7 @@ function haversine_km(float $lat1, float $lon1, float $lat2, float $lon2): float
     return $r * $c;
 }
 
-function sea_temp_nearest(): array
+function sea_temp_nearest(bool $allowRemote = false): array
 {
     $coords = station_coordinates();
     if ($coords === null) {
@@ -80,9 +80,15 @@ function sea_temp_nearest(): array
             if ($same && $lastTry > (time() - $retryAfter)) {
                 return $cache;
             }
+            if (!$allowRemote && $same) {
+                return $cache;
+            }
         }
     } elseif ($lastTry > (time() - $retryAfter)) {
         return ['available' => false, 'reason' => 'retry_later'];
+    }
+    if (!$allowRemote) {
+        return ['available' => false, 'reason' => 'cache_only'];
     }
 
     $query = http_build_query([
