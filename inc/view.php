@@ -27,5 +27,5 @@ function front_header(string $title): void
 
 function front_footer(): void
 {
-    echo '</main><footer class="foot"><div class="wrap">' . h(t('footer.license')) . ' | ' . h(t('footer.contact')) . ': <a href="mailto:' . h(contact_email()) . '">' . h(contact_email()) . '</a></div></footer></body></html>';
+    echo '</main><footer class="foot"><div class="wrap">' . h(t('footer.license')) . ' | ' . h(t('footer.contact')) . ': <a href="mailto:' . h(contact_email()) . '">' . h(contact_email()) . '</a> | <a href="/terms.php">' . h(t('footer.terms')) . '</a></div></footer></body></html>';
 }

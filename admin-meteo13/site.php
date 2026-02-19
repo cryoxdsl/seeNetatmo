@@ -9,6 +9,7 @@ require_once __DIR__ . '/../inc/admin_ui.php';
 
 admin_require_login();
 $msg='';$err='';
+$termsContentForm = terms_of_use_content();
 if ($_SERVER['REQUEST_METHOD']==='POST') {
     require_csrf();
     $site = trim((string)($_POST['site_name'] ?? ''));
@@ -24,6 +25,9 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $stationLon = trim((string) ($_POST['station_lon'] ?? ''));
     $stationAlt = trim((string) ($_POST['station_altitude'] ?? ''));
     $stationLock = isset($_POST['station_lock_position']) ? '1' : '0';
+    $termsContent = (string) ($_POST['terms_of_use_content'] ?? terms_of_use_content());
+    $termsContent = str_replace(["\r\n", "\r"], "\n", $termsContent);
+    $termsContentForm = $termsContent;
     $uploadedFavicon = null;
 
     if (isset($_FILES['favicon_file']) && is_array($_FILES['favicon_file']) && ((int)($_FILES['favicon_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE)) {
@@ -117,6 +121,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('station_lon', $stationLon !== '' ? (string) ((float) $stationLon) : '');
         setting_set('station_altitude', $stationAlt !== '' ? (string) ((float) $stationAlt) : '');
         setting_set('station_lock_position', $stationLock);
+        setting_set('terms_of_use_content', $termsContent);
         $msg=t('site.saved');
     }
 }
@@ -142,6 +147,10 @@ admin_header(t('admin.site'));
   <label><?= h(t('site.favicon_upload')) ?><br><input type="file" name="favicon_file" accept=".ico,.png,.jpg,.jpeg,.webp,image/x-icon,image/png,image/jpeg,image/webp"></label><br><br>
   <p><?= h(t('site.favicon_current')) ?>: <span class="code"><?=h(favicon_url())?></span></p>
   <label><?= h(t('site.contact')) ?><br><input type="email" name="contact_email" value="<?=h(contact_email())?>" required></label><br><br>
+  <label><?= h(t('site.terms_content')) ?><br>
+    <textarea name="terms_of_use_content" rows="12" style="width:min(900px,100%);"><?= h($termsContentForm) ?></textarea>
+  </label>
+  <p class="small-muted"><?= h(t('site.terms_content_help')) ?></p><br>
   <label><?= h(t('site.table')) ?><br><input name="data_table" value="<?=h(data_table())?>" required></label><br><br>
   <label><?= h(t('site.default_locale')) ?><br>
     <select name="default_locale">

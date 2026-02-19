@@ -78,3 +78,8 @@ function weather_icon_style_setting(): string
     $style = setting_get('weather_icon_style', 'realistic') ?? 'realistic';
     return in_array($style, ['realistic', 'minimal', 'outline', 'glyph'], true) ? $style : 'realistic';
 }
+
+function terms_of_use_content(): string
+{
+    return setting_get('terms_of_use_content', '') ?? '';
+}
