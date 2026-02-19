@@ -327,6 +327,153 @@ function vigilance_level_code(string $level): string
     };
 }
 
+function vigilance_parse_heading_date(string $heading, DateTimeImmutable $now): ?DateTimeImmutable
+{
+    $value = trim($heading);
+    if ($value === '') {
+        return null;
+    }
+
+    $norm = vigilance_normalize_text($value);
+    $norm = preg_replace('/^(lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\s+/i', '', $norm) ?? $norm;
+    if (!preg_match('/(\d{1,2})\s+([a-z\-]+)(?:\s+(\d{4}))?/i', $norm, $m)) {
+        return null;
+    }
+
+    $day = (int) $m[1];
+    $monthToken = strtolower((string) $m[2]);
+    $year = isset($m[3]) && $m[3] !== '' ? (int) $m[3] : (int) $now->format('Y');
+
+    $monthMap = [
+        'janvier' => 1, 'january' => 1,
+        'fevrier' => 2, 'february' => 2,
+        'mars' => 3, 'march' => 3,
+        'avril' => 4, 'april' => 4,
+        'mai' => 5, 'may' => 5,
+        'juin' => 6, 'june' => 6,
+        'juillet' => 7, 'july' => 7,
+        'aout' => 8, 'august' => 8,
+        'septembre' => 9, 'september' => 9,
+        'octobre' => 10, 'october' => 10,
+        'novembre' => 11, 'november' => 11,
+        'decembre' => 12, 'december' => 12,
+    ];
+    $month = $monthMap[$monthToken] ?? 0;
+    if ($month <= 0) {
+        return null;
+    }
+
+    try {
+        $dt = new DateTimeImmutable(sprintf('%04d-%02d-%02d 00:00:00', $year, $month, $day), new DateTimeZone(APP_TIMEZONE));
+    } catch (Throwable) {
+        return null;
+    }
+
+    if (!isset($m[3]) || $m[3] === '') {
+        if ($dt < $now->modify('-183 days')) {
+            $dt = $dt->modify('+1 year');
+        } elseif ($dt > $now->modify('+183 days')) {
+            $dt = $dt->modify('-1 year');
+        }
+    }
+    return $dt;
+}
+
+function vigilance_extract_day_sections(string $text): array
+{
+    $out = [];
+    if (!preg_match_all('/Vigilance\s+m[^\s]*\s+et\s+crues\s+pour\s+(.+?)(?=Vigilance\s+m[^\s]*\s+et\s+crues\s+pour\s+|$)/isu', $text, $all, PREG_SET_ORDER)) {
+        return $out;
+    }
+    foreach ($all as $m) {
+        $chunk = trim((string) ($m[1] ?? ''));
+        if ($chunk === '') {
+            continue;
+        }
+        $parts = preg_split('/Diffusion\s*:/iu', $chunk, 2);
+        $heading = trim((string) ($parts[0] ?? ''));
+        $out[] = [
+            'heading' => $heading,
+            'text' => $chunk,
+        ];
+    }
+    return $out;
+}
+
+function vigilance_entries_for_dept(string $text, string $dept): array
+{
+    $entriesRed = vigilance_extract_entries($text, 'rouge', $dept);
+    $entriesOrange = vigilance_extract_entries($text, 'orange', $dept);
+    $entriesYellow = vigilance_extract_entries($text, 'jaune', $dept);
+    return array_values(array_merge($entriesRed, $entriesOrange, $entriesYellow));
+}
+
+function vigilance_summary_from_entries(array $entries): array
+{
+    if ($entries === []) {
+        return [
+            'active' => false,
+            'level' => 'green',
+            'labels' => [],
+            'types' => [],
+            'type' => 'generic',
+            'alerts' => [],
+            'entry' => null,
+        ];
+    }
+
+    $level = 'green';
+    $labels = [];
+    $types = [];
+    $alertsByPhenomenon = [];
+    foreach ($entries as $e) {
+        $lvl = vigilance_level_code((string) ($e['level'] ?? 'green'));
+        if (vigilance_level_rank($lvl) > vigilance_level_rank($level)) {
+            $level = $lvl;
+        }
+        $label = trim((string) ($e['phenomenon'] ?? ''));
+        if ($label !== '') {
+            $labels[] = $label;
+        }
+        $types = array_merge($types, vigilance_types_from_label($label));
+        if ($label === '') {
+            continue;
+        }
+        foreach (vigilance_types_from_label($label) as $tp) {
+            $badgeLabel = vigilance_badge_label_for_type($tp, $label);
+            $keyRaw = $tp . '|' . $badgeLabel;
+            $key = function_exists('mb_strtolower') ? mb_strtolower($keyRaw, 'UTF-8') : strtolower($keyRaw);
+            if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
+                $alertsByPhenomenon[$key] = [
+                    'level' => $lvl,
+                    'type' => $tp,
+                    'label' => $badgeLabel,
+                ];
+            }
+        }
+    }
+
+    $labels = array_values(array_unique($labels));
+    $types = array_values(array_unique($types));
+    if ($types === []) {
+        $types = [vigilance_type_from_label((string) ($entries[0]['phenomenon'] ?? ''))];
+    }
+    $alerts = array_values($alertsByPhenomenon);
+    usort($alerts, static function (array $a, array $b): int {
+        return vigilance_level_rank((string) ($b['level'] ?? 'green')) <=> vigilance_level_rank((string) ($a['level'] ?? 'green'));
+    });
+
+    return [
+        'active' => true,
+        'level' => $level,
+        'labels' => $labels,
+        'types' => $types,
+        'type' => $types[0] ?? 'generic',
+        'alerts' => $alerts,
+        'entry' => $entries[0] ?? null,
+    ];
+}
+
 function vigilance_current(bool $allowRemote = false): array
 {
     $dept = station_department();
@@ -340,6 +487,12 @@ function vigilance_current(bool $allowRemote = false): array
         'type' => 'generic',
         'types' => [],
         'phenomena' => [],
+        'alerts_current' => [],
+        'alerts_next_12h' => [],
+        'next_12h_active' => false,
+        'next_12h_level' => 'green',
+        'next_12h_phenomena' => [],
+        'next_12h_phenomenon' => '',
         'alerts' => [],
         'period_text' => '',
         'updated_text' => '',
@@ -351,13 +504,13 @@ function vigilance_current(bool $allowRemote = false): array
     if ($rawCache !== '') {
         $cache = json_decode($rawCache, true);
         if (is_array($cache) && ($cache['dept'] ?? '') === $dept && ((int) ($cache['fetched_at'] ?? 0)) > (time() - 300)) {
-            return $cache;
+            return array_replace($default, $cache);
         }
         if (is_array($cache) && ($cache['dept'] ?? '') === $dept && $lastTry > (time() - $retryAfter)) {
-            return $cache;
+            return array_replace($default, $cache);
         }
         if (!$allowRemote && is_array($cache) && ($cache['dept'] ?? '') === $dept) {
-            return $cache;
+            return array_replace($default, $cache);
         }
     } elseif ($lastTry > (time() - $retryAfter)) {
         return $default;
@@ -373,78 +526,87 @@ function vigilance_current(bool $allowRemote = false): array
         $html = vigilance_http_get(MF_VIGILANCE_ACCESSIBLE_URL);
         $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
         $text = preg_replace('/\s+/', ' ', $text) ?? $text;
+        $now = new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE));
 
         if (preg_match('/Diffusion\s*:\s*le\s*([^\.]+)\./iu', $text, $m) === 1) {
             $result['updated_text'] = trim((string) $m[1]);
         }
-        if (preg_match('/Vigilance météo et crues pour\s*([^\.]+)\./iu', $text, $m) === 1) {
+        if (preg_match('/Vigilance\s+m[^\s]*\s+et\s+crues\s+pour\s*([^\.]+)\./iu', $text, $m) === 1) {
             $result['period_text'] = trim((string) $m[1]);
         }
 
-        $entriesRed = vigilance_extract_entries($text, 'rouge', $dept);
-        $entriesOrange = vigilance_extract_entries($text, 'orange', $dept);
-        $entriesYellow = vigilance_extract_entries($text, 'jaune', $dept);
-        $entries = array_values(array_merge($entriesRed, $entriesOrange, $entriesYellow));
-        $entry = $entries[0] ?? null;
+        $sections = vigilance_extract_day_sections($text);
+        if ($sections === []) {
+            $sections = [['heading' => '', 'text' => $text]];
+        }
 
-        if ($entry !== null) {
+        $resolved = [];
+        foreach ($sections as $section) {
+            $heading = trim((string) ($section['heading'] ?? ''));
+            $sectionText = (string) ($section['text'] ?? '');
+            $resolved[] = [
+                'heading' => $heading,
+                'date' => vigilance_parse_heading_date($heading, $now),
+                'summary' => vigilance_summary_from_entries(vigilance_entries_for_dept($sectionText, $dept)),
+            ];
+        }
+
+        $todayKey = $now->format('Y-m-d');
+        $deadlineKey = $now->modify('+12 hours')->format('Y-m-d');
+        $currentIndex = 0;
+        foreach ($resolved as $i => $item) {
+            $dateKey = $item['date'] instanceof DateTimeImmutable ? $item['date']->format('Y-m-d') : '';
+            if ($dateKey === $todayKey) {
+                $currentIndex = $i;
+                break;
+            }
+        }
+
+        $nextIndex = null;
+        foreach ($resolved as $i => $item) {
+            if ($i === $currentIndex) {
+                continue;
+            }
+            $dateKey = $item['date'] instanceof DateTimeImmutable ? $item['date']->format('Y-m-d') : '';
+            if ($dateKey !== '' && $dateKey > $todayKey && $dateKey <= $deadlineKey) {
+                $nextIndex = $i;
+                break;
+            }
+        }
+
+        $current = $resolved[$currentIndex]['summary'] ?? vigilance_summary_from_entries([]);
+        if (($current['active'] ?? false) === true) {
             $result['active'] = true;
-            if ($entriesRed !== []) {
-                $result['level'] = 'red';
-                $result['level_label'] = 'red';
-            } elseif ($entriesOrange !== []) {
-                $result['level'] = 'orange';
-                $result['level_label'] = 'orange';
-            } else {
-                $result['level'] = 'yellow';
-                $result['level_label'] = 'yellow';
+            $result['level'] = (string) ($current['level'] ?? 'green');
+            $result['level_label'] = $result['level'];
+            $result['phenomena'] = (array) ($current['labels'] ?? []);
+            $result['phenomenon'] = implode(', ', $result['phenomena']);
+            $result['types'] = (array) ($current['types'] ?? []);
+            $result['type'] = (string) ($current['type'] ?? 'generic');
+            $result['alerts_current'] = (array) ($current['alerts'] ?? []);
+            $result['alerts'] = $result['alerts_current'];
+            $entry = $current['entry'] ?? null;
+            if (is_array($entry)) {
+                $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
             }
-            $labels = [];
-            $types = [];
-            foreach ($entries as $e) {
-                $label = trim((string) ($e['phenomenon'] ?? ''));
-                if ($label !== '') {
-                    $labels[] = $label;
-                }
-                $types = array_merge($types, vigilance_types_from_label($label));
+            $currentHeading = trim((string) ($resolved[$currentIndex]['heading'] ?? ''));
+            if ($currentHeading !== '') {
+                $result['period_text'] = $currentHeading;
             }
-            $labels = array_values(array_unique($labels));
-            $types = array_values(array_unique($types));
-            if ($types === []) {
-                $types = [vigilance_type_from_label((string) $entry['phenomenon'])];
-            }
+        }
 
-            $result['phenomena'] = $labels;
-            $result['phenomenon'] = implode(', ', $labels);
-            $result['types'] = $types;
-            $result['type'] = $types[0] ?? 'generic';
-            $alertsByPhenomenon = [];
-            foreach ($entries as $e) {
-                $lvl = vigilance_level_code((string) ($e['level'] ?? 'yellow'));
-                $label = trim((string) ($e['phenomenon'] ?? ''));
-                if ($label === '') {
-                    continue;
-                }
-                $typesForLabel = vigilance_types_from_label($label);
-                foreach ($typesForLabel as $tp) {
-                    $badgeLabel = vigilance_badge_label_for_type($tp, $label);
-                    $keyRaw = $tp . '|' . $badgeLabel;
-                    $key = function_exists('mb_strtolower') ? mb_strtolower($keyRaw, 'UTF-8') : strtolower($keyRaw);
-                    if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
-                        $alertsByPhenomenon[$key] = [
-                        'level' => $lvl,
-                            'type' => $tp,
-                            'label' => $badgeLabel,
-                        ];
-                    }
+        if ($nextIndex !== null) {
+            $next = $resolved[$nextIndex]['summary'] ?? vigilance_summary_from_entries([]);
+            if (($next['active'] ?? false) === true) {
+                $result['next_12h_active'] = true;
+                $result['next_12h_level'] = (string) ($next['level'] ?? 'green');
+                $result['next_12h_phenomena'] = (array) ($next['labels'] ?? []);
+                $result['next_12h_phenomenon'] = implode(', ', $result['next_12h_phenomena']);
+                $result['alerts_next_12h'] = (array) ($next['alerts'] ?? []);
+                if ($result['alerts_current'] === []) {
+                    $result['alerts'] = $result['alerts_next_12h'];
                 }
             }
-            $alerts = array_values($alertsByPhenomenon);
-            usort($alerts, static function (array $a, array $b): int {
-                return vigilance_level_rank((string) ($b['level'] ?? 'green')) <=> vigilance_level_rank((string) ($a['level'] ?? 'green'));
-            });
-            $result['alerts'] = $alerts;
-            $result['url'] = vigilance_department_url($dept, (string) ($entry['dept_name'] ?? ''));
         }
     } catch (Throwable $e) {
         log_event('warning', 'front.vigilance', 'Vigilance fetch failed', ['err' => $e->getMessage(), 'dept' => $dept]);

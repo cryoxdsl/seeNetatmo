@@ -98,9 +98,12 @@ $alertDesc = match ($alertLevel) {
     'red' => t('dashboard.alert_desc_red'),
     default => t('dashboard.alert_desc_green'),
 };
-$alertBadges = [];
-if (isset($alert['alerts']) && is_array($alert['alerts'])) {
-    foreach ($alert['alerts'] as $a) {
+$normalizeAlertBadges = static function (mixed $source): array {
+    $out = [];
+    if (!is_array($source)) {
+        return $out;
+    }
+    foreach ($source as $a) {
         if (!is_array($a)) {
             continue;
         }
@@ -115,14 +118,22 @@ if (isset($alert['alerts']) && is_array($alert['alerts'])) {
         if ($type === '') {
             $type = 'generic';
         }
-        $alertBadges[] = ['type' => $type, 'level' => $level];
+        $out[] = [
+            'type' => $type,
+            'level' => $level,
+            'label' => trim((string) ($a['label'] ?? '')),
+        ];
     }
-}
-if ($alertBadges === []) {
+    return $out;
+};
+$alertNowBadges = $normalizeAlertBadges($alert['alerts_current'] ?? $alert['alerts'] ?? []);
+$alertNextBadges = $normalizeAlertBadges($alert['alerts_next_12h'] ?? []);
+if ($alertNowBadges === []) {
     $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
-    $alertBadges[] = [
+    $alertNowBadges[] = [
         'type' => $fallbackType !== '' ? $fallbackType : 'generic',
         'level' => $alertLevel,
+        'label' => '',
     ];
 }
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
@@ -166,12 +177,24 @@ $stationLon = station_longitude_setting();
 $stationAlt = station_altitude_setting();
 $stationPosition = ($stationLat !== '' && $stationLon !== '') ? ($stationLat . ', ' . $stationLon) : t('common.na');
 $stationAltDisplay = $stationAlt !== '' ? (number_format((float) $stationAlt, 0, '.', '') . ' m') : t('common.na');
+$nowRain = now_paris();
+$rainDayLabel = t('rain.day_base') . ' (' . $nowRain->format('d/m/Y') . ')';
+$monthNames = locale_current() === 'en_EN'
+    ? [1 => 'January', 2 => 'February', 3 => 'March', 4 => 'April', 5 => 'May', 6 => 'June', 7 => 'July', 8 => 'August', 9 => 'September', 10 => 'October', 11 => 'November', 12 => 'December']
+    : [1 => 'janvier', 2 => 'février', 3 => 'mars', 4 => 'avril', 5 => 'mai', 6 => 'juin', 7 => 'juillet', 8 => 'août', 9 => 'septembre', 10 => 'octobre', 11 => 'novembre', 12 => 'décembre'];
+$monthNum = (int) $nowRain->format('n');
+$monthName = $monthNames[$monthNum] ?? '';
+if ($monthName !== '') {
+    $monthName = strtoupper(substr($monthName, 0, 1)) . substr($monthName, 1);
+}
+$rainMonthLabel = t('rain.month_base') . ' (' . trim($monthName . ' ' . $nowRain->format('Y')) . ')';
+$rainYearLabel = t('rain.year_base') . ' (' . $nowRain->format('Y') . ')';
 
 front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <div class="vigi-badges">
-    <?php foreach ($alertBadges as $badge):
+    <?php foreach ($alertNowBadges as $badge):
       $bLevel = (string) ($badge['level'] ?? 'green');
       $bLabel = match ($bLevel) {
         'yellow' => t('dashboard.alert_level_yellow'),
@@ -195,9 +218,39 @@ front_header(t('dashboard.title'));
       if ($bPhen === '') {
         $bPhen = trim((string) ($badge['label'] ?? ''));
       }
-      $bTooltip = $bLabel . ' : ' . $bPhen;
+      $bTooltip = t('dashboard.alert_now') . ' - ' . $bLabel . ' : ' . $bPhen;
     ?>
       <a class="vigi-badge vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
+        <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
+      </a>
+    <?php endforeach; ?>
+    <?php foreach ($alertNextBadges as $badge):
+      $bLevel = (string) ($badge['level'] ?? 'green');
+      $bLabel = match ($bLevel) {
+        'yellow' => t('dashboard.alert_level_yellow'),
+        'orange' => t('dashboard.alert_level_orange'),
+        'red' => t('dashboard.alert_level_red'),
+        default => t('dashboard.alert_level_green'),
+      };
+      $bType = trim((string) ($badge['type'] ?? 'generic'));
+      $bPhen = match ($bType) {
+        'storm' => t('dashboard.alert_type_storm'),
+        'wind' => t('dashboard.alert_type_wind'),
+        'rain' => t('dashboard.alert_type_rain'),
+        'flood' => t('dashboard.alert_type_flood'),
+        'wave' => t('dashboard.alert_type_wave'),
+        'snow' => t('dashboard.alert_type_snow'),
+        'heat' => t('dashboard.alert_type_heat'),
+        'cold' => t('dashboard.alert_type_cold'),
+        'avalanche' => t('dashboard.alert_type_avalanche'),
+        default => t('dashboard.alert_type_generic'),
+      };
+      if ($bPhen === '') {
+        $bPhen = trim((string) ($badge['label'] ?? ''));
+      }
+      $bTooltip = t('dashboard.alert_next_12h') . ' - ' . $bLabel . ' : ' . $bPhen;
+    ?>
+      <a class="vigi-badge is-future vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
         <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
       </a>
     <?php endforeach; ?>
@@ -330,9 +383,9 @@ foreach ($metrics as $metric => $value):
     <?php $rainMonth = units_format('R', $rain['month']); ?>
     <?php $rainYear = units_format('R', $rain['year']); ?>
     <?php $rainRolling = units_format('R', $rain['rolling_year'] ?? 0.0); ?>
-    <article class="card"><h3><?= h(t('rain.day_base')) ?></h3><div><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.month_base')) ?></h3><div><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.year_base')) ?></h3><div><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainDayLabel) ?></h3><div><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainMonthLabel) ?></h3><div><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainYearLabel) ?></h3><div><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
     <article class="card"><h3><?= h(t('rain.rolling_year_base')) ?></h3><div><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
   </div>
 </section>
