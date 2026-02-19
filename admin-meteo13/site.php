@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $stationLat = trim((string) ($_POST['station_lat'] ?? ''));
     $stationLon = trim((string) ($_POST['station_lon'] ?? ''));
     $stationAlt = trim((string) ($_POST['station_altitude'] ?? ''));
+    $metarDefaultIcao = strtoupper(trim((string) ($_POST['metar_default_icao'] ?? '')));
     $stationLock = isset($_POST['station_lock_position']) ? '1' : '0';
     $termsContent = (string) ($_POST['terms_of_use_content'] ?? terms_of_use_content());
     $termsContent = str_replace(["\r\n", "\r"], "\n", $termsContent);
@@ -89,6 +90,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $err=t('site.invalid');
     } elseif (($stationLat === '') xor ($stationLon === '')) {
         $err=t('site.invalid');
+    } elseif ($metarDefaultIcao !== '' && preg_match('/^[A-Z]{4}$/', $metarDefaultIcao) !== 1) {
+        $err=t('site.invalid');
     } elseif ($err === '') {
         $tbl = db()->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t');
         $tbl->execute([':t' => $table]);
@@ -116,6 +119,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('station_lat', $stationLat !== '' ? (string) ((float) $stationLat) : '');
         setting_set('station_lon', $stationLon !== '' ? (string) ((float) $stationLon) : '');
         setting_set('station_altitude', $stationAlt !== '' ? (string) ((float) $stationAlt) : '');
+        setting_set('metar_default_icao', $metarDefaultIcao);
         setting_set('station_lock_position', $stationLock);
         setting_set('terms_of_use_content', $termsContent);
         $msg=t('site.saved');
@@ -159,6 +163,8 @@ admin_header(t('admin.site'));
   <label><?= h(t('site.station_lat')) ?><br><input name="station_lat" value="<?=h(station_latitude_setting())?>" placeholder="43.53"></label><br><br>
   <label><?= h(t('site.station_lon')) ?><br><input name="station_lon" value="<?=h(station_longitude_setting())?>" placeholder="5.45"></label><br><br>
   <label><?= h(t('site.station_altitude')) ?><br><input name="station_altitude" value="<?=h(station_altitude_setting())?>" placeholder="350"></label><br><br>
+  <label><?= h(t('site.metar_default_icao')) ?><br><input name="metar_default_icao" value="<?=h(strtoupper((string) setting_get('metar_default_icao', 'LFML')))?>" placeholder="LFML" maxlength="4" pattern="[A-Za-z]{4}"></label>
+  <p class="small-muted"><?= h(t('site.metar_default_icao_help')) ?></p><br>
   <label><input type="checkbox" name="station_lock_position" value="1" <?= station_position_locked() ? 'checked' : '' ?>> <?= h(t('site.station_lock_position')) ?></label><br><br>
   <button type="submit"><?= h(t('site.save')) ?></button>
 </form>

@@ -362,7 +362,7 @@ front_header(t('dashboard.title'));
   </div>
 </section>
 <section class="cards">
-  <article class="card station-card">
+  <article class="card station-card js-live-card" data-card-ok="<?= $state['disconnected'] ? '0' : '1' ?>">
     <h3><?= h(t('station.card_title')) ?></h3>
     <p class="small-muted"><?= h(t('station.location')) ?>: <span class="code"><?= h($stationPosition) ?></span>
       <?php if ($stationMapUrl !== null): ?>
@@ -379,7 +379,7 @@ front_header(t('dashboard.title'));
     </p>
     <p class="small-muted"><?= h(t('station.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   </article>
-  <article class="card forecast-card sea-card">
+  <article class="card forecast-card sea-card js-live-card" data-card-ok="<?= !empty($sea['available']) ? '1' : '0' ?>">
     <h3><?= h(t('sea.title')) ?></h3>
     <div class="forecast-head">
       <span class="forecast-icon sea-illustration" aria-hidden="true">
@@ -402,7 +402,7 @@ front_header(t('dashboard.title'));
       <p class="small-muted"><?= h(t('sea.updated')) ?>: <?= h((string) $sea['time']) ?></p>
     <?php endif; ?>
   </article>
-  <article class="card forecast-card">
+  <article class="card forecast-card js-live-card" data-card-ok="<?= !empty($forecast['available']) ? '1' : '0' ?>">
     <h3><?= h(t('forecast.title')) ?></h3>
     <?php if (!empty($forecast['available'])): ?>
       <div class="forecast-head">
@@ -432,7 +432,7 @@ front_header(t('dashboard.title'));
       <p class="small-muted"><?= h($forecastUnavailableMsg) ?></p>
     <?php endif; ?>
   </article>
-  <article class="card extremes-card">
+  <article class="card extremes-card js-live-card" data-card-ok="<?= ($dayTemp['min'] !== null || $dayTemp['max'] !== null) ? '1' : '0' ?>">
     <h3><?= h(t('extremes.card_title')) ?></h3>
     <div class="extremes-grid">
       <p class="extremes-line">
@@ -499,7 +499,7 @@ $metricGroupIcons = [
   <h3><?= h(t('metrics.by_type')) ?></h3>
   <div class="cards metrics-cards">
     <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
-      <article class="card forecast-card metric-group-card">
+      <article class="card forecast-card metric-group-card js-live-card" data-card-ok="<?= $state['disconnected'] ? '0' : '1' ?>">
         <h3><span class="metric-group-icon" aria-hidden="true"><?= $metricGroupIcons[$groupLabel] ?? '' ?></span><?= h(t($groupLabel)) ?></h3>
         <div class="metric-group-lines">
           <?php foreach ($groupMetrics as $metric):
@@ -577,22 +577,22 @@ $metricGroupIcons = [
     <?php $rainMonth = units_format('R', $rain['month']); ?>
     <?php $rainYear = units_format('R', $rain['year']); ?>
     <?php $rainRolling = units_format('R', $rain['rolling_year'] ?? 0.0); ?>
-    <article class="card">
+    <article class="card js-live-card" data-card-ok="<?= isset($rain['day']) ? '1' : '0' ?>">
       <h3><?= h($rainDayLabel) ?></h3>
       <div data-live-key="rain_day" data-live-value="<?= h(isset($rain['day']) ? (string) $rain['day'] : '') ?>"><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_day_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['day']) ? (float) $rain['day'] : null, isset($rainRefs['day_avg']) ? ($rainRefs['day_avg'] !== null ? (float) $rainRefs['day_avg'] : null) : null)) ?></strong></p>
     </article>
-    <article class="card">
+    <article class="card js-live-card" data-card-ok="<?= isset($rain['month']) ? '1' : '0' ?>">
       <h3><?= h($rainMonthLabel) ?></h3>
       <div data-live-key="rain_month" data-live-value="<?= h(isset($rain['month']) ? (string) $rain['month'] : '') ?>"><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_month_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['month']) ? (float) $rain['month'] : null, isset($rainRefs['month_avg']) ? ($rainRefs['month_avg'] !== null ? (float) $rainRefs['month_avg'] : null) : null)) ?></strong></p>
     </article>
-    <article class="card">
+    <article class="card js-live-card" data-card-ok="<?= isset($rain['year']) ? '1' : '0' ?>">
       <h3><?= h($rainYearLabel) ?></h3>
       <div data-live-key="rain_year" data-live-value="<?= h(isset($rain['year']) ? (string) $rain['year'] : '') ?>"><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_year_vs_same_date_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['year']) ? (float) $rain['year'] : null, isset($rainRefs['year_to_date_avg']) ? ($rainRefs['year_to_date_avg'] !== null ? (float) $rainRefs['year_to_date_avg'] : null) : null)) ?></strong></p>
     </article>
-    <article class="card">
+    <article class="card js-live-card" data-card-ok="<?= isset($rain['rolling_year']) ? '1' : '0' ?>">
       <h3><?= h(t('rain.rolling_year_base')) ?></h3>
       <div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_rolling_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['rolling_year']) ? (float) $rain['rolling_year'] : null, isset($rainRefs['rolling_365_avg']) ? ($rainRefs['rolling_365_avg'] !== null ? (float) $rainRefs['rolling_365_avg'] : null) : null)) ?></strong></p>
@@ -600,7 +600,7 @@ $metricGroupIcons = [
   </div>
 </section>
 <section class="cards">
-  <article class="card forecast-card metar-card">
+  <article class="card forecast-card metar-card js-live-card" data-card-ok="<?= !empty($metar['available']) ? '1' : '0' ?>">
     <h3><?= h(t('metar.title')) ?></h3>
     <?php if (!empty($metar['available'])): ?>
       <div class="forecast-head">
@@ -649,6 +649,7 @@ $metricGroupIcons = [
   var valuesSnapshotKey = 'meteo13_live_values_snapshot_v1';
   var reloadCooldownMs = 15000;
   var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
+  var stationDisconnected = <?= json_encode((bool) ($state['disconnected'] ?? true)) ?>;
   var enabled = localStorage.getItem(storageKey);
   enabled = enabled === null ? true : enabled === '1';
   var remaining = PERIOD;
@@ -769,6 +770,40 @@ $metricGroupIcons = [
     }, 2200);
   }
 
+  function refreshCardHealth() {
+    var cards = document.querySelectorAll('.card');
+    for (var i = 0; i < cards.length; i++) {
+      var card = cards[i];
+      var stale = false;
+
+      if (stationDisconnected && card.classList.contains('js-live-card')) {
+        stale = true;
+      }
+
+      var cardOk = card.getAttribute('data-card-ok');
+      if (cardOk === '0') {
+        stale = true;
+      }
+
+      var liveNodes = card.querySelectorAll('[data-live-key][data-live-value]');
+      if (liveNodes.length > 0) {
+        var hasValue = false;
+        for (var j = 0; j < liveNodes.length; j++) {
+          var val = (liveNodes[j].getAttribute('data-live-value') || '').trim();
+          if (val !== '') {
+            hasValue = true;
+            break;
+          }
+        }
+        if (!hasValue) {
+          stale = true;
+        }
+      }
+
+      card.classList.toggle('is-stale-card', stale);
+    }
+  }
+
   function initValueUpdateEffects() {
     var current = collectLiveValues();
     var currentValues = current.values;
@@ -871,6 +906,7 @@ $metricGroupIcons = [
   window.addEventListener('resize', syncProgressWidth);
 
   initValueUpdateEffects();
+  refreshCardHealth();
   refreshSunMomentClock();
   render();
 })();
