@@ -129,6 +129,27 @@ if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_nu
     $mapLon = number_format((float) $stationLon, 6, '.', '');
     $stationMapUrl = 'https://www.openstreetmap.org/?mlat=' . $mapLat . '&mlon=' . $mapLon . '#map=15/' . $mapLat . '/' . $mapLon;
 }
+$dayMinDisplay = units_format('T', $dayTemp['min'] ?? null);
+if ($dayMinDisplay !== t('common.na')) {
+    $dayMinDisplay .= ' ' . units_symbol('T');
+}
+$dayMaxDisplay = units_format('T', $dayTemp['max'] ?? null);
+if ($dayMaxDisplay !== t('common.na')) {
+    $dayMaxDisplay .= ' ' . units_symbol('T');
+}
+$sunriseDisplay = t('common.na');
+$sunsetDisplay = t('common.na');
+if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_numeric($stationLon)) {
+    $sunInfo = date_sun_info(now_paris()->getTimestamp(), (float) $stationLat, (float) $stationLon);
+    if (is_array($sunInfo)) {
+        if (isset($sunInfo['sunrise']) && is_numeric($sunInfo['sunrise'])) {
+            $sunriseDisplay = date('H:i', (int) $sunInfo['sunrise']);
+        }
+        if (isset($sunInfo['sunset']) && is_numeric($sunInfo['sunset'])) {
+            $sunsetDisplay = date('H:i', (int) $sunInfo['sunset']);
+        }
+    }
+}
 $nowRain = now_paris();
 $rainDayLabel = t('rain.day_base') . ' (' . $nowRain->format('d/m/Y') . ')';
 $monthNames = locale_current() === 'en_EN'
@@ -243,6 +264,27 @@ front_header(t('dashboard.title'));
       <div><?= h(t('forecast.unavailable')) ?></div>
       <p class="small-muted"><?= h($forecastUnavailableMsg) ?></p>
     <?php endif; ?>
+  </article>
+  <article class="card extremes-card">
+    <h3><?= h(t('extremes.card_title')) ?></h3>
+    <div class="extremes-grid">
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.day_min')) ?></span>
+        <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h($dayMinDisplay) ?></strong>
+      </p>
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.day_max')) ?></span>
+        <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?></strong>
+      </p>
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.sunrise')) ?></span>
+        <strong><?= h($sunriseDisplay) ?></strong>
+      </p>
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.sunset')) ?></span>
+        <strong><?= h($sunsetDisplay) ?></strong>
+      </p>
+    </div>
   </article>
 </section>
 <section class="cards">
