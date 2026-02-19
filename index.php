@@ -132,7 +132,7 @@ $normalizeAlertBadges = static function (mixed $source): array {
     return $out;
 };
 $alertNowBadges = $normalizeAlertBadges($alert['alerts_current'] ?? $alert['alerts'] ?? []);
-$alertNextBadges = $normalizeAlertBadges($alert['alerts_next_12h'] ?? []);
+$alertUpcomingBadges = $normalizeAlertBadges($alert['alerts_upcoming'] ?? $alert['alerts_next_12h'] ?? []);
 if ($alertNowBadges === []) {
     $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
     $alertNowBadges[] = [
@@ -239,7 +239,7 @@ front_header(t('dashboard.title'));
         <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
       </a>
     <?php endforeach; ?>
-    <?php foreach ($alertNextBadges as $badge):
+    <?php foreach ($alertUpcomingBadges as $badge):
       $bLevel = (string) ($badge['level'] ?? 'green');
       $bLabel = match ($bLevel) {
         'yellow' => t('dashboard.alert_level_yellow'),
@@ -267,7 +267,7 @@ front_header(t('dashboard.title'));
       $bSourceLabel = $bSource === 'vigicrues'
         ? t('dashboard.alert_source_vigicrues')
         : t('dashboard.alert_source_meteofrance');
-      $bTooltip = t('dashboard.alert_next_12h') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
+      $bTooltip = t('dashboard.alert_upcoming') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
       $bHref = trim((string) ($badge['url'] ?? ''));
       if ($bHref === '') {
         $bHref = $alertHref;

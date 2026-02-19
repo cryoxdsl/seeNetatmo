@@ -497,6 +497,101 @@ function vigilance_summary_from_entries(array $entries): array
     ];
 }
 
+function vigilance_merge_summaries(array $summaries): array
+{
+    $activeSummaries = [];
+    foreach ($summaries as $s) {
+        if (is_array($s) && (($s['active'] ?? false) === true)) {
+            $activeSummaries[] = $s;
+        }
+    }
+    if ($activeSummaries === []) {
+        return [
+            'active' => false,
+            'level' => 'green',
+            'labels' => [],
+            'types' => [],
+            'type' => 'generic',
+            'alerts' => [],
+            'entry' => null,
+        ];
+    }
+
+    $level = 'green';
+    $labels = [];
+    $types = [];
+    $alertsByKey = [];
+
+    foreach ($activeSummaries as $summary) {
+        $lvl = vigilance_level_code((string) ($summary['level'] ?? 'green'));
+        if (vigilance_level_rank($lvl) > vigilance_level_rank($level)) {
+            $level = $lvl;
+        }
+
+        foreach ((array) ($summary['labels'] ?? []) as $label) {
+            $label = trim((string) $label);
+            if ($label !== '') {
+                $labels[] = $label;
+            }
+        }
+
+        foreach ((array) ($summary['types'] ?? []) as $tp) {
+            $tp = trim((string) $tp);
+            if ($tp !== '') {
+                $types[] = $tp;
+            }
+        }
+
+        foreach ((array) ($summary['alerts'] ?? []) as $alert) {
+            if (!is_array($alert)) {
+                continue;
+            }
+            $aLevel = vigilance_level_code((string) ($alert['level'] ?? $lvl));
+            $aType = trim((string) ($alert['type'] ?? 'generic'));
+            if ($aType === '') {
+                $aType = 'generic';
+            }
+            $aLabel = trim((string) ($alert['label'] ?? ''));
+            $aSource = strtolower(trim((string) ($alert['source'] ?? 'meteofrance')));
+            if ($aSource !== 'vigicrues') {
+                $aSource = 'meteofrance';
+            }
+            $aUrl = trim((string) ($alert['url'] ?? ''));
+            $keyRaw = $aSource . '|' . $aType . '|' . $aLabel;
+            $key = function_exists('mb_strtolower') ? mb_strtolower($keyRaw, 'UTF-8') : strtolower($keyRaw);
+            if (!isset($alertsByKey[$key]) || vigilance_level_rank($aLevel) > vigilance_level_rank((string) $alertsByKey[$key]['level'])) {
+                $alertsByKey[$key] = [
+                    'level' => $aLevel,
+                    'type' => $aType,
+                    'label' => $aLabel,
+                    'source' => $aSource,
+                    'url' => $aUrl,
+                ];
+            }
+        }
+    }
+
+    $labels = array_values(array_unique($labels));
+    $types = array_values(array_unique($types));
+    if ($types === []) {
+        $types = ['generic'];
+    }
+    $alerts = array_values($alertsByKey);
+    usort($alerts, static function (array $a, array $b): int {
+        return vigilance_level_rank((string) ($b['level'] ?? 'green')) <=> vigilance_level_rank((string) ($a['level'] ?? 'green'));
+    });
+
+    return [
+        'active' => true,
+        'level' => $level,
+        'labels' => $labels,
+        'types' => $types,
+        'type' => $types[0] ?? 'generic',
+        'alerts' => $alerts,
+        'entry' => null,
+    ];
+}
+
 function vigilance_current(bool $allowRemote = false): array
 {
     $dept = station_department();
@@ -511,6 +606,11 @@ function vigilance_current(bool $allowRemote = false): array
         'types' => [],
         'phenomena' => [],
         'alerts_current' => [],
+        'alerts_upcoming' => [],
+        'upcoming_active' => false,
+        'upcoming_level' => 'green',
+        'upcoming_phenomena' => [],
+        'upcoming_phenomenon' => '',
         'alerts_next_12h' => [],
         'next_12h_active' => false,
         'next_12h_level' => 'green',
@@ -575,7 +675,6 @@ function vigilance_current(bool $allowRemote = false): array
         }
 
         $todayKey = $now->format('Y-m-d');
-        $deadlineKey = $now->modify('+12 hours')->format('Y-m-d');
         $currentIndex = 0;
         foreach ($resolved as $i => $item) {
             $dateKey = $item['date'] instanceof DateTimeImmutable ? $item['date']->format('Y-m-d') : '';
@@ -585,15 +684,24 @@ function vigilance_current(bool $allowRemote = false): array
             }
         }
 
-        $nextIndex = null;
+        $upcomingSummaries = [];
         foreach ($resolved as $i => $item) {
             if ($i === $currentIndex) {
                 continue;
             }
             $dateKey = $item['date'] instanceof DateTimeImmutable ? $item['date']->format('Y-m-d') : '';
-            if ($dateKey !== '' && $dateKey > $todayKey && $dateKey <= $deadlineKey) {
-                $nextIndex = $i;
-                break;
+            $isFuture = false;
+            if ($dateKey !== '') {
+                $isFuture = $dateKey > $todayKey;
+            } elseif ($i > $currentIndex) {
+                $isFuture = true;
+            }
+            if (!$isFuture) {
+                continue;
+            }
+            $summary = $item['summary'] ?? null;
+            if (is_array($summary) && (($summary['active'] ?? false) === true)) {
+                $upcomingSummaries[] = $summary;
             }
         }
 
@@ -618,17 +726,23 @@ function vigilance_current(bool $allowRemote = false): array
             }
         }
 
-        if ($nextIndex !== null) {
-            $next = $resolved[$nextIndex]['summary'] ?? vigilance_summary_from_entries([]);
-            if (($next['active'] ?? false) === true) {
-                $result['next_12h_active'] = true;
-                $result['next_12h_level'] = (string) ($next['level'] ?? 'green');
-                $result['next_12h_phenomena'] = (array) ($next['labels'] ?? []);
-                $result['next_12h_phenomenon'] = implode(', ', $result['next_12h_phenomena']);
-                $result['alerts_next_12h'] = (array) ($next['alerts'] ?? []);
-                if ($result['alerts_current'] === []) {
-                    $result['alerts'] = $result['alerts_next_12h'];
-                }
+        $upcoming = vigilance_merge_summaries($upcomingSummaries);
+        if (($upcoming['active'] ?? false) === true) {
+            $result['upcoming_active'] = true;
+            $result['upcoming_level'] = (string) ($upcoming['level'] ?? 'green');
+            $result['upcoming_phenomena'] = (array) ($upcoming['labels'] ?? []);
+            $result['upcoming_phenomenon'] = implode(', ', $result['upcoming_phenomena']);
+            $result['alerts_upcoming'] = (array) ($upcoming['alerts'] ?? []);
+
+            // Backward compatibility with previously exposed next_12h fields.
+            $result['next_12h_active'] = $result['upcoming_active'];
+            $result['next_12h_level'] = $result['upcoming_level'];
+            $result['next_12h_phenomena'] = $result['upcoming_phenomena'];
+            $result['next_12h_phenomenon'] = $result['upcoming_phenomenon'];
+            $result['alerts_next_12h'] = $result['alerts_upcoming'];
+
+            if ($result['alerts_current'] === []) {
+                $result['alerts'] = $result['alerts_upcoming'];
             }
         }
     } catch (Throwable $e) {
