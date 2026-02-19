@@ -162,15 +162,15 @@ front_header(t('dashboard.title'));
   </div>
   <div class="weather-temp-side">
     <div class="current-label"><?= h(t('dashboard.current_temp')) ?></div>
-    <div class="current-value"><?= h(units_format('T', $row['T'] ?? null)) ?><small><?= h(units_symbol('T')) ?></small></div>
+    <div class="current-value" data-live-key="current_temp" data-live-value="<?= h(isset($row['T']) && $row['T'] !== null ? (string) $row['T'] : '') ?>"><?= h(units_format('T', $row['T'] ?? null)) ?><small><?= h(units_symbol('T')) ?></small></div>
     <div class="day-minmax">
       <div class="min">
         <span class="arrow">↓</span>
-        <span class="v"><?= h(units_format('T', $dayTemp['min'])) ?></span>
+        <span class="v" data-live-key="day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h(units_format('T', $dayTemp['min'])) ?></span>
       </div>
       <div class="max">
         <span class="arrow">↑</span>
-        <span class="v"><?= h(units_format('T', $dayTemp['max'])) ?></span>
+        <span class="v" data-live-key="day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h(units_format('T', $dayTemp['max'])) ?></span>
       </div>
     </div>
   </div>
@@ -193,7 +193,7 @@ front_header(t('dashboard.title'));
   </article>
   <article class="card">
     <h3><?= h(t('sea.title')) ?></h3>
-    <div><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>
+    <div data-live-key="sea_temp" data-live-value="<?= h(!empty($sea['available']) && isset($sea['value_c']) && $sea['value_c'] !== null ? (string) $sea['value_c'] : '') ?>"><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>
     <p class="small-muted"><?= h(t('sea.subtitle')) ?></p>
     <?php if (!empty($sea['distance_km'])): ?>
       <p class="small-muted"><?= h(t('sea.distance')) ?>: <?= h(number_format((float) $sea['distance_km'], 1, '.', '')) ?> km</p>
@@ -208,7 +208,7 @@ front_header(t('dashboard.title'));
       <div class="forecast-head">
         <span class="forecast-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($forecastCurrentType, weather_icon_style_setting()) : '' ?></span>
         <div class="forecast-current">
-          <div class="forecast-value"><?= h($forecastCurrentTempDisplay) ?></div>
+          <div class="forecast-value" data-live-key="forecast_current_temp" data-live-value="<?= h(isset($forecast['current_temp_c']) && $forecast['current_temp_c'] !== null ? (string) $forecast['current_temp_c'] : '') ?>"><?= h($forecastCurrentTempDisplay) ?></div>
           <p class="small-muted"><?= h($forecastCurrentLabel) ?></p>
         </div>
       </div>
@@ -257,7 +257,7 @@ foreach ($metrics as $metric => $value):
         }
     }
 ?>
-  <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div><?= h($displayWithUnit) ?></div></article>
+  <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>"><?= h($displayWithUnit) ?></div></article>
 <?php endforeach; ?>
 </section>
 <section class="panel">
@@ -267,10 +267,10 @@ foreach ($metrics as $metric => $value):
     <?php $rainMonth = units_format('R', $rain['month']); ?>
     <?php $rainYear = units_format('R', $rain['year']); ?>
     <?php $rainRolling = units_format('R', $rain['rolling_year'] ?? 0.0); ?>
-    <article class="card"><h3><?= h($rainDayLabel) ?></h3><div><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
-    <article class="card"><h3><?= h($rainMonthLabel) ?></h3><div><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
-    <article class="card"><h3><?= h($rainYearLabel) ?></h3><div><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
-    <article class="card"><h3><?= h(t('rain.rolling_year_base')) ?></h3><div><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainDayLabel) ?></h3><div data-live-key="rain_day" data-live-value="<?= h(isset($rain['day']) ? (string) $rain['day'] : '') ?>"><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainMonthLabel) ?></h3><div data-live-key="rain_month" data-live-value="<?= h(isset($rain['month']) ? (string) $rain['month'] : '') ?>"><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h($rainYearLabel) ?></h3><div data-live-key="rain_year" data-live-value="<?= h(isset($rain['year']) ? (string) $rain['year'] : '') ?>"><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card"><h3><?= h(t('rain.rolling_year_base')) ?></h3><div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
   </div>
 </section>
 <script>
@@ -278,6 +278,8 @@ foreach ($metrics as $metric => $value):
   var PERIOD = 300;
   var storageKey = 'meteo13_auto_refresh_enabled';
   var lastReloadKey = 'meteo13_auto_refresh_last_reload_ts';
+  var refreshIntentKey = 'meteo13_auto_refresh_intent';
+  var valuesSnapshotKey = 'meteo13_live_values_snapshot_v1';
   var reloadCooldownMs = 15000;
   var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
   var enabled = localStorage.getItem(storageKey);
@@ -312,6 +314,92 @@ foreach ($metrics as $metric => $value):
     try {
       sessionStorage.setItem(lastReloadKey, String(ts));
     } catch (e) {}
+  }
+
+  function collectLiveValues() {
+    var values = {};
+    var nodes = {};
+    var all = document.querySelectorAll('[data-live-key][data-live-value]');
+    for (var i = 0; i < all.length; i++) {
+      var el = all[i];
+      var key = el.getAttribute('data-live-key') || '';
+      if (!key) continue;
+      values[key] = el.getAttribute('data-live-value') || '';
+      nodes[key] = el;
+    }
+    return { values: values, nodes: nodes };
+  }
+
+  function readValuesSnapshot() {
+    try {
+      var raw = sessionStorage.getItem(valuesSnapshotKey);
+      if (!raw) return {};
+      var parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function writeValuesSnapshot(values) {
+    try {
+      sessionStorage.setItem(valuesSnapshotKey, JSON.stringify(values || {}));
+    } catch (e) {}
+  }
+
+  function toNumeric(v) {
+    if (typeof v !== 'string') return NaN;
+    var normalized = v.replace(',', '.').replace(/[^0-9.\-]/g, '');
+    if (!normalized || normalized === '-' || normalized === '.' || normalized === '-.') return NaN;
+    var out = parseFloat(normalized);
+    return Number.isFinite(out) ? out : NaN;
+  }
+
+  function markUpdated(node, direction) {
+    if (!node) return;
+    node.classList.remove('live-updated', 'live-updated-up', 'live-updated-down');
+    void node.offsetWidth;
+    node.classList.add('live-updated');
+    if (direction > 0) {
+      node.classList.add('live-updated-up');
+    } else if (direction < 0) {
+      node.classList.add('live-updated-down');
+    }
+    setTimeout(function () {
+      node.classList.remove('live-updated', 'live-updated-up', 'live-updated-down');
+    }, 2200);
+  }
+
+  function initValueUpdateEffects() {
+    var current = collectLiveValues();
+    var currentValues = current.values;
+    var currentNodes = current.nodes;
+    var isAutoRefreshNavigation = false;
+    try {
+      isAutoRefreshNavigation = sessionStorage.getItem(refreshIntentKey) === '1';
+    } catch (e) {}
+
+    if (isAutoRefreshNavigation) {
+      var previousValues = readValuesSnapshot();
+      for (var key in currentValues) {
+        if (!Object.prototype.hasOwnProperty.call(currentValues, key)) continue;
+        var prevVal = Object.prototype.hasOwnProperty.call(previousValues, key) ? String(previousValues[key]) : null;
+        var currVal = String(currentValues[key]);
+        if (prevVal === null || prevVal === currVal) continue;
+
+        var direction = 0;
+        var prevNum = toNumeric(prevVal);
+        var currNum = toNumeric(currVal);
+        if (!Number.isNaN(prevNum) && !Number.isNaN(currNum)) {
+          if (currNum > prevNum) direction = 1;
+          else if (currNum < prevNum) direction = -1;
+        }
+        markUpdated(currentNodes[key], direction);
+      }
+      try { sessionStorage.removeItem(refreshIntentKey); } catch (e) {}
+    }
+
+    writeValuesSnapshot(currentValues);
   }
 
   function render() {
@@ -354,6 +442,8 @@ foreach ($metrics as $metric => $value):
           return;
         }
         setLastReloadTs(nowTs);
+        writeValuesSnapshot(collectLiveValues().values);
+        try { sessionStorage.setItem(refreshIntentKey, '1'); } catch (e) {}
         isReloading = true;
         render();
         if (timerId) {
@@ -375,6 +465,7 @@ foreach ($metrics as $metric => $value):
     }
   });
 
+  initValueUpdateEffects();
   render();
 })();
 </script>
