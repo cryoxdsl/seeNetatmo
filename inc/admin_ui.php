@@ -31,5 +31,9 @@ function admin_header(string $title): void
 
 function admin_footer(): void
 {
+    if (function_exists('admin_logged_in') && admin_logged_in()) {
+        $pingUrl = APP_ADMIN_PATH . '/ping.php';
+        echo '<script>(function(){var d=240000;function p(){if(document.hidden){return;}fetch(' . json_encode($pingUrl) . ',{method:"GET",credentials:"same-origin",cache:"no-store"}).catch(function(){});}window.setInterval(p,d);})();</script>';
+    }
     echo '</main></div></body></html>';
 }

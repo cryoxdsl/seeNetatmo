@@ -12,12 +12,30 @@ function app_session_start(): void
     if ($timeout < 300) {
         $timeout = SESSION_TIMEOUT_SECONDS;
     }
+    $secure = is_https();
+    if (!$secure) {
+        $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        if ($forwardedProto !== '' && str_contains($forwardedProto, 'https')) {
+            $secure = true;
+        }
+    }
+    if (!$secure) {
+        $cfVisitor = (string) ($_SERVER['HTTP_CF_VISITOR'] ?? '');
+        if ($cfVisitor !== '' && stripos($cfVisitor, '"https"') !== false) {
+            $secure = true;
+        }
+    }
+
+    if (function_exists('ini_set')) {
+        @ini_set('session.gc_maxlifetime', (string) $timeout);
+        @ini_set('session.use_strict_mode', '1');
+    }
 
     session_set_cookie_params([
         'lifetime' => $timeout,
         'path' => '/',
         'domain' => '',
-        'secure' => is_https(),
+        'secure' => $secure,
         'httponly' => true,
         'samesite' => 'Strict',
     ]);

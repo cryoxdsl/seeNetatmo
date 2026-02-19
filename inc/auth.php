@@ -24,21 +24,37 @@ function admin_logged_in(): bool
     return !empty($_SESSION['admin_ok']) && !empty($_SESSION['admin_uid']);
 }
 
-function admin_require_login(): void
+function admin_session_timeout_seconds(): int
 {
-    if (!admin_logged_in()) {
-        redirect(APP_ADMIN_PATH . '/login.php');
-    }
-    $now = time();
     $timeout = (int) cfg('admin_session_timeout_seconds', ADMIN_SESSION_TIMEOUT_SECONDS);
     if ($timeout < 300) {
         $timeout = ADMIN_SESSION_TIMEOUT_SECONDS;
     }
+    return $timeout;
+}
+
+function admin_session_touch_or_invalidate(): bool
+{
+    if (!admin_logged_in()) {
+        return false;
+    }
+
+    $now = time();
+    $timeout = admin_session_timeout_seconds();
     $last = (int) ($_SESSION['admin_last_seen'] ?? 0);
     if ($last > 0 && ($now - $last) > $timeout) {
-        admin_logout();
+        app_session_destroy();
+        return false;
     }
     $_SESSION['admin_last_seen'] = $now;
+    return true;
+}
+
+function admin_require_login(): void
+{
+    if (!admin_session_touch_or_invalidate()) {
+        redirect(APP_ADMIN_PATH . '/login.php');
+    }
 }
 
 function auth_lockout_active(string $username, string $ip): bool
