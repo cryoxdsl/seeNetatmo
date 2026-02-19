@@ -617,9 +617,6 @@ $metricGroupIcons = [
           <?php endif; ?>
         </div>
       </div>
-      <?php if (!empty($metar['headline'])): ?>
-        <p class="forecast-line"><?= h((string) $metar['headline']) ?></p>
-      <?php endif; ?>
       <?php if (!empty($metar['weather'])): ?>
         <p class="forecast-line"><strong><?= h(t('metar.weather')) ?>:</strong> <?= h((string) $metar['weather']) ?></p>
       <?php endif; ?>
