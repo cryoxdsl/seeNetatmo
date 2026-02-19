@@ -180,17 +180,70 @@ function rain_reference_averages(): array
     $yearStmt->execute([':y' => $currentYear, ':md' => $monthDay]);
     $yearRow = $yearStmt->fetch() ?: [];
 
+    $dailyStmt = db()->query(
+        "SELECT DATE(`DateTime`) AS d,
+                COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+         FROM `{$t}`
+         GROUP BY DATE(`DateTime`)
+         ORDER BY d ASC"
+    );
+    $dailyRows = $dailyStmt ? $dailyStmt->fetchAll() : [];
+    $dailyByDate = [];
+    foreach ($dailyRows as $r) {
+        $d = (string) ($r['d'] ?? '');
+        if ($d === '') {
+            continue;
+        }
+        $dailyByDate[$d] = (float) ($r['day_total'] ?? 0.0);
+    }
+    $rollingTotals = [];
+    for ($y = (int) $currentYear - 1; $y >= 1900; $y--) {
+        $candidate = DateTimeImmutable::createFromFormat('!Y-m-d', $y . '-' . $monthDay, new DateTimeZone(APP_TIMEZONE));
+        if (!$candidate) {
+            if ($monthDay === '02-29') {
+                $candidate = DateTimeImmutable::createFromFormat('!Y-m-d', $y . '-02-28', new DateTimeZone(APP_TIMEZONE));
+            }
+            if (!$candidate) {
+                continue;
+            }
+        }
+        $end = $candidate;
+        $start = $end->modify('-364 days');
+        $startKey = $start->format('Y-m-d');
+        $endKey = $end->format('Y-m-d');
+
+        $sum = 0.0;
+        $daysWithData = 0;
+        foreach ($dailyByDate as $d => $dayTotal) {
+            if ($d < $startKey || $d > $endKey) {
+                continue;
+            }
+            $sum += (float) $dayTotal;
+            $daysWithData++;
+        }
+        if ($daysWithData < 300) {
+            continue;
+        }
+        $rollingTotals[] = $sum;
+    }
+
     $dayAvg = isset($dayRow['avg_total']) && $dayRow['avg_total'] !== null ? round((float) $dayRow['avg_total'], 3) : null;
     $monthAvg = isset($monthRow['avg_total']) && $monthRow['avg_total'] !== null ? round((float) $monthRow['avg_total'], 3) : null;
     $yearAvg = isset($yearRow['avg_total']) && $yearRow['avg_total'] !== null ? round((float) $yearRow['avg_total'], 3) : null;
+    $rollingAvg = null;
+    if ($rollingTotals) {
+        $rollingAvg = round(array_sum($rollingTotals) / count($rollingTotals), 3);
+    }
 
     return [
         'day_avg' => $dayAvg,
         'month_avg' => $monthAvg,
         'year_to_date_avg' => $yearAvg,
+        'rolling_365_avg' => $rollingAvg,
         'day_samples' => (int) ($dayRow['sample_count'] ?? 0),
         'month_samples' => (int) ($monthRow['sample_count'] ?? 0),
         'year_samples' => (int) ($yearRow['sample_count'] ?? 0),
+        'rolling_samples' => count($rollingTotals),
     ];
 }
 

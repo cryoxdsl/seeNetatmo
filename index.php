@@ -72,12 +72,12 @@ if (function_exists('rain_totals')) {
         $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
     }
 }
-$rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null];
+$rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null, 'rolling_365_avg' => null];
 if (function_exists('rain_reference_averages')) {
     try {
         $rainRefs = rain_reference_averages();
     } catch (Throwable $e) {
-        $rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null];
+        $rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null, 'rolling_365_avg' => null];
     }
 }
 $dayTemp = ['min' => null, 'max' => null];
@@ -181,6 +181,7 @@ if ($dayMaxDisplay !== t('common.na')) {
 }
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
+$dayLengthDisplay = t('common.na');
 $sunriseTs = null;
 $sunsetTs = null;
 $nowDayTs = now_paris()->getTimestamp();
@@ -202,6 +203,10 @@ if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_nu
         }
         if ($sunriseTs !== null && $sunsetTs !== null && $sunsetTs > $sunriseTs) {
             $solarVisualAvailable = true;
+            $dayLengthSeconds = $sunsetTs - $sunriseTs;
+            $dayHours = (int) floor($dayLengthSeconds / 3600);
+            $dayMinutes = (int) floor(($dayLengthSeconds % 3600) / 60);
+            $dayLengthDisplay = sprintf('%02d:%02d', $dayHours, $dayMinutes);
             $dayStartTs = now_paris()->setTime(0, 0, 0)->getTimestamp();
             $sunriseMinutes = (int) floor(($sunriseTs - $dayStartTs) / 60);
             $sunsetMinutes = (int) floor(($sunsetTs - $dayStartTs) / 60);
@@ -398,6 +403,10 @@ front_header(t('dashboard.title'));
         <span class="extremes-label"><?= h(t('extremes.sunset')) ?></span>
         <strong><?= h($sunsetDisplay) ?></strong>
       </p>
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.day_length')) ?></span>
+        <strong><?= h($dayLengthDisplay) ?></strong>
+      </p>
       <?php if ($solarVisualAvailable): ?>
         <div class="sun-visual">
           <div class="sun-scale" role="img" aria-label="<?= h(t('extremes.moment')) ?>">
@@ -434,99 +443,78 @@ $metricGroups = [
 ?>
 <section class="panel metric-groups-panel">
   <h3><?= h(t('metrics.by_type')) ?></h3>
-  <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
-    <div class="metric-group">
-      <h4 class="metric-group-title"><?= h(t($groupLabel)) ?></h4>
-      <div class="cards metrics-cards">
-        <?php foreach ($groupMetrics as $metric):
-            $value = $metrics[$metric] ?? null;
-            $display = units_format($metric, $value);
-            $displayWithUnit = $display;
-            if ($display !== t('common.na')) {
-                $symbol = units_symbol($metric);
-                if ($symbol !== '') {
-                    $displayWithUnit .= ' ' . $symbol;
-                }
-            }
-        ?>
-          <article class="card forecast-card metric-typed-card">
-            <h3><?= h(units_metric_name($metric)) ?></h3>
-            <div class="forecast-head metric-forecast-head">
-              <div class="forecast-current">
-                <div class="forecast-value metric-main-value" data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>">
-                  <?php if ($metric === 'P'): ?>
-                    <?php
-                      $pTrend = (string) ($pressureTrend['trend'] ?? 'unknown');
-                      $pArrow = match ($pTrend) {
-                          'up' => '↑',
-                          'down' => '↓',
-                          'stable' => '→',
-                          default => '•',
-                      };
-                    ?>
-                    <span class="metric-trend metric-trend-<?= h($pTrend) ?>" title="<?= h(t('metric.pressure_trend')) ?>"><?= h($pArrow) ?></span>
-                  <?php endif; ?>
-                  <?php if ($metric === 'B'): ?>
-                    <?php
-                      $windDeg = $value !== null ? (float) $value : null;
-                      $windDegNorm = $windDeg !== null ? fmod(($windDeg + 360.0), 360.0) : 0.0;
-                    ?>
-                    <span class="wind-compass" aria-label="<?= h(t('metric.wind_dir_compass')) ?>" title="<?= h(t('metric.wind_dir_compass')) ?>">
-                      <span class="needle" style="transform:rotate(<?= h(number_format($windDegNorm, 1, '.', '')) ?>deg)">↑</span>
-                    </span>
-                  <?php endif; ?>
-                  <?= h($displayWithUnit) ?>
-                </div>
-              </div>
-            </div>
-            <?php if (in_array($metric, ['R', 'W', 'B', 'P'], true)): ?>
-              <div class="forecast-grid">
-                <?php if ($metric === 'R'): ?>
-                  <div class="forecast-day">
-                    <strong><?= h(t('metric.rain_episode_start')) ?></strong>
-                    <p class="forecast-line"><?= h(to_hhmm_local(isset($rainEpisode['start']) ? (string) $rainEpisode['start'] : null)) ?></p>
-                  </div>
-                  <div class="forecast-day">
-                    <strong><?= h(t('metric.rain_episode_end')) ?></strong>
-                    <p class="forecast-line"><?= !empty($rainEpisode['ongoing']) ? h(t('metric.rain_episode_ongoing')) : h(to_hhmm_local(isset($rainEpisode['end']) ? (string) $rainEpisode['end'] : null)) ?></p>
-                  </div>
-                <?php endif; ?>
-                <?php if ($metric === 'W'): ?>
-                  <?php
-                    $wMin = units_format('W', $dayWind['min'] ?? null);
-                    $wMax = units_format('W', $dayWind['max'] ?? null);
-                    $wMinTxt = $wMin === t('common.na') ? $wMin : ($wMin . ' ' . units_symbol('W'));
-                    $wMaxTxt = $wMax === t('common.na') ? $wMax : ($wMax . ' ' . units_symbol('W'));
-                  ?>
-                  <div class="forecast-day">
-                    <strong><?= h(t('metric.day_min_max')) ?></strong>
-                    <p class="forecast-line"><?= h($wMinTxt) ?> / <?= h($wMaxTxt) ?></p>
-                  </div>
-                <?php endif; ?>
-                <?php if ($metric === 'B'): ?>
-                  <?php $windCardinal = wind_cardinal_label($value !== null ? (float) $value : null); ?>
-                  <div class="forecast-day">
-                    <strong><?= h(t('metric.wind_dir_label')) ?></strong>
-                    <p class="forecast-line"><?= h($windCardinal) ?></p>
-                  </div>
-                <?php endif; ?>
+  <div class="cards metrics-cards">
+    <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
+      <article class="card forecast-card metric-group-card">
+        <h3><?= h(t($groupLabel)) ?></h3>
+        <div class="metric-group-lines">
+          <?php foreach ($groupMetrics as $metric):
+              $value = $metrics[$metric] ?? null;
+              $display = units_format($metric, $value);
+              $displayWithUnit = $display;
+              if ($display !== t('common.na')) {
+                  $symbol = units_symbol($metric);
+                  if ($symbol !== '') {
+                      $displayWithUnit .= ' ' . $symbol;
+                  }
+              }
+          ?>
+            <div class="forecast-day metric-line">
+              <strong><?= h(units_metric_name($metric)) ?></strong>
+              <p class="forecast-line metric-line-value" data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>">
                 <?php if ($metric === 'P'): ?>
                   <?php
-                    $delta = $pressureTrend['delta'] ?? null;
-                    $deltaTxt = $delta === null ? t('common.na') : (($delta > 0 ? '+' : '') . number_format((float) $delta, 2, '.', '') . ' hPa');
+                    $pTrend = (string) ($pressureTrend['trend'] ?? 'unknown');
+                    $pArrow = match ($pTrend) {
+                        'up' => '↑',
+                        'down' => '↓',
+                        'stable' => '→',
+                        default => '•',
+                    };
                   ?>
-                  <div class="forecast-day">
-                    <strong><?= h(t('metric.pressure_trend')) ?></strong>
-                    <p class="forecast-line"><?= h($deltaTxt) ?></p>
-                  </div>
+                  <span class="metric-trend metric-trend-<?= h($pTrend) ?>" title="<?= h(t('metric.pressure_trend')) ?>"><?= h($pArrow) ?></span>
                 <?php endif; ?>
-              </div>
-            <?php endif; ?>
-          </article>
-        <?php endforeach; ?>
-      </div>
-    </div>
-  <?php endforeach; ?>
+                <?php if ($metric === 'B'): ?>
+                  <?php
+                    $windDeg = $value !== null ? (float) $value : null;
+                    $windDegNorm = $windDeg !== null ? fmod(($windDeg + 360.0), 360.0) : 0.0;
+                  ?>
+                  <span class="wind-compass" aria-label="<?= h(t('metric.wind_dir_compass')) ?>" title="<?= h(t('metric.wind_dir_compass')) ?>">
+                    <span class="needle" style="transform:rotate(<?= h(number_format($windDegNorm, 1, '.', '')) ?>deg)">↑</span>
+                  </span>
+                <?php endif; ?>
+                <?= h($displayWithUnit) ?>
+              </p>
+              <?php if ($metric === 'R'): ?>
+                <p class="forecast-line"><strong><?= h(t('metric.rain_episode_start')) ?>:</strong> <?= h(to_hhmm_local(isset($rainEpisode['start']) ? (string) $rainEpisode['start'] : null)) ?></p>
+                <p class="forecast-line"><strong><?= h(t('metric.rain_episode_end')) ?>:</strong> <?= !empty($rainEpisode['ongoing']) ? h(t('metric.rain_episode_ongoing')) : h(to_hhmm_local(isset($rainEpisode['end']) ? (string) $rainEpisode['end'] : null)) ?></p>
+              <?php endif; ?>
+              <?php if ($metric === 'W'): ?>
+                <?php
+                  $wMin = units_format('W', $dayWind['min'] ?? null);
+                  $wMax = units_format('W', $dayWind['max'] ?? null);
+                  $wMinTxt = $wMin === t('common.na') ? $wMin : ($wMin . ' ' . units_symbol('W'));
+                  $wMaxTxt = $wMax === t('common.na') ? $wMax : ($wMax . ' ' . units_symbol('W'));
+                ?>
+                <p class="forecast-line"><strong><?= h(t('metric.day_min_max')) ?>:</strong> <?= h($wMinTxt) ?> / <?= h($wMaxTxt) ?></p>
+              <?php endif; ?>
+              <?php if ($metric === 'B'): ?>
+                <?php $windCardinal = wind_cardinal_label($value !== null ? (float) $value : null); ?>
+                <p class="forecast-line"><strong><?= h(t('metric.wind_dir_label')) ?>:</strong> <?= h($windCardinal) ?></p>
+              <?php endif; ?>
+              <?php if ($metric === 'P'): ?>
+                <?php
+                  $delta = $pressureTrend['delta'] ?? null;
+                  $deltaTxt = $delta === null ? t('common.na') : (($delta > 0 ? '+' : '') . number_format((float) $delta, 2, '.', '') . ' hPa');
+                ?>
+                <p class="forecast-line"><strong><?= h(t('metric.pressure_trend')) ?>:</strong> <?= h($deltaTxt) ?></p>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
+        </div>
+      </article>
+    <?php endforeach; ?>
+  </div>
 </section>
 <section class="panel">
   <h3><?= h(t('rain.total')) ?></h3>
@@ -550,7 +538,11 @@ $metricGroups = [
       <div data-live-key="rain_year" data-live-value="<?= h(isset($rain['year']) ? (string) $rain['year'] : '') ?>"><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_year_vs_same_date_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['year']) ? (float) $rain['year'] : null, isset($rainRefs['year_to_date_avg']) ? ($rainRefs['year_to_date_avg'] !== null ? (float) $rainRefs['year_to_date_avg'] : null) : null)) ?></strong></p>
     </article>
-    <article class="card"><h3><?= h(t('rain.rolling_year_base')) ?></h3><div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div></article>
+    <article class="card">
+      <h3><?= h(t('rain.rolling_year_base')) ?></h3>
+      <div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
+      <p class="small-muted"><?= h(t('rain.delta_rolling_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['rolling_year']) ? (float) $rain['rolling_year'] : null, isset($rainRefs['rolling_365_avg']) ? ($rainRefs['rolling_365_avg'] !== null ? (float) $rainRefs['rolling_365_avg'] : null) : null)) ?></strong></p>
+    </article>
   </div>
 </section>
 <script>

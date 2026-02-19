@@ -46,13 +46,11 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .sun-caption{margin:.4rem 0 0;display:flex;align-items:center;justify-content:space-between;gap:.45rem}
 .metric-groups-panel{display:flex;flex-direction:column;gap:.7rem}
 .metric-groups-panel h3{margin:0 0 .2rem}
-.metric-group{display:flex;flex-direction:column;gap:.45rem}
-.metric-group-title{margin:0;color:#4d6279;font-size:.86rem;letter-spacing:.01em;text-transform:uppercase}
 .metrics-cards{margin:0}
-.metric-typed-card{padding:.7rem}
-.metric-typed-card .metric-forecast-head{margin:.1rem 0 .35rem}
-.metric-typed-card .metric-main-value{font-size:1.15rem}
-.metric-typed-card .forecast-grid{margin-top:.3rem}
+.metric-group-card{padding:.7rem}
+.metric-group-card .metric-group-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
+.metric-group-card .metric-line{margin:0}
+.metric-group-card .metric-line-value{font-size:1.05rem;font-weight:700;color:#1d3e60}
 .metric-trend{display:inline-block;margin-right:.22rem;font-weight:700}
 .metric-trend-up{color:#1f8a45}
 .metric-trend-down{color:#b23a2b}
@@ -111,3 +109,4 @@ button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;curso
 .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.admin-nav{background:#102946;color:#dbe9f7;padding:1rem}.admin-nav h1{margin:.2rem 0 .8rem;font-size:1.2rem}.admin-nav a{display:block;color:#dbe9f7;text-decoration:none;margin:.38rem 0}.admin-main{padding:1rem}.alert{padding:.65rem .8rem;border-radius:8px;margin-bottom:.8rem}.alert-ok{background:#e4f4e7;color:#1e6e2f}.alert-bad{background:#f8e4e4;color:#8e1f1f}
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
 @media (max-width:820px){.admin-layout{grid-template-columns:1fr}.weather-hero{grid-template-columns:1fr}.weather-icon{width:100%;max-width:120px}.weather-temp-side{align-items:flex-start;min-width:0}.weather-temp-side .current-value{font-size:2rem}}
+@media (max-width:820px){.metric-group-card .metric-group-lines{grid-template-columns:1fr}}
