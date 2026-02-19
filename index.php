@@ -306,6 +306,19 @@ if (!function_exists('rain_delta_display')) {
         return $sign . $formatted . ' ' . units_symbol('R');
     }
 }
+if (!function_exists('rain_episode_start_display')) {
+    function rain_episode_start_display(array $episode): string
+    {
+        $start = isset($episode['start']) ? (string) $episode['start'] : '';
+        if ($start === '') {
+            return t('common.na');
+        }
+        if (!empty($episode['start_is_yesterday'])) {
+            return t('common.yesterday') . ' ' . to_hhmm_local($start);
+        }
+        return to_hhmm_local($start);
+    }
+}
 
 front_header(t('dashboard.title'));
 ?>
@@ -525,7 +538,7 @@ $metricGroupIcons = [
                 <?= h($displayWithUnit) ?>
               </p>
               <?php if ($metric === 'R'): ?>
-                <p class="forecast-line"><strong><?= h(t('metric.rain_episode_start')) ?>:</strong> <?= h(to_hhmm_local(isset($rainEpisode['start']) ? (string) $rainEpisode['start'] : null)) ?></p>
+                <p class="forecast-line"><strong><?= h(t('metric.rain_episode_start')) ?>:</strong> <?= h(rain_episode_start_display($rainEpisode)) ?></p>
                 <p class="forecast-line"><strong><?= h(t('metric.rain_episode_end')) ?>:</strong> <?= !empty($rainEpisode['ongoing']) ? h(t('metric.rain_episode_ongoing')) : h(to_hhmm_local(isset($rainEpisode['end']) ? (string) $rainEpisode['end'] : null)) ?></p>
               <?php endif; ?>
               <?php if ($metric === 'W'): ?>

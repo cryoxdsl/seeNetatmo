@@ -365,10 +365,10 @@ function current_day_temp_extreme_times(): array
     $today = now_paris()->format('Y-m-d');
     $stmt = db()->prepare(
         "SELECT
-            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d AND `T` IS NOT NULL ORDER BY `T` ASC, `DateTime` ASC LIMIT 1) AS t_min_time,
-            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d AND `T` IS NOT NULL ORDER BY `T` DESC, `DateTime` ASC LIMIT 1) AS t_max_time"
+            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d_min AND `T` IS NOT NULL ORDER BY `T` ASC, `DateTime` ASC LIMIT 1) AS t_min_time,
+            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d_max AND `T` IS NOT NULL ORDER BY `T` DESC, `DateTime` ASC LIMIT 1) AS t_max_time"
     );
-    $stmt->execute([':d' => $today]);
+    $stmt->execute([':d_min' => $today, ':d_max' => $today]);
     $row = $stmt->fetch() ?: [];
     return [
         'min_time' => isset($row['t_min_time']) && $row['t_min_time'] !== null ? (string) $row['t_min_time'] : null,
@@ -396,17 +396,21 @@ function current_day_wind_avg_range(): array
 function current_day_rain_episode(): array
 {
     $t = data_table();
-    $today = now_paris()->format('Y-m-d');
+    $now = now_paris();
+    $today = $now->format('Y-m-d');
+    $yesterday = $now->modify('-1 day')->format('Y-m-d');
+    $from = $yesterday . ' 00:00:00';
+    $to = $today . ' 23:59:59';
     $stmt = db()->prepare(
         "SELECT `DateTime`, `RR`, `R`
          FROM `{$t}`
-         WHERE DATE(`DateTime`) = :d
+         WHERE `DateTime` BETWEEN :from AND :to
          ORDER BY `DateTime` ASC"
     );
-    $stmt->execute([':d' => $today]);
+    $stmt->execute([':from' => $from, ':to' => $to]);
     $rows = $stmt->fetchAll();
     if (!$rows) {
-        return ['start' => null, 'end' => null, 'ongoing' => false];
+        return ['start' => null, 'end' => null, 'ongoing' => false, 'start_is_yesterday' => false];
     }
 
     $episodes = [];
@@ -447,9 +451,24 @@ function current_day_rain_episode(): array
     }
 
     if (!$episodes) {
-        return ['start' => null, 'end' => null, 'ongoing' => false];
+        return ['start' => null, 'end' => null, 'ongoing' => false, 'start_is_yesterday' => false];
     }
-    return $episodes[count($episodes) - 1];
+
+    $relevant = null;
+    foreach ($episodes as $ep) {
+        $startDate = substr((string) ($ep['start'] ?? ''), 0, 10);
+        $endDate = substr((string) ($ep['end'] ?? ''), 0, 10);
+        if ($startDate === $today || $endDate === $today) {
+            $relevant = $ep;
+        }
+    }
+    if ($relevant === null) {
+        return ['start' => null, 'end' => null, 'ongoing' => false, 'start_is_yesterday' => false];
+    }
+
+    $startDate = substr((string) ($relevant['start'] ?? ''), 0, 10);
+    $relevant['start_is_yesterday'] = ($startDate === $yesterday);
+    return $relevant;
 }
 
 function pressure_trend_snapshot(int $windowMinutes = 90, float $threshold = 0.5): array

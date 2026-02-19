@@ -16,6 +16,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .panel-dashboard.season-winter{background-image:url('../img/seasons/winter.svg')}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
 [data-live-key]{transition:background-color .35s ease,color .35s ease,transform .25s ease,box-shadow .35s ease}
+[data-live-key],.card div,.forecast-card .forecast-value,.extremes-card .extremes-line strong,.metric-group-card .metric-line-value,.day-minmax .v{white-space:nowrap}
 .live-updated{background:rgba(26,92,157,.11);border-radius:8px;padding:.04rem .28rem;box-shadow:0 0 0 1px rgba(26,92,157,.2) inset;animation:liveFlash .85s ease}
 .live-updated-up{color:#18733f}
 .live-updated-down{color:#a62d2d}
@@ -104,7 +105,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .auto-chip.is-loading{cursor:progress;pointer-events:none;opacity:.88}
 .auto-chip.is-loading .count{min-width:92px}
 .auto-progress{display:block;width:var(--auto-progress-width);height:4px;background:#dfe8f2;border-radius:999px;overflow:hidden}
-.auto-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#2c88d9,#22b3be)}
+.auto-progress span{display:block;height:100%;width:0;margin-left:auto;background:linear-gradient(90deg,#2c88d9,#22b3be)}
 .btn-lite{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.42rem .65rem;border-radius:8px;cursor:pointer}
 .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}select,input,button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.5rem .7rem;border-radius:8px;text-decoration:none}
 button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
