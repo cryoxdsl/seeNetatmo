@@ -118,10 +118,15 @@ $normalizeAlertBadges = static function (mixed $source): array {
         if ($type === '') {
             $type = 'generic';
         }
+        $src = strtolower(trim((string) ($a['source'] ?? 'meteofrance')));
+        $src = $src === 'vigicrues' ? 'vigicrues' : 'meteofrance';
+        $url = trim((string) ($a['url'] ?? ''));
         $out[] = [
             'type' => $type,
             'level' => $level,
             'label' => trim((string) ($a['label'] ?? '')),
+            'source' => $src,
+            'url' => $url,
         ];
     }
     return $out;
@@ -134,6 +139,8 @@ if ($alertNowBadges === []) {
         'type' => $fallbackType !== '' ? $fallbackType : 'generic',
         'level' => $alertLevel,
         'label' => '',
+        'source' => 'meteofrance',
+        'url' => '',
     ];
 }
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
@@ -218,9 +225,17 @@ front_header(t('dashboard.title'));
       if ($bPhen === '') {
         $bPhen = trim((string) ($badge['label'] ?? ''));
       }
-      $bTooltip = t('dashboard.alert_now') . ' - ' . $bLabel . ' : ' . $bPhen;
+      $bSource = (string) ($badge['source'] ?? 'meteofrance');
+      $bSourceLabel = $bSource === 'vigicrues'
+        ? t('dashboard.alert_source_vigicrues')
+        : t('dashboard.alert_source_meteofrance');
+      $bTooltip = t('dashboard.alert_now') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
+      $bHref = trim((string) ($badge['url'] ?? ''));
+      if ($bHref === '') {
+        $bHref = $alertHref;
+      }
     ?>
-      <a class="vigi-badge vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
+      <a class="vigi-badge src-<?= h($bSource) ?> vigi-<?= h($bLevel) ?>" href="<?= h($bHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
         <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
       </a>
     <?php endforeach; ?>
@@ -248,9 +263,17 @@ front_header(t('dashboard.title'));
       if ($bPhen === '') {
         $bPhen = trim((string) ($badge['label'] ?? ''));
       }
-      $bTooltip = t('dashboard.alert_next_12h') . ' - ' . $bLabel . ' : ' . $bPhen;
+      $bSource = (string) ($badge['source'] ?? 'meteofrance');
+      $bSourceLabel = $bSource === 'vigicrues'
+        ? t('dashboard.alert_source_vigicrues')
+        : t('dashboard.alert_source_meteofrance');
+      $bTooltip = t('dashboard.alert_next_12h') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
+      $bHref = trim((string) ($badge['url'] ?? ''));
+      if ($bHref === '') {
+        $bHref = $alertHref;
+      }
     ?>
-      <a class="vigi-badge is-future vigi-<?= h($bLevel) ?>" href="<?= h($alertHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
+      <a class="vigi-badge is-future src-<?= h($bSource) ?> vigi-<?= h($bLevel) ?>" href="<?= h($bHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
         <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
       </a>
     <?php endforeach; ?>

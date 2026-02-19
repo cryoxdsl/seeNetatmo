@@ -5,6 +5,7 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/logger.php';
 
 const MF_VIGILANCE_ACCESSIBLE_URL = 'https://vigilance.meteofrance.fr/fr/vigilance-accessible';
+const VIGICRUES_URL = 'https://www.vigicrues.gouv.fr';
 
 function station_department_from_zip(?string $zip): ?string
 {
@@ -327,6 +328,23 @@ function vigilance_level_code(string $level): string
     };
 }
 
+function vigilance_source_from_label(string $label): string
+{
+    $v = vigilance_normalize_text($label);
+    if (str_contains($v, 'crues') || preg_match('/\bcrue\b/', $v) === 1) {
+        return 'vigicrues';
+    }
+    return 'meteofrance';
+}
+
+function vigilance_source_url(string $source, string $dept, string $deptName = ''): string
+{
+    if ($source === 'vigicrues') {
+        return VIGICRUES_URL;
+    }
+    return vigilance_department_url($dept, $deptName);
+}
+
 function vigilance_parse_heading_date(string $heading, DateTimeImmutable $now): ?DateTimeImmutable
 {
     $value = trim($heading);
@@ -439,15 +457,20 @@ function vigilance_summary_from_entries(array $entries): array
         if ($label === '') {
             continue;
         }
+        $source = vigilance_source_from_label($label);
+        $dept = strtoupper(trim((string) ($e['dept'] ?? '')));
+        $deptName = trim((string) ($e['dept_name'] ?? ''));
         foreach (vigilance_types_from_label($label) as $tp) {
             $badgeLabel = vigilance_badge_label_for_type($tp, $label);
-            $keyRaw = $tp . '|' . $badgeLabel;
+            $keyRaw = $source . '|' . $tp . '|' . $badgeLabel;
             $key = function_exists('mb_strtolower') ? mb_strtolower($keyRaw, 'UTF-8') : strtolower($keyRaw);
             if (!isset($alertsByPhenomenon[$key]) || vigilance_level_rank($lvl) > vigilance_level_rank((string) $alertsByPhenomenon[$key]['level'])) {
                 $alertsByPhenomenon[$key] = [
                     'level' => $lvl,
                     'type' => $tp,
                     'label' => $badgeLabel,
+                    'source' => $source,
+                    'url' => vigilance_source_url($source, $dept, $deptName),
                 ];
             }
         }
