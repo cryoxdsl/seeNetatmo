@@ -123,6 +123,12 @@ $stationLon = station_longitude_setting();
 $stationAlt = station_altitude_setting();
 $stationPosition = ($stationLat !== '' && $stationLon !== '') ? ($stationLat . ', ' . $stationLon) : t('common.na');
 $stationAltDisplay = $stationAlt !== '' ? (number_format((float) $stationAlt, 0, '.', '') . ' m') : t('common.na');
+$stationMapUrl = null;
+if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_numeric($stationLon)) {
+    $mapLat = number_format((float) $stationLat, 6, '.', '');
+    $mapLon = number_format((float) $stationLon, 6, '.', '');
+    $stationMapUrl = 'https://www.openstreetmap.org/?mlat=' . $mapLat . '&mlon=' . $mapLon . '#map=15/' . $mapLat . '/' . $mapLon;
+}
 $nowRain = now_paris();
 $rainDayLabel = t('rain.day_base') . ' (' . $nowRain->format('d/m/Y') . ')';
 $monthNames = locale_current() === 'en_EN'
@@ -179,9 +185,9 @@ front_header(t('dashboard.title'));
   <article class="card station-card">
     <h3><?= h(t('station.card_title')) ?></h3>
     <div class="station-visual">
-      <div class="station-pin">
+      <div class="station-alt-icon">
         <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M32 6c-9.4 0-17 7.6-17 17 0 12.4 17 35 17 35s17-22.6 17-35c0-9.4-7.6-17-17-17zm0 24a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" fill="currentColor"/>
+          <path d="M6 53h52L42 23l-8 12-6-8L6 53zm27-10l-4 6h8l-4-6z" fill="currentColor"/>
         </svg>
       </div>
       <div class="alt-meter-wrap">
@@ -189,7 +195,19 @@ front_header(t('dashboard.title'));
         <span class="alt-meter-label"><?= h($stationAltDisplay) ?></span>
       </div>
     </div>
-    <p class="small-muted station-line"><span class="station-label"><?= h(t('station.location')) ?></span><span class="code"><?= h($stationPosition) ?></span></p>
+    <p class="small-muted station-line">
+      <span class="station-label"><?= h(t('station.location')) ?></span>
+      <span class="station-location-value">
+        <span class="code"><?= h($stationPosition) ?></span>
+        <?php if ($stationMapUrl !== null): ?>
+          <a class="station-map-link" href="<?= h($stationMapUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="OpenStreetMap">
+            <svg viewBox="0 0 64 64" aria-hidden="true">
+              <path d="M32 6c-9.4 0-17 7.6-17 17 0 12.4 17 35 17 35s17-22.6 17-35c0-9.4-7.6-17-17-17zm0 24a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" fill="currentColor"/>
+            </svg>
+          </a>
+        <?php endif; ?>
+      </span>
+    </p>
     <p class="small-muted station-line"><span class="station-label"><?= h(t('station.altitude')) ?></span><strong><?= h($stationAltDisplay) ?></strong></p>
     <p class="small-muted station-line"><span class="station-label"><?= h(t('station.status')) ?></span>
       <span class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></span>
