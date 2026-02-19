@@ -35,6 +35,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare('DELETE FROM backup_codes WHERE user_id=:u')->execute([':u' => $uid]);
             $msg = t('twofa.disabled');
         } elseif ($action === 'enable' || $action === 'regenerate') {
+            if ($action === 'regenerate') {
+                $confirmPassword = (string) ($_POST['confirm_password'] ?? '');
+                if (!password_verify($confirmPassword, (string) ($user['password_hash'] ?? ''))) {
+                    throw new RuntimeException(t('twofa.disable_bad_password'));
+                }
+            }
             $secret = totp_secret_generate();
             $secretEnc = encrypt_string($secret);
 
@@ -84,6 +90,7 @@ admin_header(t('twofa.manage_title'));
     <form method="post" class="row">
       <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
       <input type="hidden" name="action" value="regenerate">
+      <label><?= h(t('twofa.confirm_password')) ?><br><input type="password" name="confirm_password" required></label>
       <button type="submit"><?= h(t('twofa.regenerate')) ?></button>
     </form>
     <form method="post" class="row" onsubmit="return confirm('<?= h(t('twofa.confirm_disable')) ?>');">

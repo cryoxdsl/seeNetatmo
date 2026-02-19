@@ -21,7 +21,10 @@ function admin_header(string $title): void
     echo '<a href="' . APP_ADMIN_PATH . '/health.php">' . h(t('admin.health')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/logs.php">' . h(t('admin.logs')) . '</a>';
     echo '<a href="/upgrade.php">' . h(t('admin.upgrade')) . '</a>';
-    echo '<a href="' . APP_ADMIN_PATH . '/logout.php">' . h(t('admin.logout')) . '</a>';
+    echo '<form method="post" action="' . APP_ADMIN_PATH . '/logout.php" style="margin:0;">';
+    echo '<input type="hidden" name="csrf_token" value="' . h(csrf_token()) . '">';
+    echo '<button type="submit" style="all:unset;display:block;cursor:pointer;color:#fff;padding:.4rem .6rem;">' . h(t('admin.logout')) . '</button>';
+    echo '</form>';
     echo '<a href="' . h(locale_switch_url('fr_FR')) . '">' . h(t('lang.fr')) . '</a><a href="' . h(locale_switch_url('en_EN')) . '">' . h(t('lang.en')) . '</a>';
     echo '</aside><main class="admin-main">';
 }

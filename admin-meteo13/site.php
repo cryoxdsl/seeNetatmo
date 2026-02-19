@@ -74,6 +74,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
 
     if ($site==='' || !filter_var($mail, FILTER_VALIDATE_EMAIL) || $table==='') {
         $err=t('site.invalid');
+    } elseif (preg_match('/^[A-Za-z0-9_]{1,64}$/', $table) !== 1) {
+        $err=t('site.invalid');
     } elseif (!in_array($weatherIconStyle, ['realistic', 'minimal', 'outline', 'glyph'], true)) {
         $err=t('site.invalid');
     } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
@@ -87,6 +89,21 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     } elseif (($stationLat === '') xor ($stationLon === '')) {
         $err=t('site.invalid');
     } elseif ($err === '') {
+        $tbl = db()->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t');
+        $tbl->execute([':t' => $table]);
+        if ((int) $tbl->fetchColumn() === 0) {
+            $err = t('site.invalid');
+        } else {
+            $pk = db()->prepare("SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = :t AND CONSTRAINT_NAME = 'PRIMARY' ORDER BY ORDINAL_POSITION");
+            $pk->execute([':t' => $table]);
+            $pkCols = array_map(static fn(array $r): string => (string) $r['COLUMN_NAME'], $pk->fetchAll());
+            if ($pkCols !== ['DateTime']) {
+                $err = t('site.invalid');
+            }
+        }
+    }
+
+    if ($err === '') {
         setting_set('site_name',$site);
         setting_set('contact_email',$mail);
         setting_set('data_table',$table);

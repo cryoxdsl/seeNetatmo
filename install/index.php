@@ -5,6 +5,7 @@ require_once __DIR__ . '/../inc/constants.php';
 require_once __DIR__ . '/../inc/helpers.php';
 require_once __DIR__ . '/../inc/totp.php';
 require_once __DIR__ . '/../inc/config.php';
+require_once __DIR__ . '/../inc/session.php';
 require_once __DIR__ . '/../inc/i18n.php';
 
 if (is_file(__DIR__ . '/../config/installed.lock')) {
@@ -48,8 +49,15 @@ function installer_db(array $s): PDO
     ]);
 }
 
+function installer_csrf_input(): string
+{
+    return '<input type="hidden" name="csrf_token" value="' . h(csrf_token()) . '">';
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        require_csrf();
+
         if ($step === 1) {
             $errs = [];
             if (PHP_VERSION_ID < 80000) $errs[] = 'PHP >= 8.0 required';
@@ -212,21 +220,21 @@ if (!empty($st['totp_secret']) && !empty($st['admin_username'])) {
 <?php if($error):?><div class="alert alert-bad"><?=h($error)?></div><?php endif;?>
 <?php if($ok):?><div class="alert alert-ok"><?=h($ok)?></div><?php endif;?>
 
-<?php if($step===1):?><form method="post"><p><?= h(t('install.check_desc')) ?></p><button type="submit"><?= h(t('install.run_checks')) ?></button></form><?php endif;?>
+<?php if($step===1):?><form method="post"><?= installer_csrf_input() ?><p><?= h(t('install.check_desc')) ?></p><button type="submit"><?= h(t('install.run_checks')) ?></button></form><?php endif;?>
 
-<?php if($step===2):?><form method="post"><label>DB host<br><input name="db_host" value="<?=h($st['db_host']??'localhost')?>" required></label><br><br><label>DB port<br><input name="db_port" value="<?=h($st['db_port']??'3306')?>" required></label><br><br><label>DB name<br><input name="db_name" value="<?=h($st['db_name']??'')?>" required></label><br><br><label>DB user<br><input name="db_user" value="<?=h($st['db_user']??'')?>" required></label><br><br><label>DB pass<br><input type="password" name="db_pass"></label><br><br><button type="submit"><?= h(t('install.connect')) ?></button></form><?php endif;?>
+<?php if($step===2):?><form method="post"><?= installer_csrf_input() ?><label>DB host<br><input name="db_host" value="<?=h($st['db_host']??'localhost')?>" required></label><br><br><label>DB port<br><input name="db_port" value="<?=h($st['db_port']??'3306')?>" required></label><br><br><label>DB name<br><input name="db_name" value="<?=h($st['db_name']??'')?>" required></label><br><br><label>DB user<br><input name="db_user" value="<?=h($st['db_user']??'')?>" required></label><br><br><label>DB pass<br><input type="password" name="db_pass"></label><br><br><button type="submit"><?= h(t('install.connect')) ?></button></form><?php endif;?>
 
-<?php if($step===3):?><form method="post"><label>Data table<br><input name="data_table" value="<?=h($st['data_table']??'alldata')?>" required></label><br><br><button type="submit"><?= h(t('install.verify_table')) ?></button></form><?php endif;?>
+<?php if($step===3):?><form method="post"><?= installer_csrf_input() ?><label>Data table<br><input name="data_table" value="<?=h($st['data_table']??'alldata')?>" required></label><br><br><button type="submit"><?= h(t('install.verify_table')) ?></button></form><?php endif;?>
 
-<?php if($step===4):?><form method="post"><p><?= h(t('install.create_tables_desc')) ?></p><button type="submit"><?= h(t('install.create_tables')) ?></button></form><?php endif;?>
+<?php if($step===4):?><form method="post"><?= installer_csrf_input() ?><p><?= h(t('install.create_tables_desc')) ?></p><button type="submit"><?= h(t('install.create_tables')) ?></button></form><?php endif;?>
 
-<?php if($step===5):?><form method="post"><label>Admin username<br><input name="admin_username" value="<?=h($st['admin_username']??'admin')?>" required></label><br><br><label>Admin password (min 12)<br><input type="password" name="admin_password" minlength="12" required></label><br><br><button type="submit"><?= h(t('install.create_admin')) ?></button></form><?php endif;?>
+<?php if($step===5):?><form method="post"><?= installer_csrf_input() ?><label>Admin username<br><input name="admin_username" value="<?=h($st['admin_username']??'admin')?>" required></label><br><br><label>Admin password (min 12)<br><input type="password" name="admin_password" minlength="12" required></label><br><br><button type="submit"><?= h(t('install.create_admin')) ?></button></form><?php endif;?>
 
-<?php if($step===6):?><form method="post"><p>Netatmo credentials (can be updated later in admin)</p><label>client_id<br><input name="client_id" value="<?=h($st['netatmo_client_id']??'')?>"></label><br><br><label>client_secret<br><input type="password" name="client_secret"></label><br><br><button type="submit"><?= h(t('install.save_netatmo')) ?></button></form><?php endif;?>
+<?php if($step===6):?><form method="post"><?= installer_csrf_input() ?><p>Netatmo credentials (can be updated later in admin)</p><label>client_id<br><input name="client_id" value="<?=h($st['netatmo_client_id']??'')?>"></label><br><br><label>client_secret<br><input type="password" name="client_secret"></label><br><br><button type="submit"><?= h(t('install.save_netatmo')) ?></button></form><?php endif;?>
 
-<?php if($step===7):?><form method="post"><p>Generate master key and cron keys.</p><button type="submit"><?= h(t('install.generate_keys')) ?></button></form><?php endif;?>
+<?php if($step===7):?><form method="post"><?= installer_csrf_input() ?><p>Generate master key and cron keys.</p><button type="submit"><?= h(t('install.generate_keys')) ?></button></form><?php endif;?>
 
-<?php if($step===8 && empty($_SESSION['install_done'])):?><form method="post"><p><?= h(t('install.finalize_desc')) ?></p><button type="submit"><?= h(t('install.finalize')) ?></button></form><?php endif;?>
+<?php if($step===8 && empty($_SESSION['install_done'])):?><form method="post"><?= installer_csrf_input() ?><p><?= h(t('install.finalize_desc')) ?></p><button type="submit"><?= h(t('install.finalize')) ?></button></form><?php endif;?>
 
 <?php if(!empty($_SESSION['install_done'])): ?>
 <div class="panel">
