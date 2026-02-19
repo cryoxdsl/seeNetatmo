@@ -9,7 +9,6 @@ require_once __DIR__ . '/../inc/settings.php';
 require_once __DIR__ . '/../inc/crypto.php';
 require_once __DIR__ . '/../inc/lock.php';
 require_once __DIR__ . '/../inc/logger.php';
-require_once __DIR__ . '/../inc/vigilance.php';
 require_once __DIR__ . '/../inc/sea_temp.php';
 
 header('Content-Type: text/plain; charset=utf-8');
@@ -50,17 +49,11 @@ if ($lock === null) {
 }
 
 try {
-    $v = vigilance_current(true);
     $s = sea_temp_nearest(true);
     $dur = round(microtime(true) - $start, 3);
 
     log_event('info', 'cron.external', 'External refresh success', [
         'duration_sec' => $dur,
-        'vigilance' => [
-            'dept' => $v['dept'] ?? '',
-            'active' => $v['active'] ?? false,
-            'level' => $v['level'] ?? 'green',
-        ],
         'sea_temp' => [
             'available' => $s['available'] ?? false,
             'distance_km' => $s['distance_km'] ?? null,

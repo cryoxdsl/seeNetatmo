@@ -24,7 +24,7 @@ PHP 8 weather application for OVH shared hosting (`hosting-starter`), without fr
 - Cron HTTP via cron-job.org:
   - `/cron/fetch.php?key=...` (5 min)
   - `/cron/daily.php?key=...` (00:10)
-  - `/cron/external.php?key=...` (10-15 min, vigilance + sea temperature cache)
+  - `/cron/external.php?key=...` (10-15 min, sea temperature cache)
 
 ## FR - Déploiement OVH (Git vers /www)
 1. Créer la base MySQL OVH.

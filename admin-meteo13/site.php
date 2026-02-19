@@ -19,7 +19,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $favicon = trim((string)($_POST['favicon_url'] ?? ''));
     $weatherIconStyle = trim((string) ($_POST['weather_icon_style'] ?? weather_icon_style_setting()));
     $defaultLocale = normalize_locale((string) ($_POST['default_locale'] ?? 'fr_FR'));
-    $stationDepartment = strtoupper(trim((string) ($_POST['station_department'] ?? '')));
     $stationZip = trim((string) ($_POST['station_zipcode'] ?? ''));
     $stationLat = trim((string) ($_POST['station_lat'] ?? ''));
     $stationLon = trim((string) ($_POST['station_lon'] ?? ''));
@@ -82,8 +81,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $err=t('site.invalid');
     } elseif (!in_array($weatherIconStyle, ['realistic', 'minimal', 'outline', 'glyph'], true)) {
         $err=t('site.invalid');
-    } elseif ($stationDepartment !== '' && preg_match('/^(?:\d{2,3}|2A|2B)$/', $stationDepartment) !== 1) {
-        $err=t('site.invalid');
     } elseif ($stationLat !== '' && (!is_numeric($stationLat) || (float) $stationLat < -90 || (float) $stationLat > 90)) {
         $err=t('site.invalid');
     } elseif ($stationLon !== '' && (!is_numeric($stationLon) || (float) $stationLon < -180 || (float) $stationLon > 180)) {
@@ -115,7 +112,6 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('favicon_url', $uploadedFavicon ?? ($favicon !== '' ? $favicon : '/favicon.ico'));
         setting_set('weather_icon_style', $weatherIconStyle);
         setting_set('default_locale', $defaultLocale);
-        setting_set('station_department', $stationDepartment);
         setting_set('station_zipcode', $stationZip);
         setting_set('station_lat', $stationLat !== '' ? (string) ((float) $stationLat) : '');
         setting_set('station_lon', $stationLon !== '' ? (string) ((float) $stationLon) : '');
@@ -160,7 +156,6 @@ admin_header(t('admin.site'));
     </select>
   </label><br><br>
   <label><?= h(t('site.station_zipcode')) ?><br><input name="station_zipcode" value="<?=h(station_zipcode())?>" placeholder="13590"></label><br><br>
-  <label><?= h(t('site.station_department')) ?><br><input name="station_department" value="<?=h(station_department_setting())?>" placeholder="13"></label><br><br>
   <label><?= h(t('site.station_lat')) ?><br><input name="station_lat" value="<?=h(station_latitude_setting())?>" placeholder="43.53"></label><br><br>
   <label><?= h(t('site.station_lon')) ?><br><input name="station_lon" value="<?=h(station_longitude_setting())?>" placeholder="5.45"></label><br><br>
   <label><?= h(t('site.station_altitude')) ?><br><input name="station_altitude" value="<?=h(station_altitude_setting())?>" placeholder="350"></label><br><br>

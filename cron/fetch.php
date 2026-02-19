@@ -79,18 +79,6 @@ try {
         $zip = trim((string) ($w['station_zipcode'] ?? ''));
         if ($zip !== '') {
             setting_set('station_zipcode', $zip);
-            if ((setting_get('station_department', '') ?? '') === '') {
-                $digits = preg_replace('/\D+/', '', $zip) ?? '';
-                $dept = '';
-                if (str_starts_with($digits, '97') || str_starts_with($digits, '98')) {
-                    $dept = strlen($digits) >= 3 ? substr($digits, 0, 3) : '';
-                } elseif (strlen($digits) >= 2) {
-                    $dept = substr($digits, 0, 2);
-                }
-                if ($dept !== '') {
-                    setting_set('station_department', $dept);
-                }
-            }
         }
         if (isset($w['station_lat']) && $w['station_lat'] !== null && is_numeric((string) $w['station_lat'])) {
             setting_set('station_lat', (string) ((float) $w['station_lat']));

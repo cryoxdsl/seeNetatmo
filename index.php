@@ -5,7 +5,6 @@ require_once __DIR__ . '/inc/bootstrap.php';
 require_once __DIR__ . '/inc/db.php';
 require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
-require_once __DIR__ . '/inc/vigilance.php';
 require_once __DIR__ . '/inc/sea_temp.php';
 require_once __DIR__ . '/inc/forecast.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
@@ -84,95 +83,6 @@ $seasonUrl = '/assets/img/seasons/' . $season . '.svg';
 if (is_file($seasonFile)) {
     $seasonUrl .= '?v=' . filemtime($seasonFile);
 }
-$alert = vigilance_current();
-$alertLevel = (string) ($alert['level'] ?? 'green');
-$alertLabel = match ($alertLevel) {
-    'yellow' => t('dashboard.alert_level_yellow'),
-    'orange' => t('dashboard.alert_level_orange'),
-    'red' => t('dashboard.alert_level_red'),
-    default => t('dashboard.alert_level_green'),
-};
-$alertDesc = match ($alertLevel) {
-    'yellow' => t('dashboard.alert_desc_yellow'),
-    'orange' => t('dashboard.alert_desc_orange'),
-    'red' => t('dashboard.alert_desc_red'),
-    default => t('dashboard.alert_desc_green'),
-};
-$normalizeAlertBadges = static function (mixed $source): array {
-    $out = [];
-    if (!is_array($source)) {
-        return $out;
-    }
-    foreach ($source as $a) {
-        if (!is_array($a)) {
-            continue;
-        }
-        $type = trim((string) ($a['type'] ?? 'generic'));
-        $level = trim((string) ($a['level'] ?? 'green'));
-        $level = match (strtolower($level)) {
-            'rouge', 'red' => 'red',
-            'orange' => 'orange',
-            'jaune', 'yellow' => 'yellow',
-            default => 'green',
-        };
-        if ($type === '') {
-            $type = 'generic';
-        }
-        $src = strtolower(trim((string) ($a['source'] ?? 'meteofrance')));
-        $src = $src === 'vigicrues' ? 'vigicrues' : 'meteofrance';
-        $url = trim((string) ($a['url'] ?? ''));
-        $out[] = [
-            'type' => $type,
-            'level' => $level,
-            'label' => trim((string) ($a['label'] ?? '')),
-            'source' => $src,
-            'url' => $url,
-        ];
-    }
-    return $out;
-};
-$alertNowBadges = $normalizeAlertBadges($alert['alerts_current'] ?? $alert['alerts'] ?? []);
-$alertUpcomingBadges = $normalizeAlertBadges($alert['alerts_upcoming'] ?? $alert['alerts_next_12h'] ?? []);
-$badgeKey = static function (array $badge): string {
-    $source = strtolower(trim((string) ($badge['source'] ?? 'meteofrance')));
-    if ($source !== 'vigicrues') {
-        $source = 'meteofrance';
-    }
-    $type = trim((string) ($badge['type'] ?? 'generic'));
-    if ($type === '') {
-        $type = 'generic';
-    }
-    $label = trim((string) ($badge['label'] ?? ''));
-    if ($label === '') {
-        $label = $type;
-    }
-    $normalized = function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label);
-    return $source . '|' . $type . '|' . $normalized;
-};
-$currentBadgeKeys = [];
-foreach ($alertNowBadges as $badge) {
-    if (!is_array($badge)) {
-        continue;
-    }
-    $currentBadgeKeys[$badgeKey($badge)] = true;
-}
-$alertUpcomingBadges = array_values(array_filter(
-    $alertUpcomingBadges,
-    static function (array $badge) use ($currentBadgeKeys, $badgeKey): bool {
-        return !isset($currentBadgeKeys[$badgeKey($badge)]);
-    }
-));
-if ($alertNowBadges === []) {
-    $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
-    $alertNowBadges[] = [
-        'type' => $fallbackType !== '' ? $fallbackType : 'generic',
-        'level' => $alertLevel,
-        'label' => '',
-        'source' => 'meteofrance',
-        'url' => '',
-    ];
-}
-$alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
 $forecast = forecast_summary(true);
@@ -229,84 +139,6 @@ $rainYearLabel = t('rain.year_base') . ' (' . $nowRain->format('Y') . ')';
 front_header(t('dashboard.title'));
 ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
-  <div class="vigi-badges">
-    <?php foreach ($alertNowBadges as $badge):
-      $bLevel = (string) ($badge['level'] ?? 'green');
-      $bLabel = match ($bLevel) {
-        'yellow' => t('dashboard.alert_level_yellow'),
-        'orange' => t('dashboard.alert_level_orange'),
-        'red' => t('dashboard.alert_level_red'),
-        default => t('dashboard.alert_level_green'),
-      };
-      $bType = trim((string) ($badge['type'] ?? 'generic'));
-      $bPhen = match ($bType) {
-        'storm' => t('dashboard.alert_type_storm'),
-        'wind' => t('dashboard.alert_type_wind'),
-        'rain' => t('dashboard.alert_type_rain'),
-        'flood' => t('dashboard.alert_type_flood'),
-        'wave' => t('dashboard.alert_type_wave'),
-        'snow' => t('dashboard.alert_type_snow'),
-        'heat' => t('dashboard.alert_type_heat'),
-        'cold' => t('dashboard.alert_type_cold'),
-        'avalanche' => t('dashboard.alert_type_avalanche'),
-        default => t('dashboard.alert_type_generic'),
-      };
-      if ($bPhen === '') {
-        $bPhen = trim((string) ($badge['label'] ?? ''));
-      }
-      $bSource = (string) ($badge['source'] ?? 'meteofrance');
-      $bSourceLabel = $bSource === 'vigicrues'
-        ? t('dashboard.alert_source_vigicrues')
-        : t('dashboard.alert_source_meteofrance');
-      $bTooltip = t('dashboard.alert_now') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
-      $bHref = trim((string) ($badge['url'] ?? ''));
-      if ($bHref === '') {
-        $bHref = $alertHref;
-      }
-    ?>
-      <a class="vigi-badge src-<?= h($bSource) ?> vigi-<?= h($bLevel) ?>" href="<?= h($bHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
-        <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
-      </a>
-    <?php endforeach; ?>
-    <?php foreach ($alertUpcomingBadges as $badge):
-      $bLevel = (string) ($badge['level'] ?? 'green');
-      $bLabel = match ($bLevel) {
-        'yellow' => t('dashboard.alert_level_yellow'),
-        'orange' => t('dashboard.alert_level_orange'),
-        'red' => t('dashboard.alert_level_red'),
-        default => t('dashboard.alert_level_green'),
-      };
-      $bType = trim((string) ($badge['type'] ?? 'generic'));
-      $bPhen = match ($bType) {
-        'storm' => t('dashboard.alert_type_storm'),
-        'wind' => t('dashboard.alert_type_wind'),
-        'rain' => t('dashboard.alert_type_rain'),
-        'flood' => t('dashboard.alert_type_flood'),
-        'wave' => t('dashboard.alert_type_wave'),
-        'snow' => t('dashboard.alert_type_snow'),
-        'heat' => t('dashboard.alert_type_heat'),
-        'cold' => t('dashboard.alert_type_cold'),
-        'avalanche' => t('dashboard.alert_type_avalanche'),
-        default => t('dashboard.alert_type_generic'),
-      };
-      if ($bPhen === '') {
-        $bPhen = trim((string) ($badge['label'] ?? ''));
-      }
-      $bSource = (string) ($badge['source'] ?? 'meteofrance');
-      $bSourceLabel = $bSource === 'vigicrues'
-        ? t('dashboard.alert_source_vigicrues')
-        : t('dashboard.alert_source_meteofrance');
-      $bTooltip = t('dashboard.alert_upcoming') . ' - ' . $bLabel . ' : ' . $bPhen . "\n" . t('dashboard.alert_source') . ': ' . $bSourceLabel;
-      $bHref = trim((string) ($badge['url'] ?? ''));
-      if ($bHref === '') {
-        $bHref = $alertHref;
-      }
-    ?>
-      <a class="vigi-badge is-future src-<?= h($bSource) ?> vigi-<?= h($bLevel) ?>" href="<?= h($bHref) ?>" target="_blank" rel="noopener noreferrer" data-tooltip="<?= h($bTooltip) ?>">
-        <span class="vigi-icon"><?= vigilance_icon((string) ($badge['type'] ?? 'generic')) ?></span>
-      </a>
-    <?php endforeach; ?>
-  </div>
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">

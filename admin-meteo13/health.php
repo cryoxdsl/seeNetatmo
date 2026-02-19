@@ -21,7 +21,6 @@ $lastExternal = db()->query("SELECT created_at,message FROM app_logs WHERE chann
 $err24h = (int)db()->query("SELECT COUNT(*) FROM app_logs WHERE level='error' AND created_at >= (NOW() - INTERVAL 24 HOUR)")->fetchColumn();
 $source = station_position_locked() ? t('health.position_manual') : t('health.position_auto');
 $lockStatus = station_position_locked() ? t('health.position_on') : t('health.position_off');
-$dept = station_department_setting();
 $zip = station_zipcode();
 $lat = station_latitude_setting();
 $lon = station_longitude_setting();
@@ -41,7 +40,7 @@ admin_header(t('admin.health'));
   <p><strong><?= h(t('health.position')) ?></strong></p>
   <p><?= h(t('health.position_source')) ?>: <?= h($source) ?></p>
   <p><?= h(t('health.position_lock')) ?>: <?= h($lockStatus) ?></p>
-  <p>Dept: <?= h($dept !== '' ? $dept : t('common.na')) ?> | ZIP: <?= h($zip !== '' ? $zip : t('common.na')) ?></p>
+  <p>ZIP: <?= h($zip !== '' ? $zip : t('common.na')) ?></p>
   <p>Lat: <?= h($lat !== '' ? $lat : t('common.na')) ?> | Lon: <?= h($lon !== '' ? $lon : t('common.na')) ?></p>
 </div>
 <?php admin_footer();
