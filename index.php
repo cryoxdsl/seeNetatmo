@@ -422,19 +422,11 @@ front_header(t('dashboard.title'));
     <div class="extremes-grid">
       <p class="extremes-line">
         <span class="extremes-label"><?= h(t('extremes.day_min')) ?></span>
-        <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h($dayMinDisplay) ?></strong>
+        <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h($dayMinDisplay) ?> (<?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?>)</strong>
       </p>
       <p class="extremes-line">
         <span class="extremes-label"><?= h(t('extremes.day_max')) ?></span>
-        <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?></strong>
-      </p>
-      <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.day_min_time')) ?></span>
-        <strong><?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?></strong>
-      </p>
-      <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.day_max_time')) ?></span>
-        <strong><?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?></strong>
+        <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?> (<?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?>)</strong>
       </p>
       <p class="extremes-line">
         <span class="extremes-label"><?= h(t('extremes.sunrise')) ?></span>
