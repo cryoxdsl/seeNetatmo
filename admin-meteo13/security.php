@@ -33,6 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare('UPDATE users SET totp_secret_enc=:s WHERE id=:id')
                 ->execute([':s' => '', ':id' => $uid]);
             db()->prepare('DELETE FROM backup_codes WHERE user_id=:u')->execute([':u' => $uid]);
+            auth_revoke_all_trusted_devices($uid);
             $msg = t('twofa.disabled');
         } elseif ($action === 'enable' || $action === 'regenerate') {
             if ($action === 'regenerate') {
@@ -53,6 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             db()->prepare('UPDATE users SET totp_secret_enc=:s WHERE id=:id')
                 ->execute([':s' => $secretEnc, ':id' => $uid]);
             db()->prepare('DELETE FROM backup_codes WHERE user_id=:u')->execute([':u' => $uid]);
+            auth_revoke_all_trusted_devices($uid);
             $ins = db()->prepare('INSERT INTO backup_codes(user_id,code_hash,created_at) VALUES(:u,:h,NOW())');
             foreach ($codesPlain as $c) {
                 $ins->execute([':u' => $uid, ':h' => password_hash($c, PASSWORD_DEFAULT)]);

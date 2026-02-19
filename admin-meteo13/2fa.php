@@ -21,7 +21,8 @@ $error = '';
 $msg = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
-    $res = auth_verify_2fa((string) ($_POST['code'] ?? ''));
+    $rememberDevice = !empty($_POST['remember_device']);
+    $res = auth_verify_2fa((string) ($_POST['code'] ?? ''), $rememberDevice);
     if ($res['ok']) {
         if (!empty($res['backup_used'])) {
             $msg = t('twofa.backup_used');
@@ -39,6 +40,8 @@ admin_header('2FA');
 <form method="post" class="panel">
   <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">
   <label><?= h(t('twofa.code')) ?><br><input name="code" required></label><br><br>
+  <label><input type="checkbox" name="remember_device" value="1"> <?= h(t('twofa.remember_device')) ?></label>
+  <p class="small-muted"><?= h(t('twofa.remember_device_help')) ?></p><br>
   <button type="submit"><?= h(t('twofa.validate')) ?></button>
 </form>
 <?php admin_footer();

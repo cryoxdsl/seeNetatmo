@@ -26,6 +26,25 @@ $migrations = [
             "ALTER TABLE login_attempts ADD KEY idx_login_attempts_uip (username, ip_address, created_at)",
         ],
     ],
+    4 => [
+        'description' => 'Create trusted devices table for 2FA remember-me',
+        'sql' => [
+            "CREATE TABLE IF NOT EXISTS trusted_devices (
+              id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+              user_id INT UNSIGNED NOT NULL,
+              selector CHAR(16) NOT NULL,
+              token_hash CHAR(64) NOT NULL,
+              ua_hash CHAR(64) NOT NULL,
+              expires_at DATETIME NOT NULL,
+              last_used_at DATETIME NOT NULL,
+              created_at DATETIME NOT NULL,
+              revoked_at DATETIME NULL,
+              UNIQUE KEY uq_trusted_devices_selector (selector),
+              KEY idx_trusted_devices_user (user_id),
+              KEY idx_trusted_devices_expires (expires_at)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4",
+        ],
+    ],
 ];
 
 $applied = [];

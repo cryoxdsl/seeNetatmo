@@ -38,6 +38,21 @@ CREATE TABLE IF NOT EXISTS backup_codes (
   KEY idx_backup_codes_user (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS trusted_devices (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id INT UNSIGNED NOT NULL,
+  selector CHAR(16) NOT NULL,
+  token_hash CHAR(64) NOT NULL,
+  ua_hash CHAR(64) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  last_used_at DATETIME NOT NULL,
+  created_at DATETIME NOT NULL,
+  revoked_at DATETIME NULL,
+  UNIQUE KEY uq_trusted_devices_selector (selector),
+  KEY idx_trusted_devices_user (user_id),
+  KEY idx_trusted_devices_expires (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS app_logs (
   id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   level VARCHAR(20) NOT NULL,

@@ -19,6 +19,222 @@ function auth_msg(string $key, string $fallback): string
     return $fallback;
 }
 
+function auth_cookie_secure_flag(): bool
+{
+    $secure = is_https();
+    if (!$secure) {
+        $forwardedProto = strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? ''));
+        if ($forwardedProto !== '' && str_contains($forwardedProto, 'https')) {
+            $secure = true;
+        }
+    }
+    if (!$secure) {
+        $cfVisitor = (string) ($_SERVER['HTTP_CF_VISITOR'] ?? '');
+        if ($cfVisitor !== '' && stripos($cfVisitor, '"https"') !== false) {
+            $secure = true;
+        }
+    }
+    return $secure;
+}
+
+function auth_set_trusted_cookie(string $value, int $expiresAt): void
+{
+    setcookie(TRUSTED_2FA_COOKIE_NAME, $value, [
+        'expires' => $expiresAt,
+        'path' => '/',
+        'secure' => auth_cookie_secure_flag(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+}
+
+function auth_clear_trusted_cookie(): void
+{
+    setcookie(TRUSTED_2FA_COOKIE_NAME, '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'secure' => auth_cookie_secure_flag(),
+        'httponly' => true,
+        'samesite' => 'Lax',
+    ]);
+    unset($_COOKIE[TRUSTED_2FA_COOKIE_NAME]);
+}
+
+function auth_user_agent_hash(): string
+{
+    $ua = substr((string) ($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 500);
+    return hash('sha256', $ua);
+}
+
+function auth_trusted_devices_available(): bool
+{
+    static $available = null;
+    if ($available !== null) {
+        return $available;
+    }
+    try {
+        db()->query('SELECT 1 FROM trusted_devices LIMIT 1');
+        $available = true;
+    } catch (Throwable) {
+        $available = false;
+    }
+    return $available;
+}
+
+function auth_trusted_cookie_parse(?string $raw): ?array
+{
+    $raw = trim((string) $raw);
+    if ($raw === '') {
+        return null;
+    }
+    $parts = explode('.', $raw, 2);
+    if (count($parts) !== 2) {
+        return null;
+    }
+    [$selector, $token] = $parts;
+    if (!preg_match('/^[a-f0-9]{16}$/', $selector) || !preg_match('/^[a-f0-9]{64}$/', $token)) {
+        return null;
+    }
+    return ['selector' => $selector, 'token' => $token];
+}
+
+function auth_finalize_admin_login(array $user): void
+{
+    $_SESSION['admin_uid'] = (int) $user['id'];
+    $_SESSION['admin_username'] = (string) $user['username'];
+    $_SESSION['admin_ok'] = 1;
+    $_SESSION['admin_last_seen'] = time();
+    unset($_SESSION['pending_uid'], $_SESSION['pending_user'], $_SESSION['pending_created_at']);
+    unset($_SESSION['pending_2fa_failures']);
+    db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $user['id']]);
+    session_regenerate_id(true);
+}
+
+function auth_issue_trusted_device(int $userId): void
+{
+    if (!auth_trusted_devices_available() || $userId <= 0) {
+        return;
+    }
+    $selector = random_hex(8);
+    $token = random_hex(32);
+    $tokenHash = hash('sha256', $token);
+    $uaHash = auth_user_agent_hash();
+    $expiresAt = time() + (TRUSTED_2FA_DAYS * 86400);
+    $expiresSql = date('Y-m-d H:i:s', $expiresAt);
+
+    try {
+        db()->prepare('DELETE FROM trusted_devices WHERE user_id=:uid AND (expires_at < NOW() OR revoked_at IS NOT NULL)')
+            ->execute([':uid' => $userId]);
+        db()->prepare('INSERT INTO trusted_devices(user_id,selector,token_hash,ua_hash,expires_at,last_used_at,created_at,revoked_at) VALUES(:uid,:selector,:token_hash,:ua_hash,:expires_at,NOW(),NOW(),NULL)')
+            ->execute([
+                ':uid' => $userId,
+                ':selector' => $selector,
+                ':token_hash' => $tokenHash,
+                ':ua_hash' => $uaHash,
+                ':expires_at' => $expiresSql,
+            ]);
+        auth_set_trusted_cookie($selector . '.' . $token, $expiresAt);
+    } catch (Throwable) {
+        auth_clear_trusted_cookie();
+    }
+}
+
+function auth_revoke_current_trusted_device(): void
+{
+    if (!auth_trusted_devices_available()) {
+        auth_clear_trusted_cookie();
+        return;
+    }
+    $parsed = auth_trusted_cookie_parse($_COOKIE[TRUSTED_2FA_COOKIE_NAME] ?? '');
+    if (!$parsed) {
+        auth_clear_trusted_cookie();
+        return;
+    }
+    try {
+        db()->prepare('UPDATE trusted_devices SET revoked_at=NOW() WHERE selector=:selector')
+            ->execute([':selector' => $parsed['selector']]);
+    } catch (Throwable) {
+        // Ignore DB errors on logout path.
+    }
+    auth_clear_trusted_cookie();
+}
+
+function auth_revoke_all_trusted_devices(int $userId): void
+{
+    if (!auth_trusted_devices_available() || $userId <= 0) {
+        auth_clear_trusted_cookie();
+        return;
+    }
+    try {
+        db()->prepare('UPDATE trusted_devices SET revoked_at=NOW() WHERE user_id=:uid AND revoked_at IS NULL')
+            ->execute([':uid' => $userId]);
+    } catch (Throwable) {
+        // Ignore DB errors on management path.
+    }
+    auth_clear_trusted_cookie();
+}
+
+function auth_login_with_trusted_device(array $user): bool
+{
+    if (!auth_trusted_devices_available()) {
+        return false;
+    }
+    $rawCookie = (string) ($_COOKIE[TRUSTED_2FA_COOKIE_NAME] ?? '');
+    $parsed = auth_trusted_cookie_parse($rawCookie);
+    if (!$parsed) {
+        if ($rawCookie !== '') {
+            auth_clear_trusted_cookie();
+        }
+        return false;
+    }
+
+    try {
+        $stmt = db()->prepare('SELECT id, user_id, token_hash, ua_hash, expires_at FROM trusted_devices WHERE selector=:selector AND revoked_at IS NULL LIMIT 1');
+        $stmt->execute([':selector' => $parsed['selector']]);
+        $row = $stmt->fetch();
+        if (!$row) {
+            auth_clear_trusted_cookie();
+            return false;
+        }
+        if ((int) $row['user_id'] !== (int) $user['id']) {
+            auth_clear_trusted_cookie();
+            return false;
+        }
+        if ((string) $row['ua_hash'] !== auth_user_agent_hash()) {
+            db()->prepare('UPDATE trusted_devices SET revoked_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
+            auth_clear_trusted_cookie();
+            return false;
+        }
+        $tokenHash = hash('sha256', $parsed['token']);
+        if (!hash_equals((string) $row['token_hash'], $tokenHash)) {
+            db()->prepare('UPDATE trusted_devices SET revoked_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
+            auth_clear_trusted_cookie();
+            return false;
+        }
+        if (strtotime((string) $row['expires_at']) < time()) {
+            db()->prepare('UPDATE trusted_devices SET revoked_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
+            auth_clear_trusted_cookie();
+            return false;
+        }
+
+        $newToken = random_hex(32);
+        $newTokenHash = hash('sha256', $newToken);
+        $newExpiresAt = time() + (TRUSTED_2FA_DAYS * 86400);
+        $newExpiresSql = date('Y-m-d H:i:s', $newExpiresAt);
+        db()->prepare('UPDATE trusted_devices SET token_hash=:token_hash, expires_at=:expires_at, last_used_at=NOW() WHERE id=:id')
+            ->execute([
+                ':token_hash' => $newTokenHash,
+                ':expires_at' => $newExpiresSql,
+                ':id' => $row['id'],
+            ]);
+        auth_set_trusted_cookie($parsed['selector'] . '.' . $newToken, $newExpiresAt);
+        return true;
+    } catch (Throwable) {
+        auth_clear_trusted_cookie();
+        return false;
+    }
+}
+
 function admin_logged_in(): bool
 {
     return !empty($_SESSION['admin_ok']) && !empty($_SESSION['admin_uid']);
@@ -91,13 +307,13 @@ function auth_login_password(string $username, string $password): array
     unset($_SESSION['pending_2fa_failures']);
     $totpSecret = decrypt_string((string) ($user['totp_secret_enc'] ?? ''));
     if ($totpSecret === null || $totpSecret === '') {
-        $_SESSION['admin_uid'] = (int) $user['id'];
-        $_SESSION['admin_username'] = (string) $user['username'];
-        $_SESSION['admin_ok'] = 1;
-        $_SESSION['admin_last_seen'] = time();
-        unset($_SESSION['pending_uid'], $_SESSION['pending_user']);
-        db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $user['id']]);
-        session_regenerate_id(true);
+        auth_clear_trusted_cookie();
+        auth_finalize_admin_login($user);
+        return ['ok' => true, 'need_2fa' => false];
+    }
+
+    if (auth_login_with_trusted_device($user)) {
+        auth_finalize_admin_login($user);
         return ['ok' => true, 'need_2fa' => false];
     }
 
@@ -124,7 +340,7 @@ function auth_pending_user(): ?array
     return $u ?: null;
 }
 
-function auth_verify_2fa(string $codeOrBackup): array
+function auth_verify_2fa(string $codeOrBackup, bool $rememberDevice = false): array
 {
     $u = auth_pending_user();
     if (!$u) {
@@ -140,14 +356,12 @@ function auth_verify_2fa(string $codeOrBackup): array
     $totpSecret = decrypt_string((string) $u['totp_secret_enc']);
     if ($totpSecret && totp_verify($totpSecret, $input)) {
         auth_log_attempt($username, $ip, true);
-        $_SESSION['admin_uid'] = (int) $u['id'];
-        $_SESSION['admin_username'] = (string) $u['username'];
-        $_SESSION['admin_ok'] = 1;
-        $_SESSION['admin_last_seen'] = time();
-        unset($_SESSION['pending_uid'], $_SESSION['pending_user'], $_SESSION['pending_created_at']);
-        unset($_SESSION['pending_2fa_failures']);
-        db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $u['id']]);
-        session_regenerate_id(true);
+        auth_finalize_admin_login($u);
+        if ($rememberDevice) {
+            auth_issue_trusted_device((int) $u['id']);
+        } else {
+            auth_clear_trusted_cookie();
+        }
         return ['ok' => true, 'backup_used' => false];
     }
 
@@ -158,14 +372,12 @@ function auth_verify_2fa(string $codeOrBackup): array
         if (password_verify($backupCandidate, (string) $row['code_hash'])) {
             db()->prepare('UPDATE backup_codes SET used_at=NOW() WHERE id=:id')->execute([':id' => $row['id']]);
             auth_log_attempt($username, $ip, true);
-            $_SESSION['admin_uid'] = (int) $u['id'];
-            $_SESSION['admin_username'] = (string) $u['username'];
-            $_SESSION['admin_ok'] = 1;
-            $_SESSION['admin_last_seen'] = time();
-            unset($_SESSION['pending_uid'], $_SESSION['pending_user'], $_SESSION['pending_created_at']);
-            unset($_SESSION['pending_2fa_failures']);
-            db()->prepare('UPDATE users SET last_login_at=NOW() WHERE id=:id')->execute([':id' => $u['id']]);
-            session_regenerate_id(true);
+            auth_finalize_admin_login($u);
+            if ($rememberDevice) {
+                auth_issue_trusted_device((int) $u['id']);
+            } else {
+                auth_clear_trusted_cookie();
+            }
             return ['ok' => true, 'backup_used' => true];
         }
     }
@@ -180,6 +392,7 @@ function auth_verify_2fa(string $codeOrBackup): array
 
 function admin_logout(): void
 {
+    auth_revoke_current_trusted_device();
     app_session_destroy();
     redirect(APP_ADMIN_PATH . '/login.php');
 }
