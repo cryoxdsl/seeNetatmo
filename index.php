@@ -133,6 +133,35 @@ $normalizeAlertBadges = static function (mixed $source): array {
 };
 $alertNowBadges = $normalizeAlertBadges($alert['alerts_current'] ?? $alert['alerts'] ?? []);
 $alertUpcomingBadges = $normalizeAlertBadges($alert['alerts_upcoming'] ?? $alert['alerts_next_12h'] ?? []);
+$badgeKey = static function (array $badge): string {
+    $source = strtolower(trim((string) ($badge['source'] ?? 'meteofrance')));
+    if ($source !== 'vigicrues') {
+        $source = 'meteofrance';
+    }
+    $type = trim((string) ($badge['type'] ?? 'generic'));
+    if ($type === '') {
+        $type = 'generic';
+    }
+    $label = trim((string) ($badge['label'] ?? ''));
+    if ($label === '') {
+        $label = $type;
+    }
+    $normalized = function_exists('mb_strtolower') ? mb_strtolower($label, 'UTF-8') : strtolower($label);
+    return $source . '|' . $type . '|' . $normalized;
+};
+$currentBadgeKeys = [];
+foreach ($alertNowBadges as $badge) {
+    if (!is_array($badge)) {
+        continue;
+    }
+    $currentBadgeKeys[$badgeKey($badge)] = true;
+}
+$alertUpcomingBadges = array_values(array_filter(
+    $alertUpcomingBadges,
+    static function (array $badge) use ($currentBadgeKeys, $badgeKey): bool {
+        return !isset($currentBadgeKeys[$badgeKey($badge)]);
+    }
+));
 if ($alertNowBadges === []) {
     $fallbackType = trim((string) ($alert['type'] ?? 'generic'));
     $alertNowBadges[] = [
