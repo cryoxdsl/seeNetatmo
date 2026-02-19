@@ -30,6 +30,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .forecast-card .forecast-icon svg{width:34px;height:34px}
 .forecast-card .forecast-current{display:flex;flex-direction:column}
 .forecast-card .forecast-value{font-size:1.1rem;font-weight:700}
+.sea-card .sea-illustration{color:#2f79b7;background:linear-gradient(180deg,#f7fcff,#e9f4ff)}
 .forecast-card .forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;margin-top:.45rem}
 .forecast-card .forecast-day{border:1px solid var(--line);border-radius:8px;padding:.35rem .45rem;background:#f8fbff}
 .forecast-card .forecast-day strong{display:block;margin-bottom:.25rem;font-size:.78rem;color:var(--muted)}
@@ -48,6 +49,9 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .metric-groups-panel h3{margin:0 0 .2rem}
 .metrics-cards{margin:0}
 .metric-group-card{padding:.7rem}
+.metric-group-card h3{display:flex;align-items:center;gap:.45rem}
+.metric-group-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d4e2ef;border-radius:8px;background:#f4f9ff;color:#3e678e;flex:0 0 24px}
+.metric-group-icon svg{width:16px;height:16px;display:block}
 .metric-group-card .metric-group-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
 .metric-group-card .metric-line{margin:0}
 .metric-group-card .metric-line-value{font-size:1.05rem;font-weight:700;color:#1d3e60}

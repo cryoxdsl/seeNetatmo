@@ -88,6 +88,14 @@ if (function_exists('current_day_temp_range')) {
         $dayTemp = ['min' => null, 'max' => null];
     }
 }
+$dayTempTimes = ['min_time' => null, 'max_time' => null];
+if (function_exists('current_day_temp_extreme_times')) {
+    try {
+        $dayTempTimes = current_day_temp_extreme_times();
+    } catch (Throwable $e) {
+        $dayTempTimes = ['min_time' => null, 'max_time' => null];
+    }
+}
 $dayWind = ['min' => null, 'max' => null];
 if (function_exists('current_day_wind_avg_range')) {
     try {
@@ -270,6 +278,19 @@ if (!function_exists('to_hhmm_local')) {
         }
     }
 }
+if (!function_exists('to_hhmm_from_db')) {
+    function to_hhmm_from_db(?string $dt): string
+    {
+        if ($dt === null || $dt === '') {
+            return t('common.na');
+        }
+        try {
+            return (new DateTimeImmutable($dt, new DateTimeZone(APP_TIMEZONE)))->format('H:i');
+        } catch (Throwable $e) {
+            return t('common.na');
+        }
+    }
+}
 if (!function_exists('rain_delta_display')) {
     function rain_delta_display(?float $current, ?float $avg): string
     {
@@ -343,9 +364,21 @@ front_header(t('dashboard.title'));
     </p>
     <p class="small-muted"><?= h(t('station.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   </article>
-  <article class="card">
+  <article class="card forecast-card sea-card">
     <h3><?= h(t('sea.title')) ?></h3>
-    <div data-live-key="sea_temp" data-live-value="<?= h(!empty($sea['available']) && isset($sea['value_c']) && $sea['value_c'] !== null ? (string) $sea['value_c'] : '') ?>"><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>
+    <div class="forecast-head">
+      <span class="forecast-icon sea-illustration" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <path d="M6 42c4-3 8-3 12 0s8 3 12 0s8-3 12 0s8 3 12 0s8-3 12 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M6 50c4-3 8-3 12 0s8 3 12 0s8-3 12 0s8 3 12 0s8-3 12 0" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>
+          <path d="M36 12a10 10 0 0 1 10 10H26a10 10 0 0 1 10-10z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round"/>
+          <path d="M36 22v14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <div class="forecast-current">
+        <div class="forecast-value" data-live-key="sea_temp" data-live-value="<?= h(!empty($sea['available']) && isset($sea['value_c']) && $sea['value_c'] !== null ? (string) $sea['value_c'] : '') ?>"><?= h($seaValue . ($sea['available'] ? (' ' . units_symbol('T')) : '')) ?></div>
+      </div>
+    </div>
     <p class="small-muted"><?= h(t('sea.subtitle')) ?></p>
     <?php if (!empty($sea['distance_km'])): ?>
       <p class="small-muted"><?= h(t('sea.distance')) ?>: <?= h(number_format((float) $sea['distance_km'], 1, '.', '')) ?> km</p>
@@ -396,6 +429,14 @@ front_header(t('dashboard.title'));
         <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?></strong>
       </p>
       <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.day_min_time')) ?></span>
+        <strong><?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?></strong>
+      </p>
+      <p class="extremes-line">
+        <span class="extremes-label"><?= h(t('extremes.day_max_time')) ?></span>
+        <strong><?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?></strong>
+      </p>
+      <p class="extremes-line">
         <span class="extremes-label"><?= h(t('extremes.sunrise')) ?></span>
         <strong><?= h($sunriseDisplay) ?></strong>
       </p>
@@ -440,13 +481,19 @@ $metricGroups = [
   'metric.group.rain' => ['RR', 'R'],
   'metric.group.pressure' => ['P'],
 ];
+$metricGroupIcons = [
+  'metric.group.thermal' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 4a2 2 0 1 1 4 0v8.6a4.5 4.5 0 1 1-4 0V4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15.2v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  'metric.group.wind' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h12c2.7 0 3.8-3 1.4-4.5M3 13h16c3.2 0 4.7 3 1.8 4.8M3 17h10c2.2 0 3.2-1.8 1.9-3.2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  'metric.group.rain' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 14h8.5a3 3 0 0 0 0-6 4 4 0 0 0-7.6-.9A3.2 3.2 0 0 0 7.5 14z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 16.5l-1 3M12 16.5l-1 3M15 16.5l-1 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+  'metric.group.pressure' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 12l4-2.5M12 7.2v1.2M7.8 12H6.6M17.4 12h-1.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+];
 ?>
 <section class="panel metric-groups-panel">
   <h3><?= h(t('metrics.by_type')) ?></h3>
   <div class="cards metrics-cards">
     <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
       <article class="card forecast-card metric-group-card">
-        <h3><?= h(t($groupLabel)) ?></h3>
+        <h3><span class="metric-group-icon" aria-hidden="true"><?= $metricGroupIcons[$groupLabel] ?? '' ?></span><?= h(t($groupLabel)) ?></h3>
         <div class="metric-group-lines">
           <?php foreach ($groupMetrics as $metric):
               $value = $metrics[$metric] ?? null;

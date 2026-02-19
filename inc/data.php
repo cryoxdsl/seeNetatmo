@@ -359,6 +359,23 @@ function current_day_temp_range(): array
     ];
 }
 
+function current_day_temp_extreme_times(): array
+{
+    $t = data_table();
+    $today = now_paris()->format('Y-m-d');
+    $stmt = db()->prepare(
+        "SELECT
+            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d AND `T` IS NOT NULL ORDER BY `T` ASC, `DateTime` ASC LIMIT 1) AS t_min_time,
+            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d AND `T` IS NOT NULL ORDER BY `T` DESC, `DateTime` ASC LIMIT 1) AS t_max_time"
+    );
+    $stmt->execute([':d' => $today]);
+    $row = $stmt->fetch() ?: [];
+    return [
+        'min_time' => isset($row['t_min_time']) && $row['t_min_time'] !== null ? (string) $row['t_min_time'] : null,
+        'max_time' => isset($row['t_max_time']) && $row['t_max_time'] !== null ? (string) $row['t_max_time'] : null,
+    ];
+}
+
 function current_day_wind_avg_range(): array
 {
     $t = data_table();
