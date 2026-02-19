@@ -7,6 +7,7 @@ require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
 require_once __DIR__ . '/inc/vigilance.php';
 require_once __DIR__ . '/inc/sea_temp.php';
+require_once __DIR__ . '/inc/forecast.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -127,6 +128,32 @@ if ($alertBadges === []) {
 $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
+$forecast = forecast_summary(true);
+$forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
+$forecastCurrentLabel = t((string) ($forecast['current_label_key'] ?? 'forecast.condition.unknown'));
+$forecastCurrentTemp = units_format('T', $forecast['current_temp_c'] ?? null);
+$forecastCurrentTempDisplay = $forecastCurrentTemp;
+if ($forecastCurrentTemp !== t('common.na')) {
+    $forecastCurrentTempDisplay .= ' ' . units_symbol('T');
+}
+$forecastTodayMin = units_format('T', $forecast['today_min_c'] ?? null);
+$forecastTodayMax = units_format('T', $forecast['today_max_c'] ?? null);
+$forecastTomorrowMin = units_format('T', $forecast['tomorrow_min_c'] ?? null);
+$forecastTomorrowMax = units_format('T', $forecast['tomorrow_max_c'] ?? null);
+$forecastTodayPop = isset($forecast['today_pop']) && $forecast['today_pop'] !== null
+    ? ((string) ((int) $forecast['today_pop']) . '%')
+    : t('common.na');
+$forecastTomorrowPop = isset($forecast['tomorrow_pop']) && $forecast['tomorrow_pop'] !== null
+    ? ((string) ((int) $forecast['tomorrow_pop']) . '%')
+    : t('common.na');
+$forecastNa = t('common.na');
+$forecastTodayRange = ($forecastTodayMin === $forecastNa && $forecastTodayMax === $forecastNa)
+    ? $forecastNa
+    : ($forecastTodayMin . ' / ' . $forecastTodayMax . ' ' . units_symbol('T'));
+$forecastTomorrowRange = ($forecastTomorrowMin === $forecastNa && $forecastTomorrowMax === $forecastNa)
+    ? $forecastNa
+    : ($forecastTomorrowMin . ' / ' . $forecastTomorrowMax . ' ' . units_symbol('T'));
+$forecastUpdated = trim((string) ($forecast['updated_at'] ?? ''));
 $stationLat = station_latitude_setting();
 $stationLon = station_longitude_setting();
 $stationAlt = station_altitude_setting();
@@ -229,6 +256,36 @@ front_header(t('dashboard.title'));
     <?php endif; ?>
     <?php if (!empty($sea['time'])): ?>
       <p class="small-muted"><?= h(t('sea.updated')) ?>: <?= h((string) $sea['time']) ?></p>
+    <?php endif; ?>
+  </article>
+  <article class="card forecast-card">
+    <h3><?= h(t('forecast.title')) ?></h3>
+    <?php if (!empty($forecast['available'])): ?>
+      <div class="forecast-head">
+        <span class="forecast-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($forecastCurrentType, weather_icon_style_setting()) : '' ?></span>
+        <div class="forecast-current">
+          <div class="forecast-value"><?= h($forecastCurrentTempDisplay) ?></div>
+          <p class="small-muted"><?= h($forecastCurrentLabel) ?></p>
+        </div>
+      </div>
+      <div class="forecast-grid">
+        <div class="forecast-day">
+          <strong><?= h(t('forecast.today')) ?></strong>
+          <p class="forecast-line"><?= h($forecastTodayRange) ?></p>
+          <p class="forecast-line"><?= h(t('forecast.precip')) ?>: <?= h($forecastTodayPop) ?></p>
+        </div>
+        <div class="forecast-day">
+          <strong><?= h(t('forecast.tomorrow')) ?></strong>
+          <p class="forecast-line"><?= h($forecastTomorrowRange) ?></p>
+          <p class="forecast-line"><?= h(t('forecast.precip')) ?>: <?= h($forecastTomorrowPop) ?></p>
+        </div>
+      </div>
+      <?php if ($forecastUpdated !== ''): ?>
+        <p class="small-muted"><?= h(t('forecast.updated')) ?>: <?= h($forecastUpdated) ?></p>
+      <?php endif; ?>
+    <?php else: ?>
+      <div><?= h(t('forecast.unavailable')) ?></div>
+      <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
     <?php endif; ?>
   </article>
 </section>
