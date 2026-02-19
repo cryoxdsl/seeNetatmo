@@ -279,6 +279,101 @@ function metar_decode_wx_token(string $token, string $lang): string
     return trim(implode(' ', $parts));
 }
 
+function metar_parse_signed_temp_token(string $token): ?float
+{
+    $token = strtoupper(trim($token));
+    if ($token === '') {
+        return null;
+    }
+    if (preg_match('/^M?(\d{2})$/', $token) !== 1) {
+        return null;
+    }
+    $value = (float) substr($token, -2);
+    return str_starts_with($token, 'M') ? -$value : $value;
+}
+
+function metar_beaufort_from_kt(float $kt): int
+{
+    if ($kt < 1.0) {
+        return 0;
+    }
+    if ($kt <= 3.0) {
+        return 1;
+    }
+    if ($kt <= 6.0) {
+        return 2;
+    }
+    if ($kt <= 10.0) {
+        return 3;
+    }
+    if ($kt <= 16.0) {
+        return 4;
+    }
+    if ($kt <= 21.0) {
+        return 5;
+    }
+    if ($kt <= 27.0) {
+        return 6;
+    }
+    if ($kt <= 33.0) {
+        return 7;
+    }
+    if ($kt <= 40.0) {
+        return 8;
+    }
+    if ($kt <= 47.0) {
+        return 9;
+    }
+    if ($kt <= 55.0) {
+        return 10;
+    }
+    if ($kt <= 63.0) {
+        return 11;
+    }
+    return 12;
+}
+
+function metar_relative_humidity(?float $tempC, ?float $dewC): ?float
+{
+    if ($tempC === null || $dewC === null) {
+        return null;
+    }
+    $a = 17.625;
+    $b = 243.04;
+    $gammaT = ($a * $tempC) / ($b + $tempC);
+    $gammaD = ($a * $dewC) / ($b + $dewC);
+    $rh = 100.0 * exp($gammaD - $gammaT);
+    $rh = max(0.0, min(100.0, $rh));
+    return round($rh, 0);
+}
+
+function metar_cardinal_label_long_fr(?float $degrees): string
+{
+    if ($degrees === null) {
+        return 'variable';
+    }
+    $short = metar_cardinal_from_degrees($degrees, 'fr');
+    return match ($short) {
+        'N' => 'nord',
+        'NNE' => 'nord-nord-est',
+        'NE' => 'nord-est',
+        'ENE' => 'est-nord-est',
+        'E' => 'est',
+        'ESE' => 'est-sud-est',
+        'SE' => 'sud-est',
+        'SSE' => 'sud-sud-est',
+        'S' => 'sud',
+        'SSW' => 'sud-sud-ouest',
+        'SW' => 'sud-ouest',
+        'WSW' => 'ouest-sud-ouest',
+        'W' => 'ouest',
+        'WNW' => 'ouest-nord-ouest',
+        'NW' => 'nord-ouest',
+        'NNW' => 'nord-nord-ouest',
+        default => 'variable',
+    };
+}
+
 function metar_decode_human(array $metar): array
 {
     if (empty($metar['available'])) {
@@ -286,129 +381,140 @@ function metar_decode_human(array $metar): array
     }
     $lang = metar_locale_code();
     $lines = [];
+    $raw = strtoupper(trim((string) ($metar['raw_text'] ?? '')));
+    $icao = strtoupper(trim((string) ($metar['airport_icao'] ?? ($metar['station_id'] ?? ''))));
 
-    $flight = strtoupper(trim((string) ($metar['flight_category'] ?? '')));
-    if ($flight !== '') {
-        $flightDesc = match ($flight) {
-            'VFR' => ($lang === 'en' ? 'good flight conditions' : 'bonnes conditions de vol'),
-            'MVFR' => ($lang === 'en' ? 'marginal visual conditions' : 'conditions visuelles marginales'),
-            'IFR' => ($lang === 'en' ? 'instrument flight conditions' : 'conditions de vol aux instruments'),
-            'LIFR' => ($lang === 'en' ? 'very low instrument conditions' : 'conditions IFR très basses'),
-            default => '',
-        };
-        $lines[] = $flightDesc !== ''
-            ? ($lang === 'en' ? ('Flight category: ' . $flight . ' (' . $flightDesc . ')') : ('Catégorie de vol: ' . $flight . ' (' . $flightDesc . ')'))
-            : ($lang === 'en' ? ('Flight category: ' . $flight) : ('Catégorie de vol: ' . $flight));
+    $obsTs = null;
+    if (!empty($metar['observed_at'])) {
+        $tmpTs = strtotime((string) $metar['observed_at']);
+        if ($tmpTs !== false) {
+            $obsTs = $tmpTs;
+        }
+    }
+    if ($obsTs === null && preg_match('/\b(\d{4})\/(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\b/', $raw, $mDate) === 1) {
+        $obsTs = strtotime($mDate[1] . '-' . $mDate[2] . '-' . $mDate[3] . ' ' . $mDate[4] . ':' . $mDate[5] . ':00 UTC') ?: null;
     }
 
-    $windSpeed = isset($metar['wind_speed_kt']) && $metar['wind_speed_kt'] !== '' ? (float) $metar['wind_speed_kt'] : null;
+    if ($lang === 'fr') {
+        if ($obsTs !== null && $icao !== '') {
+            $lines[] = 'METAR du ' . gmdate('d', $obsTs) . ' à ' . gmdate('H\hi', $obsTs) . ' UTC pour ' . $icao . ' :';
+        } elseif ($icao !== '') {
+            $lines[] = 'METAR pour ' . $icao . ' :';
+        }
+    } else {
+        if ($obsTs !== null && $icao !== '') {
+            $lines[] = 'METAR for ' . $icao . ' on ' . gmdate('d/m/Y H:i', $obsTs) . ' UTC:';
+        } elseif ($icao !== '') {
+            $lines[] = 'METAR for ' . $icao . ':';
+        }
+    }
+
+    if ($raw !== '' && preg_match('/\bAUTO\b/', $raw) === 1) {
+        $lines[] = $lang === 'fr'
+            ? 'Note : Les relevés ont été effectués par une station météorologique automatique.'
+            : 'Note: Observations were made by an automated weather station.';
+    }
+
     $windDir = isset($metar['wind_dir_degrees']) && $metar['wind_dir_degrees'] !== '' ? (float) $metar['wind_dir_degrees'] : null;
-    if ($windSpeed !== null || $windDir !== null) {
-        $dirTxt = $windDir === null
-            ? ($lang === 'en' ? 'variable' : 'variable')
-            : (number_format($windDir, 0, '.', '') . '° (' . metar_cardinal_from_degrees($windDir, $lang) . ')');
-        $windLine = $lang === 'en'
-            ? ('Wind: ' . $dirTxt)
-            : ('Vent: ' . $dirTxt);
-        if ($windSpeed !== null) {
-            $windLine .= $lang === 'en'
-                ? (' at ' . number_format($windSpeed, 0, '.', '') . ' kt')
-                : (' à ' . number_format($windSpeed, 0, '.', '') . ' kt');
+    $windSpeedKt = isset($metar['wind_speed_kt']) && $metar['wind_speed_kt'] !== '' ? (float) $metar['wind_speed_kt'] : null;
+    if (($windDir === null || $windSpeedKt === null) && $raw !== '' && preg_match('/\b(\d{3}|VRB)(\d{2,3})(G(\d{2,3}))?KT\b/', $raw, $mWind) === 1) {
+        if ($windDir === null && $mWind[1] !== 'VRB') {
+            $windDir = (float) $mWind[1];
         }
-        if (!empty($metar['wind_gust_kt'])) {
-            $gust = (float) $metar['wind_gust_kt'];
-            $windLine .= $lang === 'en'
-                ? (' gusting ' . number_format($gust, 0, '.', '') . ' kt')
-                : (' rafales ' . number_format($gust, 0, '.', '') . ' kt');
+        if ($windSpeedKt === null) {
+            $windSpeedKt = (float) $mWind[2];
         }
-        $lines[] = $windLine;
+    }
+    if ($windDir !== null || $windSpeedKt !== null) {
+        if ($lang === 'fr') {
+            $dirLabel = metar_cardinal_label_long_fr($windDir);
+            $degTxt = $windDir !== null ? number_format($windDir, 0, '.', '') : 'N/A';
+            $ktTxt = $windSpeedKt !== null ? number_format($windSpeedKt, 0, '.', '') : 'N/A';
+            $kmhTxt = $windSpeedKt !== null ? number_format($windSpeedKt * 1.852, 0, '.', '') : 'N/A';
+            $lines[] = 'Le vent provient d\'' . $dirLabel . ' (' . $degTxt . '°) avec une vitesse de ' . $ktTxt . ' noeuds (' . $kmhTxt . ' km/h).';
+        } else {
+            $dirLabel = metar_cardinal_from_degrees($windDir, 'en');
+            $degTxt = $windDir !== null ? number_format($windDir, 0, '.', '') : 'N/A';
+            $ktTxt = $windSpeedKt !== null ? number_format($windSpeedKt, 0, '.', '') : 'N/A';
+            $kmhTxt = $windSpeedKt !== null ? number_format($windSpeedKt * 1.852, 0, '.', '') : 'N/A';
+            $lines[] = 'Wind is from ' . $dirLabel . ' (' . $degTxt . '°) at ' . $ktTxt . ' kt (' . $kmhTxt . ' km/h).';
+        }
+        if ($windSpeedKt !== null) {
+            $beaufort = metar_beaufort_from_kt($windSpeedKt);
+            $lines[] = $lang === 'fr' ? ('Beaufort : ' . $beaufort) : ('Beaufort: ' . $beaufort);
+        }
     }
 
-    $visRaw = (string) ($metar['visibility_statute_mi'] ?? '');
-    if ($visRaw !== '') {
-        $visLine = $lang === 'en'
-            ? ('Visibility: ' . $visRaw . ' mi')
-            : ('Visibilité: ' . $visRaw . ' mi');
+    $visMeters = null;
+    if ($raw !== '' && preg_match('/\b(9999|[0-7][0-9]{3})\b/', $raw, $mVis) === 1) {
+        $visMeters = (int) $mVis[1];
+    }
+    if ($visMeters === 9999) {
+        $lines[] = $lang === 'fr'
+            ? 'La visibilité est supérieure à 10 km'
+            : 'Visibility is greater than 10 km';
+        $lines[] = $lang === 'fr'
+            ? 'Il y a 10000 m de visibilité'
+            : 'There is 10000 m visibility';
+    } elseif ($visMeters !== null) {
+        $km = $visMeters / 1000.0;
+        $lines[] = $lang === 'fr'
+            ? ('La visibilité est de ' . number_format($km, 1, '.', '') . ' km')
+            : ('Visibility is ' . number_format($km, 1, '.', '') . ' km');
+        $lines[] = $lang === 'fr'
+            ? ('Il y a ' . $visMeters . ' m de visibilité')
+            : ('There is ' . $visMeters . ' m visibility');
+    } else {
+        $visRaw = (string) ($metar['visibility_statute_mi'] ?? '');
         $visMi = metar_visibility_mi_to_float($visRaw);
         if ($visMi !== null) {
-            $visKm = $visMi * 1.60934;
-            $visLine .= ' (' . number_format($visKm, 1, '.', '') . ' km)';
-        }
-        $lines[] = $visLine;
-    }
-
-    $wx = trim((string) ($metar['weather'] ?? ($metar['wx_string'] ?? '')));
-    if ($wx !== '') {
-        $tokens = preg_split('/\s+/', strtoupper($wx)) ?: [];
-        $decodedTokens = [];
-        foreach ($tokens as $token) {
-            $decoded = metar_decode_wx_token((string) $token, $lang);
-            if ($decoded !== '') {
-                $decodedTokens[] = $decoded;
-            }
-        }
-        if ($decodedTokens !== []) {
-            $lines[] = $lang === 'en'
-                ? ('Significant weather: ' . implode(', ', $decodedTokens))
-                : ('Temps significatif: ' . implode(', ', $decodedTokens));
-        }
-    }
-
-    if (!empty($metar['sky'])) {
-        $coverMap = [
-            'SKC' => ['fr' => 'ciel clair', 'en' => 'clear sky'],
-            'CLR' => ['fr' => 'clair', 'en' => 'clear'],
-            'FEW' => ['fr' => 'peu nuageux', 'en' => 'few clouds'],
-            'SCT' => ['fr' => 'épars', 'en' => 'scattered'],
-            'BKN' => ['fr' => 'fragmentés', 'en' => 'broken'],
-            'OVC' => ['fr' => 'couvert', 'en' => 'overcast'],
-            'VV' => ['fr' => 'visibilité verticale', 'en' => 'vertical visibility'],
-        ];
-        $layers = [];
-        foreach ((array) $metar['sky'] as $layer) {
-            if (!is_array($layer)) {
-                continue;
-            }
-            $cover = strtoupper(trim((string) ($layer['cover'] ?? '')));
-            if ($cover === '') {
-                continue;
-            }
-            $coverTxt = $coverMap[$cover][$lang] ?? $cover;
-            $base = (string) ($layer['base'] ?? '');
-            if ($base !== '' && is_numeric($base)) {
-                $baseFt = (float) $base;
-                $baseM = (int) round($baseFt * 0.3048);
-                $layers[] = $coverTxt . ' ' . number_format($baseFt, 0, '.', '') . ' ft (' . $baseM . ' m)';
-            } else {
-                $layers[] = $coverTxt;
-            }
-        }
-        if ($layers !== []) {
-            $lines[] = $lang === 'en'
-                ? ('Clouds: ' . implode(', ', $layers))
-                : ('Nuages: ' . implode(', ', $layers));
+            $km = $visMi * 1.60934;
+            $lines[] = $lang === 'fr'
+                ? ('La visibilité est de ' . number_format($km, 1, '.', '') . ' km')
+                : ('Visibility is ' . number_format($km, 1, '.', '') . ' km');
         }
     }
 
     $temp = isset($metar['temp_c']) && $metar['temp_c'] !== '' ? (float) $metar['temp_c'] : null;
     $dew = isset($metar['dewpoint_c']) && $metar['dewpoint_c'] !== '' ? (float) $metar['dewpoint_c'] : null;
-    if ($temp !== null || $dew !== null) {
-        $tempTxt = $temp !== null ? (number_format($temp, 1, '.', '') . ' °C') : ($lang === 'en' ? 'N/A' : 'N/A');
-        $dewTxt = $dew !== null ? (number_format($dew, 1, '.', '') . ' °C') : ($lang === 'en' ? 'N/A' : 'N/A');
-        $lines[] = $lang === 'en'
-            ? ('Temperature / dew point: ' . $tempTxt . ' / ' . $dewTxt)
-            : ('Température / point de rosée: ' . $tempTxt . ' / ' . $dewTxt);
+    if (($temp === null || $dew === null) && $raw !== '' && preg_match('/\b(M?\d{2})\/(M?\d{2})\b/', $raw, $mTd) === 1) {
+        if ($temp === null) {
+            $temp = metar_parse_signed_temp_token((string) $mTd[1]);
+        }
+        if ($dew === null) {
+            $dew = metar_parse_signed_temp_token((string) $mTd[2]);
+        }
+    }
+    if ($temp !== null) {
+        $lines[] = $lang === 'fr'
+            ? ('La température est de ' . number_format($temp, 0, '.', '') . ' °C')
+            : ('Temperature is ' . number_format($temp, 0, '.', '') . ' °C');
+    }
+    if ($dew !== null) {
+        $lines[] = $lang === 'fr'
+            ? ('Le point de rosée est de ' . number_format($dew, 0, '.', '') . ' °C')
+            : ('Dew point is ' . number_format($dew, 0, '.', '') . ' °C');
+    }
+    $rh = metar_relative_humidity($temp, $dew);
+    if ($rh !== null) {
+        $lines[] = $lang === 'fr'
+            ? ('L\'humidité relative est de ' . number_format($rh, 0, '.', '') . '%')
+            : ('Relative humidity is ' . number_format($rh, 0, '.', '') . '%');
     }
 
-    if (!empty($metar['altim_in_hg']) && is_numeric((string) $metar['altim_in_hg'])) {
-        $inhg = (float) $metar['altim_in_hg'];
-        $hpa = $inhg * 33.8638866667;
-        $lines[] = $lang === 'en'
-            ? ('Pressure: ' . number_format($hpa, 1, '.', '') . ' hPa (' . number_format($inhg, 2, '.', '') . ' inHg)')
-            : ('Pression: ' . number_format($hpa, 1, '.', '') . ' hPa (' . number_format($inhg, 2, '.', '') . ' inHg)');
+    $qnhHpa = null;
+    if ($raw !== '' && preg_match('/\bQ(\d{4})\b/', $raw, $mQnh) === 1) {
+        $qnhHpa = (float) $mQnh[1];
+    } elseif (!empty($metar['altim_in_hg']) && is_numeric((string) $metar['altim_in_hg'])) {
+        $qnhHpa = round(((float) $metar['altim_in_hg']) * 33.8638866667, 0);
+    }
+    if ($qnhHpa !== null) {
+        $lines[] = $lang === 'fr'
+            ? ('La pression au niveau de la mer est de ' . number_format($qnhHpa, 0, '.', '') . ' hPa')
+            : ('Sea-level pressure is ' . number_format($qnhHpa, 0, '.', '') . ' hPa');
     }
 
-    return $lines;
+    return array_values(array_filter($lines, static fn(string $line): bool => trim($line) !== ''));
 }
 
 function metar_parse_items(string $xml): array

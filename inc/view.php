@@ -9,11 +9,6 @@ function front_header(string $title): void
     $baseTitle = browser_title_base();
     $fullTitle = $title !== '' ? ($title . ' - ' . $baseTitle) : $baseTitle;
     $units = units_current();
-    $currentUrl = (string) ($_SERVER['REQUEST_URI'] ?? '/index.php');
-    if ($currentUrl === '') {
-        $currentUrl = '/index.php';
-    }
-
     echo '<!doctype html><html lang="' . h(locale_current()) . '"><head><meta charset="utf-8">';
     echo '<meta name="viewport" content="width=device-width,initial-scale=1">';
     echo '<title>' . h($fullTitle) . '</title>';
@@ -22,7 +17,7 @@ function front_header(string $title): void
     $cssVersion = is_file($cssPath) ? (string) filemtime($cssPath) : APP_VERSION;
     echo '<link rel="stylesheet" href="/assets/css/style.css?v=' . h($cssVersion) . '">';
     echo '</head><body>';
-    echo '<header class="top"><div class="wrap head-row"><a class="brand" href="' . h($currentUrl) . '" onclick="window.location.reload(); return false;">' . h(app_name()) . '</a><nav>';
+    echo '<header class="top"><div class="wrap head-row"><a class="brand" href="/index.php">' . h(app_name()) . '</a><nav>';
     echo '<a href="/index.php">' . h(t('nav.live')) . '</a><a href="/charts.php">' . h(t('nav.charts')) . '</a><a href="/climat.php">' . h(t('nav.climate')) . '</a><a href="/history.php">' . h(t('nav.history')) . '</a>';
     echo '<span class="nav-switch"><a href="' . h(locale_switch_url('fr_FR')) . '"' . (locale_current() === 'fr_FR' ? ' class="active"' : '') . ' title="' . h(t('lang.fr_full')) . '">' . h(t('lang.fr')) . '</a><span class="sep">|</span><a href="' . h(locale_switch_url('en_EN')) . '"' . (locale_current() === 'en_EN' ? ' class="active"' : '') . ' title="' . h(t('lang.en_full')) . '">' . h(t('lang.en')) . '</a></span>';
     echo '<span class="nav-switch"><a href="' . h(units_switch_url('si')) . '"' . ($units === 'si' ? ' class="active"' : '') . ' title="' . h(t('units.si_full')) . '">' . h(t('units.si')) . '</a><span class="sep">|</span><a href="' . h(units_switch_url('imperial')) . '"' . ($units === 'imperial' ? ' class="active"' : '') . ' title="' . h(t('units.imperial_full')) . '">' . h(t('units.imperial')) . '</a></span>';
