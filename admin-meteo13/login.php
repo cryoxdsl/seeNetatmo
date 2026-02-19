@@ -14,6 +14,10 @@ if (admin_logged_in()) {
 }
 
 $error = '';
+$msg = '';
+if ((string) ($_GET['logged_out'] ?? '') === '1') {
+    $msg = t('login.logged_out');
+}
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
     $u = trim((string) ($_POST['username'] ?? ''));
@@ -31,6 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 admin_header(t('login.title'));
 ?>
 <h2><?= h(t('login.title')) ?></h2>
+<?php if ($msg): ?><div class="alert alert-ok"><?= h($msg) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-bad"><?= h($error) ?></div><?php endif; ?>
 <form method="post" class="panel">
   <input type="hidden" name="csrf_token" value="<?= h(csrf_token()) ?>">

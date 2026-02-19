@@ -394,7 +394,7 @@ function admin_logout(): void
 {
     auth_revoke_current_trusted_device();
     app_session_destroy();
-    redirect(APP_ADMIN_PATH . '/login.php');
+    redirect(APP_ADMIN_PATH . '/login.php?logged_out=1');
 }
 
 function admin_current_user(): ?array

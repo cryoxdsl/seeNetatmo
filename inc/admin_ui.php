@@ -21,7 +21,7 @@ function admin_header(string $title): void
     echo '<a href="' . APP_ADMIN_PATH . '/health.php">' . h(t('admin.health')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/logs.php">' . h(t('admin.logs')) . '</a>';
     echo '<a href="/upgrade.php">' . h(t('admin.upgrade')) . '</a>';
-    echo '<form method="post" action="' . APP_ADMIN_PATH . '/logout.php" style="margin:0;">';
+    echo '<form method="post" action="' . APP_ADMIN_PATH . '/logout.php" style="margin:0;" onsubmit="return confirm(' . json_encode((string) t('admin.logout_confirm')) . ');">';
     echo '<input type="hidden" name="csrf_token" value="' . h(csrf_token()) . '">';
     echo '<button type="submit" style="all:unset;display:block;cursor:pointer;color:#fff;padding:.4rem .6rem;">' . h(t('admin.logout')) . '</button>';
     echo '</form>';
