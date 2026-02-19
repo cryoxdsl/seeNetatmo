@@ -137,6 +137,7 @@ if (is_file($seasonFile)) {
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
 $metar = metar_nearest(true);
+$metarHumanLines = metar_decode_human($metar);
 $forecast = forecast_summary(true);
 $forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
@@ -624,6 +625,12 @@ $metricGroupIcons = [
       <?php endif; ?>
       <?php if (!empty($metar['sky'])): ?>
         <p class="forecast-line"><strong><?= h(t('metar.clouds')) ?>:</strong> <?= h((string) $metar['sky']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metarHumanLines)): ?>
+        <p class="small-muted"><?= h(t('metar.decoded')) ?>:</p>
+        <?php foreach ($metarHumanLines as $line): ?>
+          <p class="forecast-line"><?= h((string) $line) ?></p>
+        <?php endforeach; ?>
       <?php endif; ?>
       <?php if (!empty($metar['raw_text'])): ?>
         <p class="small-muted"><?= h(t('metar.raw')) ?>:</p>

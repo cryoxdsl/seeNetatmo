@@ -131,6 +131,286 @@ function metar_decode_summary(array $metar): array
     ];
 }
 
+function metar_locale_code(): string
+{
+    if (function_exists('locale_current') && locale_current() === 'en_EN') {
+        return 'en';
+    }
+    return 'fr';
+}
+
+function metar_fraction_to_float(string $value): ?float
+{
+    $value = trim($value);
+    if ($value === '') {
+        return null;
+    }
+    if (is_numeric($value)) {
+        return (float) $value;
+    }
+    if (preg_match('/^(\d+)\s+(\d+)\/(\d+)$/', $value, $m) === 1) {
+        $den = (float) $m[3];
+        if ($den <= 0.0) {
+            return null;
+        }
+        return (float) $m[1] + ((float) $m[2] / $den);
+    }
+    if (preg_match('/^(\d+)\/(\d+)$/', $value, $m) === 1) {
+        $den = (float) $m[2];
+        if ($den <= 0.0) {
+            return null;
+        }
+        return (float) $m[1] / $den;
+    }
+    return null;
+}
+
+function metar_visibility_mi_to_float(string $raw): ?float
+{
+    $raw = strtoupper(trim($raw));
+    if ($raw === '') {
+        return null;
+    }
+    $raw = str_replace(['SM', 'MI'], '', $raw);
+    $raw = trim(str_replace('+', '', $raw));
+    return metar_fraction_to_float($raw);
+}
+
+function metar_cardinal_from_degrees(?float $degrees, string $lang): string
+{
+    if ($degrees === null) {
+        return $lang === 'en' ? 'variable' : 'variable';
+    }
+    $dirs = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
+    $idx = (int) round((fmod($degrees, 360.0) / 22.5));
+    if ($idx < 0) {
+        $idx += 16;
+    }
+    return $dirs[$idx % 16];
+}
+
+function metar_decode_wx_token(string $token, string $lang): string
+{
+    $token = strtoupper(trim($token));
+    if ($token === '') {
+        return '';
+    }
+
+    $intensity = '';
+    if (str_starts_with($token, '+') || str_starts_with($token, '-')) {
+        $intensity = $token[0];
+        $token = substr($token, 1);
+    }
+
+    $vicinity = false;
+    if (str_starts_with($token, 'VC')) {
+        $vicinity = true;
+        $token = substr($token, 2);
+    }
+
+    $descriptors = [
+        'MI' => ['fr' => 'mince', 'en' => 'shallow'],
+        'PR' => ['fr' => 'partielle', 'en' => 'partial'],
+        'BC' => ['fr' => 'bancs', 'en' => 'patches'],
+        'DR' => ['fr' => 'chasse-neige', 'en' => 'drifting'],
+        'BL' => ['fr' => 'soulevée', 'en' => 'blowing'],
+        'SH' => ['fr' => 'averses', 'en' => 'showers'],
+        'TS' => ['fr' => 'orage', 'en' => 'thunderstorm'],
+        'FZ' => ['fr' => 'verglaçante', 'en' => 'freezing'],
+    ];
+    $phenomena = [
+        'DZ' => ['fr' => 'bruine', 'en' => 'drizzle'],
+        'RA' => ['fr' => 'pluie', 'en' => 'rain'],
+        'SN' => ['fr' => 'neige', 'en' => 'snow'],
+        'SG' => ['fr' => 'neige en grains', 'en' => 'snow grains'],
+        'PL' => ['fr' => 'granules de glace', 'en' => 'ice pellets'],
+        'GR' => ['fr' => 'grêle', 'en' => 'hail'],
+        'GS' => ['fr' => 'grésil', 'en' => 'small hail'],
+        'BR' => ['fr' => 'brume', 'en' => 'mist'],
+        'FG' => ['fr' => 'brouillard', 'en' => 'fog'],
+        'HZ' => ['fr' => 'brume sèche', 'en' => 'haze'],
+        'DU' => ['fr' => 'poussière', 'en' => 'dust'],
+        'SA' => ['fr' => 'sable', 'en' => 'sand'],
+        'SQ' => ['fr' => 'grain', 'en' => 'squall'],
+        'FC' => ['fr' => 'trombe', 'en' => 'funnel cloud'],
+        'SS' => ['fr' => 'tempête de sable', 'en' => 'sandstorm'],
+        'DS' => ['fr' => 'tempête de poussière', 'en' => 'duststorm'],
+    ];
+
+    $descWords = [];
+    while (strlen($token) >= 2) {
+        $code = substr($token, 0, 2);
+        if (!isset($descriptors[$code])) {
+            break;
+        }
+        $descWords[] = $descriptors[$code][$lang];
+        $token = substr($token, 2);
+    }
+
+    $phenWords = [];
+    while (strlen($token) >= 2) {
+        $code = substr($token, 0, 2);
+        if (!isset($phenomena[$code])) {
+            break;
+        }
+        $phenWords[] = $phenomena[$code][$lang];
+        $token = substr($token, 2);
+    }
+
+    if ($descWords === [] && $phenWords === []) {
+        return strtoupper(trim($token));
+    }
+
+    $parts = [];
+    if ($intensity === '+') {
+        $parts[] = $lang === 'en' ? 'heavy' : 'forte';
+    } elseif ($intensity === '-') {
+        $parts[] = $lang === 'en' ? 'light' : 'faible';
+    }
+    if ($vicinity) {
+        $parts[] = $lang === 'en' ? 'in the vicinity' : 'à proximité';
+    }
+    if ($descWords !== []) {
+        $parts[] = implode(' ', $descWords);
+    }
+    if ($phenWords !== []) {
+        $parts[] = implode(' ', $phenWords);
+    }
+    return trim(implode(' ', $parts));
+}
+
+function metar_decode_human(array $metar): array
+{
+    if (empty($metar['available'])) {
+        return [];
+    }
+    $lang = metar_locale_code();
+    $lines = [];
+
+    $flight = strtoupper(trim((string) ($metar['flight_category'] ?? '')));
+    if ($flight !== '') {
+        $flightDesc = match ($flight) {
+            'VFR' => ($lang === 'en' ? 'good flight conditions' : 'bonnes conditions de vol'),
+            'MVFR' => ($lang === 'en' ? 'marginal visual conditions' : 'conditions visuelles marginales'),
+            'IFR' => ($lang === 'en' ? 'instrument flight conditions' : 'conditions de vol aux instruments'),
+            'LIFR' => ($lang === 'en' ? 'very low instrument conditions' : 'conditions IFR très basses'),
+            default => '',
+        };
+        $lines[] = $flightDesc !== ''
+            ? ($lang === 'en' ? ('Flight category: ' . $flight . ' (' . $flightDesc . ')') : ('Catégorie de vol: ' . $flight . ' (' . $flightDesc . ')'))
+            : ($lang === 'en' ? ('Flight category: ' . $flight) : ('Catégorie de vol: ' . $flight));
+    }
+
+    $windSpeed = isset($metar['wind_speed_kt']) && $metar['wind_speed_kt'] !== '' ? (float) $metar['wind_speed_kt'] : null;
+    $windDir = isset($metar['wind_dir_degrees']) && $metar['wind_dir_degrees'] !== '' ? (float) $metar['wind_dir_degrees'] : null;
+    if ($windSpeed !== null || $windDir !== null) {
+        $dirTxt = $windDir === null
+            ? ($lang === 'en' ? 'variable' : 'variable')
+            : (number_format($windDir, 0, '.', '') . '° (' . metar_cardinal_from_degrees($windDir, $lang) . ')');
+        $windLine = $lang === 'en'
+            ? ('Wind: ' . $dirTxt)
+            : ('Vent: ' . $dirTxt);
+        if ($windSpeed !== null) {
+            $windLine .= $lang === 'en'
+                ? (' at ' . number_format($windSpeed, 0, '.', '') . ' kt')
+                : (' à ' . number_format($windSpeed, 0, '.', '') . ' kt');
+        }
+        if (!empty($metar['wind_gust_kt'])) {
+            $gust = (float) $metar['wind_gust_kt'];
+            $windLine .= $lang === 'en'
+                ? (' gusting ' . number_format($gust, 0, '.', '') . ' kt')
+                : (' rafales ' . number_format($gust, 0, '.', '') . ' kt');
+        }
+        $lines[] = $windLine;
+    }
+
+    $visRaw = (string) ($metar['visibility_statute_mi'] ?? '');
+    if ($visRaw !== '') {
+        $visLine = $lang === 'en'
+            ? ('Visibility: ' . $visRaw . ' mi')
+            : ('Visibilité: ' . $visRaw . ' mi');
+        $visMi = metar_visibility_mi_to_float($visRaw);
+        if ($visMi !== null) {
+            $visKm = $visMi * 1.60934;
+            $visLine .= ' (' . number_format($visKm, 1, '.', '') . ' km)';
+        }
+        $lines[] = $visLine;
+    }
+
+    $wx = trim((string) ($metar['weather'] ?? ($metar['wx_string'] ?? '')));
+    if ($wx !== '') {
+        $tokens = preg_split('/\s+/', strtoupper($wx)) ?: [];
+        $decodedTokens = [];
+        foreach ($tokens as $token) {
+            $decoded = metar_decode_wx_token((string) $token, $lang);
+            if ($decoded !== '') {
+                $decodedTokens[] = $decoded;
+            }
+        }
+        if ($decodedTokens !== []) {
+            $lines[] = $lang === 'en'
+                ? ('Significant weather: ' . implode(', ', $decodedTokens))
+                : ('Temps significatif: ' . implode(', ', $decodedTokens));
+        }
+    }
+
+    if (!empty($metar['sky'])) {
+        $coverMap = [
+            'SKC' => ['fr' => 'ciel clair', 'en' => 'clear sky'],
+            'CLR' => ['fr' => 'clair', 'en' => 'clear'],
+            'FEW' => ['fr' => 'peu nuageux', 'en' => 'few clouds'],
+            'SCT' => ['fr' => 'épars', 'en' => 'scattered'],
+            'BKN' => ['fr' => 'fragmentés', 'en' => 'broken'],
+            'OVC' => ['fr' => 'couvert', 'en' => 'overcast'],
+            'VV' => ['fr' => 'visibilité verticale', 'en' => 'vertical visibility'],
+        ];
+        $layers = [];
+        foreach ((array) $metar['sky'] as $layer) {
+            if (!is_array($layer)) {
+                continue;
+            }
+            $cover = strtoupper(trim((string) ($layer['cover'] ?? '')));
+            if ($cover === '') {
+                continue;
+            }
+            $coverTxt = $coverMap[$cover][$lang] ?? $cover;
+            $base = (string) ($layer['base'] ?? '');
+            if ($base !== '' && is_numeric($base)) {
+                $baseFt = (float) $base;
+                $baseM = (int) round($baseFt * 0.3048);
+                $layers[] = $coverTxt . ' ' . number_format($baseFt, 0, '.', '') . ' ft (' . $baseM . ' m)';
+            } else {
+                $layers[] = $coverTxt;
+            }
+        }
+        if ($layers !== []) {
+            $lines[] = $lang === 'en'
+                ? ('Clouds: ' . implode(', ', $layers))
+                : ('Nuages: ' . implode(', ', $layers));
+        }
+    }
+
+    $temp = isset($metar['temp_c']) && $metar['temp_c'] !== '' ? (float) $metar['temp_c'] : null;
+    $dew = isset($metar['dewpoint_c']) && $metar['dewpoint_c'] !== '' ? (float) $metar['dewpoint_c'] : null;
+    if ($temp !== null || $dew !== null) {
+        $tempTxt = $temp !== null ? (number_format($temp, 1, '.', '') . ' °C') : ($lang === 'en' ? 'N/A' : 'N/A');
+        $dewTxt = $dew !== null ? (number_format($dew, 1, '.', '') . ' °C') : ($lang === 'en' ? 'N/A' : 'N/A');
+        $lines[] = $lang === 'en'
+            ? ('Temperature / dew point: ' . $tempTxt . ' / ' . $dewTxt)
+            : ('Température / point de rosée: ' . $tempTxt . ' / ' . $dewTxt);
+    }
+
+    if (!empty($metar['altim_in_hg']) && is_numeric((string) $metar['altim_in_hg'])) {
+        $inhg = (float) $metar['altim_in_hg'];
+        $hpa = $inhg * 33.8638866667;
+        $lines[] = $lang === 'en'
+            ? ('Pressure: ' . number_format($hpa, 1, '.', '') . ' hPa (' . number_format($inhg, 2, '.', '') . ' inHg)')
+            : ('Pression: ' . number_format($hpa, 1, '.', '') . ' hPa (' . number_format($inhg, 2, '.', '') . ' inHg)');
+    }
+
+    return $lines;
+}
+
 function metar_parse_items(string $xml): array
 {
     if (!function_exists('simplexml_load_string')) {
