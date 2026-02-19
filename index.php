@@ -139,14 +139,44 @@ if ($dayMaxDisplay !== t('common.na')) {
 }
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
+$sunriseTs = null;
+$sunsetTs = null;
+$nowDayTs = now_paris()->getTimestamp();
+$solarVisualAvailable = false;
+$sunrisePct = 0.0;
+$sunsetPct = 0.0;
+$sunNowPct = 0.0;
+$sunPhaseLabel = t('common.na');
 if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_numeric($stationLon)) {
     $sunInfo = date_sun_info(now_paris()->getTimestamp(), (float) $stationLat, (float) $stationLon);
     if (is_array($sunInfo)) {
         if (isset($sunInfo['sunrise']) && is_numeric($sunInfo['sunrise'])) {
-            $sunriseDisplay = date('H:i', (int) $sunInfo['sunrise']);
+            $sunriseTs = (int) $sunInfo['sunrise'];
+            $sunriseDisplay = date('H:i', $sunriseTs);
         }
         if (isset($sunInfo['sunset']) && is_numeric($sunInfo['sunset'])) {
-            $sunsetDisplay = date('H:i', (int) $sunInfo['sunset']);
+            $sunsetTs = (int) $sunInfo['sunset'];
+            $sunsetDisplay = date('H:i', $sunsetTs);
+        }
+        if ($sunriseTs !== null && $sunsetTs !== null && $sunsetTs > $sunriseTs) {
+            $solarVisualAvailable = true;
+            $dayStartTs = now_paris()->setTime(0, 0, 0)->getTimestamp();
+            $sunriseMinutes = (int) floor(($sunriseTs - $dayStartTs) / 60);
+            $sunsetMinutes = (int) floor(($sunsetTs - $dayStartTs) / 60);
+            $nowMinutes = (int) floor(($nowDayTs - $dayStartTs) / 60);
+            $sunriseMinutes = max(0, min(1440, $sunriseMinutes));
+            $sunsetMinutes = max(0, min(1440, $sunsetMinutes));
+            $nowMinutes = max(0, min(1440, $nowMinutes));
+            $sunrisePct = ($sunriseMinutes / 1440) * 100;
+            $sunsetPct = ($sunsetMinutes / 1440) * 100;
+            $sunNowPct = ($nowMinutes / 1440) * 100;
+            if ($nowDayTs < $sunriseTs) {
+                $sunPhaseLabel = t('extremes.phase.before_sunrise');
+            } elseif ($nowDayTs > $sunsetTs) {
+                $sunPhaseLabel = t('extremes.phase.after_sunset');
+            } else {
+                $sunPhaseLabel = t('extremes.phase.daylight');
+            }
         }
     }
 }
@@ -284,6 +314,17 @@ front_header(t('dashboard.title'));
         <span class="extremes-label"><?= h(t('extremes.sunset')) ?></span>
         <strong><?= h($sunsetDisplay) ?></strong>
       </p>
+      <?php if ($solarVisualAvailable): ?>
+        <div class="sun-visual">
+          <div class="sun-scale" role="img" aria-label="<?= h(t('extremes.moment')) ?>">
+            <span class="sun-daylight" style="left: <?= h(number_format($sunrisePct, 3, '.', '')) ?>%;width: <?= h(number_format(max(0, $sunsetPct - $sunrisePct), 3, '.', '')) ?>%;"></span>
+            <span class="sun-tick" style="left: <?= h(number_format($sunrisePct, 3, '.', '')) ?>%;"></span>
+            <span class="sun-tick" style="left: <?= h(number_format($sunsetPct, 3, '.', '')) ?>%;"></span>
+            <span class="sun-now" style="left: <?= h(number_format($sunNowPct, 3, '.', '')) ?>%;"></span>
+          </div>
+          <p class="small-muted sun-caption"><span><?= h(t('extremes.moment')) ?>: <strong><?= h($sunPhaseLabel) ?></strong></span><span><?= h(date('H:i', $nowDayTs)) ?></span></p>
+        </div>
+      <?php endif; ?>
     </div>
   </article>
 </section>
@@ -346,7 +387,16 @@ foreach ($metrics as $metric => $value):
   var progress = document.getElementById('autoRefreshProgress');
   var countdown = document.getElementById('autoRefreshCountdown');
   var toggle = document.getElementById('autoRefreshToggle');
+  var refreshBox = document.getElementById('autoRefreshBox');
   if (!dot || !progress || !countdown || !toggle) return;
+
+  function syncProgressWidth() {
+    if (!refreshBox) return;
+    var w = toggle.getBoundingClientRect().width;
+    if (w > 0) {
+      refreshBox.style.setProperty('--auto-progress-width', Math.ceil(w) + 'px');
+    }
+  }
 
   function fmt(sec) {
     var m = Math.floor(sec / 60);
@@ -461,14 +511,17 @@ foreach ($metrics as $metric => $value):
       countdown.textContent = reloadingText;
       toggle.classList.add('is-loading');
       dot.textContent = '';
-      progress.style.width = '100%';
+      syncProgressWidth();
+      progress.style.width = '0%';
       return;
     }
     toggle.classList.remove('is-loading');
     countdown.textContent = fmt(remaining);
     toggle.classList.toggle('is-off', !enabled);
     dot.textContent = enabled ? '' : '||';
-    progress.style.width = (enabled ? ((PERIOD - remaining) / PERIOD) : 0) * 100 + '%';
+    syncProgressWidth();
+    var ratio = Math.max(0, Math.min(1, remaining / PERIOD));
+    progress.style.width = (ratio * 100) + '%';
   }
 
   toggle.addEventListener('click', function () {
@@ -519,6 +572,7 @@ foreach ($metrics as $metric => $value):
       clearInterval(timerId);
     }
   });
+  window.addEventListener('resize', syncProgressWidth);
 
   initValueUpdateEffects();
   render();
