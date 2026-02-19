@@ -120,6 +120,80 @@ function rain_totals(): array
     ];
 }
 
+function rain_reference_averages(): array
+{
+    $t = data_table();
+    $now = now_paris();
+    $currentYear = (int) $now->format('Y');
+    $currentMonth = (int) $now->format('n');
+    $monthDay = $now->format('m-d');
+
+    $dayStmt = db()->prepare(
+        "SELECT AVG(day_total) AS avg_total, COUNT(*) AS sample_count
+         FROM (
+            SELECT YEAR(`DateTime`) AS y,
+                   COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+            FROM `{$t}`
+            WHERE DATE_FORMAT(`DateTime`, '%m-%d') = :md
+              AND YEAR(`DateTime`) <> :y
+            GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
+         ) x"
+    );
+    $dayStmt->execute([':md' => $monthDay, ':y' => $currentYear]);
+    $dayRow = $dayStmt->fetch() ?: [];
+
+    $monthStmt = db()->prepare(
+        "SELECT AVG(month_total) AS avg_total, COUNT(*) AS sample_count
+         FROM (
+            SELECT y, COALESCE(SUM(day_total),0) AS month_total
+            FROM (
+                SELECT YEAR(`DateTime`) AS y,
+                       DATE(`DateTime`) AS d,
+                       COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+                FROM `{$t}`
+                WHERE MONTH(`DateTime`) = :m
+                  AND YEAR(`DateTime`) <> :y
+                GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
+            ) z
+            GROUP BY y
+         ) x"
+    );
+    $monthStmt->execute([':m' => $currentMonth, ':y' => $currentYear]);
+    $monthRow = $monthStmt->fetch() ?: [];
+
+    $yearStmt = db()->prepare(
+        "SELECT AVG(year_total) AS avg_total, COUNT(*) AS sample_count
+         FROM (
+            SELECT y, COALESCE(SUM(day_total),0) AS year_total
+            FROM (
+                SELECT YEAR(`DateTime`) AS y,
+                       DATE(`DateTime`) AS d,
+                       COALESCE(MAX(`R`), SUM(COALESCE(`RR`,0)), 0) AS day_total
+                FROM `{$t}`
+                WHERE YEAR(`DateTime`) <> :y
+                  AND DATE_FORMAT(`DateTime`, '%m-%d') <= :md
+                GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
+            ) z
+            GROUP BY y
+         ) x"
+    );
+    $yearStmt->execute([':y' => $currentYear, ':md' => $monthDay]);
+    $yearRow = $yearStmt->fetch() ?: [];
+
+    $dayAvg = isset($dayRow['avg_total']) && $dayRow['avg_total'] !== null ? round((float) $dayRow['avg_total'], 3) : null;
+    $monthAvg = isset($monthRow['avg_total']) && $monthRow['avg_total'] !== null ? round((float) $monthRow['avg_total'], 3) : null;
+    $yearAvg = isset($yearRow['avg_total']) && $yearRow['avg_total'] !== null ? round((float) $yearRow['avg_total'], 3) : null;
+
+    return [
+        'day_avg' => $dayAvg,
+        'month_avg' => $monthAvg,
+        'year_to_date_avg' => $yearAvg,
+        'day_samples' => (int) ($dayRow['sample_count'] ?? 0),
+        'month_samples' => (int) ($monthRow['sample_count'] ?? 0),
+        'year_samples' => (int) ($yearRow['sample_count'] ?? 0),
+    ];
+}
+
 function climat_available_years(): array
 {
     $t = data_table();
