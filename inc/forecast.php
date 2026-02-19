@@ -25,8 +25,8 @@ function forecast_http_get_json(string $url): array
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 2,
-        CURLOPT_CONNECTTIMEOUT => 1,
+        CURLOPT_TIMEOUT => 4,
+        CURLOPT_CONNECTTIMEOUT => 2,
         CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
     ]);
     $raw = curl_exec($ch);
@@ -153,6 +153,7 @@ function forecast_summary(bool $allowRemote = false): array
 
     $out = [
         'available' => false,
+        'reason' => 'fetch_failed',
         'fetched_at' => time(),
         'station_lat' => $coords['lat'],
         'station_lon' => $coords['lon'],
@@ -238,7 +239,9 @@ function forecast_summary(bool $allowRemote = false): array
             || $out['today_max_c'] !== null
             || $out['tomorrow_min_c'] !== null
             || $out['tomorrow_max_c'] !== null;
+        $out['reason'] = $out['available'] ? '' : 'no_data';
     } catch (Throwable $e) {
+        $out['reason'] = 'fetch_failed';
         log_event('warning', 'front.forecast', 'Forecast fetch failed', ['err' => $e->getMessage()]);
     }
 

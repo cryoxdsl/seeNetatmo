@@ -129,6 +129,7 @@ $alertHref = (string) ($alert['url'] ?? 'https://vigilance.meteofrance.fr');
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
 $forecast = forecast_summary(true);
+$forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
 $forecastCurrentLabel = t((string) ($forecast['current_label_key'] ?? 'forecast.condition.unknown'));
 $forecastCurrentTemp = units_format('T', $forecast['current_temp_c'] ?? null);
@@ -154,6 +155,12 @@ $forecastTomorrowRange = ($forecastTomorrowMin === $forecastNa && $forecastTomor
     ? $forecastNa
     : ($forecastTomorrowMin . ' / ' . $forecastTomorrowMax . ' ' . units_symbol('T'));
 $forecastUpdated = trim((string) ($forecast['updated_at'] ?? ''));
+$forecastUnavailableMsg = t('forecast.unavailable');
+if ($forecastReason === 'no_station_coords') {
+    $forecastUnavailableMsg = t('forecast.coords_required');
+} elseif ($forecastReason === 'retry_later') {
+    $forecastUnavailableMsg = t('forecast.retry_later');
+}
 $stationLat = station_latitude_setting();
 $stationLon = station_longitude_setting();
 $stationAlt = station_altitude_setting();
@@ -285,7 +292,7 @@ front_header(t('dashboard.title'));
       <?php endif; ?>
     <?php else: ?>
       <div><?= h(t('forecast.unavailable')) ?></div>
-      <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
+      <p class="small-muted"><?= h($forecastUnavailableMsg) ?></p>
     <?php endif; ?>
   </article>
 </section>
