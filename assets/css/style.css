@@ -49,6 +49,15 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .metric-group{display:flex;flex-direction:column;gap:.45rem}
 .metric-group-title{margin:0;color:#4d6279;font-size:.86rem;letter-spacing:.01em;text-transform:uppercase}
 .metrics-cards{margin:0}
+.metric-typed-card{padding:.55rem}
+.metric-typed-card .extremes-grid{gap:.3rem}
+.metric-trend{display:inline-block;margin-right:.22rem;font-weight:700}
+.metric-trend-up{color:#1f8a45}
+.metric-trend-down{color:#b23a2b}
+.metric-trend-stable{color:#4b6783}
+.metric-trend-unknown{color:#7a8fa5}
+.wind-compass{display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;margin-right:.22rem;border:1px solid #c8d6e5;border-radius:50%;background:#f7fbff;vertical-align:middle}
+.wind-compass .needle{display:inline-block;line-height:1;font-size:.9em;color:#2f5f8a;transform-origin:50% 55%}
 .weather-hero{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
 .weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
 .weather-icon svg{width:100px;height:100px}

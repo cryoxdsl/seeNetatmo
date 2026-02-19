@@ -231,3 +231,122 @@ function current_day_temp_range(): array
         'max' => isset($row['t_max']) && $row['t_max'] !== null ? (float) $row['t_max'] : null,
     ];
 }
+
+function current_day_wind_avg_range(): array
+{
+    $t = data_table();
+    $today = now_paris()->format('Y-m-d');
+    $stmt = db()->prepare(
+        "SELECT MIN(`W`) AS w_min, MAX(`W`) AS w_max
+         FROM `{$t}`
+         WHERE DATE(`DateTime`) = :d"
+    );
+    $stmt->execute([':d' => $today]);
+    $row = $stmt->fetch();
+    return [
+        'min' => isset($row['w_min']) && $row['w_min'] !== null ? (float) $row['w_min'] : null,
+        'max' => isset($row['w_max']) && $row['w_max'] !== null ? (float) $row['w_max'] : null,
+    ];
+}
+
+function current_day_rain_episode(): array
+{
+    $t = data_table();
+    $today = now_paris()->format('Y-m-d');
+    $stmt = db()->prepare(
+        "SELECT `DateTime`, `RR`, `R`
+         FROM `{$t}`
+         WHERE DATE(`DateTime`) = :d
+         ORDER BY `DateTime` ASC"
+    );
+    $stmt->execute([':d' => $today]);
+    $rows = $stmt->fetchAll();
+    if (!$rows) {
+        return ['start' => null, 'end' => null, 'ongoing' => false];
+    }
+
+    $episodes = [];
+    $activeStart = null;
+    $activeEnd = null;
+    $previousR = null;
+    $lastRaining = false;
+
+    foreach ($rows as $row) {
+        $dtRaw = (string) ($row['DateTime'] ?? '');
+        if ($dtRaw === '') {
+            continue;
+        }
+        $rr = isset($row['RR']) && $row['RR'] !== null ? (float) $row['RR'] : 0.0;
+        $r = isset($row['R']) && $row['R'] !== null ? (float) $row['R'] : null;
+        $rainByCumulative = $r !== null && $previousR !== null && ($r - $previousR) > 0.001;
+        $isRaining = $rr > 0.0 || $rainByCumulative;
+
+        if ($isRaining) {
+            if ($activeStart === null) {
+                $activeStart = $dtRaw;
+            }
+            $activeEnd = $dtRaw;
+        } elseif ($activeStart !== null && $activeEnd !== null) {
+            $episodes[] = ['start' => $activeStart, 'end' => $activeEnd, 'ongoing' => false];
+            $activeStart = null;
+            $activeEnd = null;
+        }
+
+        $lastRaining = $isRaining;
+        if ($r !== null) {
+            $previousR = $r;
+        }
+    }
+
+    if ($activeStart !== null && $activeEnd !== null) {
+        $episodes[] = ['start' => $activeStart, 'end' => $activeEnd, 'ongoing' => $lastRaining];
+    }
+
+    if (!$episodes) {
+        return ['start' => null, 'end' => null, 'ongoing' => false];
+    }
+    return $episodes[count($episodes) - 1];
+}
+
+function pressure_trend_snapshot(int $windowMinutes = 90, float $threshold = 0.5): array
+{
+    $windowMinutes = max(30, min(360, $windowMinutes));
+    $threshold = max(0.1, $threshold);
+    $t = data_table();
+    $now = now_paris();
+    $from = $now->modify('-' . $windowMinutes . ' minutes')->format('Y-m-d H:i:s');
+    $to = $now->format('Y-m-d H:i:s');
+
+    $latestStmt = db()->prepare(
+        "SELECT `P` AS p_val, `DateTime` AS dt
+         FROM `{$t}`
+         WHERE `DateTime` BETWEEN :f AND :to AND `P` IS NOT NULL
+         ORDER BY `DateTime` DESC
+         LIMIT 1"
+    );
+    $latestStmt->execute([':f' => $from, ':to' => $to]);
+    $latest = $latestStmt->fetch();
+
+    $oldestStmt = db()->prepare(
+        "SELECT `P` AS p_val, `DateTime` AS dt
+         FROM `{$t}`
+         WHERE `DateTime` BETWEEN :f AND :to AND `P` IS NOT NULL
+         ORDER BY `DateTime` ASC
+         LIMIT 1"
+    );
+    $oldestStmt->execute([':f' => $from, ':to' => $to]);
+    $oldest = $oldestStmt->fetch();
+
+    if (!$latest || !$oldest || !isset($latest['p_val'], $oldest['p_val'])) {
+        return ['trend' => 'unknown', 'delta' => null];
+    }
+
+    $delta = (float) $latest['p_val'] - (float) $oldest['p_val'];
+    $trend = 'stable';
+    if ($delta >= $threshold) {
+        $trend = 'up';
+    } elseif ($delta <= -$threshold) {
+        $trend = 'down';
+    }
+    return ['trend' => $trend, 'delta' => round($delta, 2)];
+}

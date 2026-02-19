@@ -80,6 +80,30 @@ if (function_exists('current_day_temp_range')) {
         $dayTemp = ['min' => null, 'max' => null];
     }
 }
+$dayWind = ['min' => null, 'max' => null];
+if (function_exists('current_day_wind_avg_range')) {
+    try {
+        $dayWind = current_day_wind_avg_range();
+    } catch (Throwable $e) {
+        $dayWind = ['min' => null, 'max' => null];
+    }
+}
+$rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
+if (function_exists('current_day_rain_episode')) {
+    try {
+        $rainEpisode = current_day_rain_episode();
+    } catch (Throwable $e) {
+        $rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
+    }
+}
+$pressureTrend = ['trend' => 'unknown', 'delta' => null];
+if (function_exists('pressure_trend_snapshot')) {
+    try {
+        $pressureTrend = pressure_trend_snapshot();
+    } catch (Throwable $e) {
+        $pressureTrend = ['trend' => 'unknown', 'delta' => null];
+    }
+}
 
 $month = (int) now_paris()->format('n');
 $season = match (true) {
@@ -202,6 +226,37 @@ if ($monthName !== '') {
 }
 $rainMonthLabel = t('rain.month_base') . ' (' . trim($monthName . ' ' . $nowRain->format('Y')) . ')';
 $rainYearLabel = t('rain.year_base') . ' (' . $nowRain->format('Y') . ')';
+if (!function_exists('wind_cardinal_label')) {
+    function wind_cardinal_label(?float $deg): string
+    {
+        if ($deg === null) {
+            return t('common.na');
+        }
+        $normalized = fmod($deg, 360.0);
+        if ($normalized < 0) {
+            $normalized += 360.0;
+        }
+        $dirs = ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'];
+        if (locale_current() === 'en_EN') {
+            $dirs = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+        }
+        $idx = (int) round($normalized / 45.0) % 8;
+        return $dirs[$idx];
+    }
+}
+if (!function_exists('to_hhmm_local')) {
+    function to_hhmm_local(?string $dt): string
+    {
+        if ($dt === null || $dt === '') {
+            return t('common.na');
+        }
+        try {
+            return (new DateTimeImmutable($dt, new DateTimeZone(APP_TIMEZONE)))->format('H:i');
+        } catch (Throwable $e) {
+            return t('common.na');
+        }
+    }
+}
 
 front_header(t('dashboard.title'));
 ?>
@@ -371,7 +426,76 @@ $metricGroups = [
                 }
             }
         ?>
-          <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>"><?= h($displayWithUnit) ?></div></article>
+          <article class="card metric-typed-card extremes-card">
+            <div class="extremes-grid">
+              <p class="extremes-line">
+                <span class="extremes-label"><?= h(units_metric_name($metric)) ?></span>
+                <strong data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>">
+                  <?php if ($metric === 'P'): ?>
+                    <?php
+                      $pTrend = (string) ($pressureTrend['trend'] ?? 'unknown');
+                      $pArrow = match ($pTrend) {
+                          'up' => '↑',
+                          'down' => '↓',
+                          'stable' => '→',
+                          default => '•',
+                      };
+                    ?>
+                    <span class="metric-trend metric-trend-<?= h($pTrend) ?>" title="<?= h(t('metric.pressure_trend')) ?>"><?= h($pArrow) ?></span>
+                  <?php endif; ?>
+                  <?php if ($metric === 'B'): ?>
+                    <?php
+                      $windDeg = $value !== null ? (float) $value : null;
+                      $windDegNorm = $windDeg !== null ? fmod(($windDeg + 360.0), 360.0) : 0.0;
+                    ?>
+                    <span class="wind-compass" aria-label="<?= h(t('metric.wind_dir_compass')) ?>" title="<?= h(t('metric.wind_dir_compass')) ?>">
+                      <span class="needle" style="transform:rotate(<?= h(number_format($windDegNorm, 1, '.', '')) ?>deg)">↑</span>
+                    </span>
+                  <?php endif; ?>
+                  <?= h($displayWithUnit) ?>
+                </strong>
+              </p>
+              <?php if ($metric === 'R'): ?>
+                <p class="extremes-line">
+                  <span class="extremes-label"><?= h(t('metric.rain_episode_start')) ?></span>
+                  <strong><?= h(to_hhmm_local(isset($rainEpisode['start']) ? (string) $rainEpisode['start'] : null)) ?></strong>
+                </p>
+                <p class="extremes-line">
+                  <span class="extremes-label"><?= h(t('metric.rain_episode_end')) ?></span>
+                  <strong><?= !empty($rainEpisode['ongoing']) ? h(t('metric.rain_episode_ongoing')) : h(to_hhmm_local(isset($rainEpisode['end']) ? (string) $rainEpisode['end'] : null)) ?></strong>
+                </p>
+              <?php endif; ?>
+              <?php if ($metric === 'W'): ?>
+                <?php
+                  $wMin = units_format('W', $dayWind['min'] ?? null);
+                  $wMax = units_format('W', $dayWind['max'] ?? null);
+                  $wMinTxt = $wMin === t('common.na') ? $wMin : ($wMin . ' ' . units_symbol('W'));
+                  $wMaxTxt = $wMax === t('common.na') ? $wMax : ($wMax . ' ' . units_symbol('W'));
+                ?>
+                <p class="extremes-line">
+                  <span class="extremes-label"><?= h(t('metric.day_min_max')) ?></span>
+                  <strong><?= h($wMinTxt) ?> / <?= h($wMaxTxt) ?></strong>
+                </p>
+              <?php endif; ?>
+              <?php if ($metric === 'B'): ?>
+                <?php $windCardinal = wind_cardinal_label($value !== null ? (float) $value : null); ?>
+                <p class="extremes-line">
+                  <span class="extremes-label"><?= h(t('metric.wind_dir_label')) ?></span>
+                  <strong><?= h($windCardinal) ?></strong>
+                </p>
+              <?php endif; ?>
+              <?php if ($metric === 'P'): ?>
+                <?php
+                  $delta = $pressureTrend['delta'] ?? null;
+                  $deltaTxt = $delta === null ? t('common.na') : (($delta > 0 ? '+' : '') . number_format((float) $delta, 2, '.', '') . ' hPa');
+                ?>
+                <p class="extremes-line">
+                  <span class="extremes-label"><?= h(t('metric.pressure_trend')) ?></span>
+                  <strong><?= h($deltaTxt) ?></strong>
+                </p>
+              <?php endif; ?>
+            </div>
+          </article>
         <?php endforeach; ?>
       </div>
     </div>
