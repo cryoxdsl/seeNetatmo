@@ -442,29 +442,30 @@ foreach ($metrics as $metric => $value):
     if (isReloading) {
       return;
     }
+    if (!enabled) {
+      render();
+      return;
+    }
     if (remaining <= 0) {
-      if (enabled) {
-        var nowTs = Date.now();
-        var lastTs = getLastReloadTs();
-        if (lastTs > 0 && (nowTs - lastTs) < reloadCooldownMs) {
-          enabled = false;
-          localStorage.setItem(storageKey, '0');
-          remaining = PERIOD;
-          render();
-          return;
-        }
-        setLastReloadTs(nowTs);
-        writeValuesSnapshot(collectLiveValues().values);
-        try { sessionStorage.setItem(refreshIntentKey, '1'); } catch (e) {}
-        isReloading = true;
+      var nowTs = Date.now();
+      var lastTs = getLastReloadTs();
+      if (lastTs > 0 && (nowTs - lastTs) < reloadCooldownMs) {
+        enabled = false;
+        localStorage.setItem(storageKey, '0');
+        remaining = PERIOD;
         render();
-        if (timerId) {
-          clearInterval(timerId);
-        }
-        setTimeout(function () { window.location.reload(); }, 120);
         return;
       }
-      remaining = PERIOD;
+      setLastReloadTs(nowTs);
+      writeValuesSnapshot(collectLiveValues().values);
+      try { sessionStorage.setItem(refreshIntentKey, '1'); } catch (e) {}
+      isReloading = true;
+      render();
+      if (timerId) {
+        clearInterval(timerId);
+      }
+      setTimeout(function () { window.location.reload(); }, 120);
+      return;
     }
     remaining--;
     render();
