@@ -69,3 +69,95 @@ function redirect(string $path): never
     header('Location: ' . $path);
     exit;
 }
+
+function sanitize_rich_html(string $html): string
+{
+    $html = trim($html);
+    if ($html === '') {
+        return '';
+    }
+
+    $allowedTags = ['p', 'br', 'strong', 'em', 'b', 'i', 'u', 'ul', 'ol', 'li', 'a', 'h2', 'h3', 'h4', 'blockquote'];
+    $allowedTagLookup = array_fill_keys($allowedTags, true);
+
+    if (class_exists('DOMDocument')) {
+        $prevUseErrors = libxml_use_internal_errors(true);
+        $doc = new DOMDocument('1.0', 'UTF-8');
+        $wrapped = '<!DOCTYPE html><html><body><div id="__root__">' . $html . '</div></body></html>';
+        $loaded = $doc->loadHTML($wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
+        if ($loaded) {
+            $xpath = new DOMXPath($doc);
+            foreach ($xpath->query('//script|//style|//iframe|//object|//embed|//form|//input|//button|//textarea|//select|//meta|//link|//base') as $n) {
+                if ($n->parentNode) {
+                    $n->parentNode->removeChild($n);
+                }
+            }
+
+            foreach ($xpath->query('//*') as $el) {
+                if (!($el instanceof DOMElement)) {
+                    continue;
+                }
+                $tag = strtolower($el->tagName);
+                if (!isset($allowedTagLookup[$tag]) && $tag !== 'html' && $tag !== 'body' && $tag !== 'div') {
+                    $parent = $el->parentNode;
+                    if ($parent) {
+                        while ($el->firstChild) {
+                            $parent->insertBefore($el->firstChild, $el);
+                        }
+                        $parent->removeChild($el);
+                    }
+                    continue;
+                }
+
+                $toRemove = [];
+                foreach ($el->attributes as $attr) {
+                    $name = strtolower($attr->name);
+                    if (str_starts_with($name, 'on') || $name === 'style') {
+                        $toRemove[] = $attr->name;
+                        continue;
+                    }
+                    if ($tag === 'a') {
+                        if (!in_array($name, ['href', 'title', 'target', 'rel'], true)) {
+                            $toRemove[] = $attr->name;
+                        }
+                    } elseif (!in_array($tag, ['html', 'body', 'div'], true)) {
+                        $toRemove[] = $attr->name;
+                    }
+                }
+                foreach ($toRemove as $name) {
+                    $el->removeAttribute($name);
+                }
+
+                if ($tag === 'a' && $el->hasAttribute('href')) {
+                    $href = trim((string) $el->getAttribute('href'));
+                    $ok = str_starts_with($href, 'http://')
+                        || str_starts_with($href, 'https://')
+                        || str_starts_with($href, 'mailto:')
+                        || str_starts_with($href, '/')
+                        || str_starts_with($href, '#');
+                    if (!$ok) {
+                        $el->setAttribute('href', '#');
+                    }
+                }
+                if ($tag === 'a' && strtolower((string) $el->getAttribute('target')) === '_blank') {
+                    $el->setAttribute('rel', 'noopener noreferrer');
+                }
+            }
+
+            $root = $doc->getElementById('__root__');
+            if ($root instanceof DOMElement) {
+                $out = '';
+                foreach ($root->childNodes as $child) {
+                    $out .= (string) $doc->saveHTML($child);
+                }
+                libxml_clear_errors();
+                libxml_use_internal_errors($prevUseErrors);
+                return trim($out);
+            }
+        }
+        libxml_clear_errors();
+        libxml_use_internal_errors($prevUseErrors);
+    }
+
+    return strip_tags($html, '<p><br><strong><em><b><i><u><ul><ol><li><a><h2><h3><h4><blockquote>');
+}
