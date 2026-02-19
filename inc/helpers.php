@@ -84,8 +84,15 @@ function sanitize_rich_html(string $html): string
         $prevUseErrors = libxml_use_internal_errors(true);
         $doc = new DOMDocument('1.0', 'UTF-8');
         $wrapped = '<!DOCTYPE html><html><body><div id="__root__">' . $html . '</div></body></html>';
+        $wrapped = '<?xml encoding="UTF-8">' . $wrapped;
         $loaded = $doc->loadHTML($wrapped, LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
         if ($loaded) {
+            foreach ($doc->childNodes as $child) {
+                if ($child instanceof DOMProcessingInstruction && strtolower($child->target) === 'xml') {
+                    $doc->removeChild($child);
+                    break;
+                }
+            }
             $xpath = new DOMXPath($doc);
             foreach ($xpath->query('//script|//style|//iframe|//object|//embed|//form|//input|//button|//textarea|//select|//meta|//link|//base') as $n) {
                 if ($n->parentNode) {
