@@ -53,6 +53,16 @@ if (function_exists('weather_condition_from_row')) {
         ];
     }
 }
+$currentTrend = (string) ($weather['trend'] ?? 'unknown');
+$currentTrendArrow = match ($currentTrend) {
+    'up' => '↑',
+    'down' => '↓',
+    'stable' => '→',
+    default => '•',
+};
+$currentTrendLabel = function_exists('weather_trend_label')
+    ? weather_trend_label($currentTrend)
+    : t('weather.trend.unavailable');
 
 $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
 if (function_exists('rain_totals')) {
@@ -219,7 +229,7 @@ front_header(t('dashboard.title'));
   </div>
   <div class="weather-temp-side">
     <div class="current-label"><?= h(t('dashboard.current_temp')) ?></div>
-    <div class="current-value" data-live-key="current_temp" data-live-value="<?= h(isset($row['T']) && $row['T'] !== null ? (string) $row['T'] : '') ?>"><?= h(units_format('T', $row['T'] ?? null)) ?><small><?= h(units_symbol('T')) ?></small></div>
+    <div class="current-value" data-live-key="current_temp" data-live-value="<?= h(isset($row['T']) && $row['T'] !== null ? (string) $row['T'] : '') ?>"><span class="temp-trend temp-trend-<?= h($currentTrend) ?>" aria-label="<?= h($currentTrendLabel) ?>" title="<?= h($currentTrendLabel) ?>"><?= h($currentTrendArrow) ?></span><?= h(units_format('T', $row['T'] ?? null)) ?><small><?= h(units_symbol('T')) ?></small></div>
     <div class="day-minmax">
       <div class="min">
         <span class="arrow">↓</span>
@@ -324,7 +334,6 @@ front_header(t('dashboard.title'));
     </div>
   </article>
 </section>
-<section class="cards">
 <?php
 $metrics = [
   'T' => $row['T'] ?? null,
@@ -338,18 +347,35 @@ $metrics = [
   'D' => $row['D'] ?? null,
   'A' => $row['A'] ?? null,
 ];
-foreach ($metrics as $metric => $value):
-    $display = units_format($metric, $value);
-    $displayWithUnit = $display;
-    if ($display !== t('common.na')) {
-        $symbol = units_symbol($metric);
-        if ($symbol !== '') {
-            $displayWithUnit .= ' ' . $symbol;
-        }
-    }
+$metricGroups = [
+  'metric.group.thermal' => ['T', 'A', 'D', 'H'],
+  'metric.group.wind' => ['W', 'G', 'B'],
+  'metric.group.rain' => ['RR', 'R'],
+  'metric.group.pressure' => ['P'],
+];
 ?>
-  <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>"><?= h($displayWithUnit) ?></div></article>
-<?php endforeach; ?>
+<section class="panel metric-groups-panel">
+  <h3><?= h(t('metrics.by_type')) ?></h3>
+  <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
+    <div class="metric-group">
+      <h4 class="metric-group-title"><?= h(t($groupLabel)) ?></h4>
+      <div class="cards metrics-cards">
+        <?php foreach ($groupMetrics as $metric):
+            $value = $metrics[$metric] ?? null;
+            $display = units_format($metric, $value);
+            $displayWithUnit = $display;
+            if ($display !== t('common.na')) {
+                $symbol = units_symbol($metric);
+                if ($symbol !== '') {
+                    $displayWithUnit .= ' ' . $symbol;
+                }
+            }
+        ?>
+          <article class="card"><h3><?= h(units_metric_name($metric)) ?></h3><div data-live-key="metric_<?= h(strtolower((string) $metric)) ?>" data-live-value="<?= h($value === null ? '' : (string) $value) ?>"><?= h($displayWithUnit) ?></div></article>
+        <?php endforeach; ?>
+      </div>
+    </div>
+  <?php endforeach; ?>
 </section>
 <section class="panel">
   <h3><?= h(t('rain.total')) ?></h3>
