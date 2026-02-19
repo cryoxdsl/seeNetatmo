@@ -445,6 +445,8 @@ foreach ($metrics as $metric => $value):
 (function () {
   var PERIOD = 300;
   var storageKey = 'meteo13_auto_refresh_enabled';
+  var lastReloadKey = 'meteo13_auto_refresh_last_reload_ts';
+  var reloadCooldownMs = 15000;
   var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
   var enabled = localStorage.getItem(storageKey);
   enabled = enabled === null ? true : enabled === '1';
@@ -462,6 +464,22 @@ foreach ($metrics as $metric => $value):
     var m = Math.floor(sec / 60);
     var s = sec % 60;
     return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  function getLastReloadTs() {
+    try {
+      var raw = sessionStorage.getItem(lastReloadKey) || '0';
+      var n = parseInt(raw, 10);
+      return Number.isFinite(n) ? n : 0;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  function setLastReloadTs(ts) {
+    try {
+      sessionStorage.setItem(lastReloadKey, String(ts));
+    } catch (e) {}
   }
 
   function render() {
@@ -494,6 +512,16 @@ foreach ($metrics as $metric => $value):
     }
     if (remaining <= 0) {
       if (enabled) {
+        var nowTs = Date.now();
+        var lastTs = getLastReloadTs();
+        if (lastTs > 0 && (nowTs - lastTs) < reloadCooldownMs) {
+          enabled = false;
+          localStorage.setItem(storageKey, '0');
+          remaining = PERIOD;
+          render();
+          return;
+        }
+        setLastReloadTs(nowTs);
         isReloading = true;
         render();
         if (timerId) {
@@ -507,6 +535,13 @@ foreach ($metrics as $metric => $value):
     remaining--;
     render();
   }, 1000);
+
+  window.addEventListener('beforeunload', function () {
+    isReloading = true;
+    if (timerId) {
+      clearInterval(timerId);
+    }
+  });
 
   render();
 })();
