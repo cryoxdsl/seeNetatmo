@@ -235,24 +235,20 @@ front_header(t('dashboard.title'));
 <section class="cards">
   <article class="card station-card">
     <h3><?= h(t('station.card_title')) ?></h3>
-    <p class="small-muted station-line">
-      <span class="station-label"><?= h(t('station.location')) ?></span>
-      <span class="station-location-value">
-        <span class="code"><?= h($stationPosition) ?></span>
-        <?php if ($stationMapUrl !== null): ?>
-          <a class="station-map-link" href="<?= h($stationMapUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="OpenStreetMap">
-            <svg viewBox="0 0 64 64" aria-hidden="true">
-              <path d="M32 6c-9.4 0-17 7.6-17 17 0 12.4 17 35 17 35s17-22.6 17-35c0-9.4-7.6-17-17-17zm0 24a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" fill="currentColor"/>
-            </svg>
-          </a>
-        <?php endif; ?>
-      </span>
+    <p class="small-muted"><?= h(t('station.location')) ?>: <span class="code"><?= h($stationPosition) ?></span>
+      <?php if ($stationMapUrl !== null): ?>
+        <a class="station-map-link" href="<?= h($stationMapUrl) ?>" target="_blank" rel="noopener noreferrer" aria-label="OpenStreetMap">
+          <svg viewBox="0 0 64 64" aria-hidden="true">
+            <path d="M32 6c-9.4 0-17 7.6-17 17 0 12.4 17 35 17 35s17-22.6 17-35c0-9.4-7.6-17-17-17zm0 24a7 7 0 1 1 0-14 7 7 0 0 1 0 14z" fill="currentColor"/>
+          </svg>
+        </a>
+      <?php endif; ?>
     </p>
-    <p class="small-muted station-line"><span class="station-label"><?= h(t('station.altitude')) ?></span><strong><?= h($stationAltDisplay) ?></strong></p>
-    <p class="small-muted station-line"><span class="station-label"><?= h(t('station.status')) ?></span>
+    <p class="small-muted"><?= h(t('station.altitude')) ?>: <strong><?= h($stationAltDisplay) ?></strong></p>
+    <p class="small-muted"><?= h(t('station.status')) ?>:
       <span class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></span>
     </p>
-    <p class="small-muted station-line"><span class="station-label"><?= h(t('station.last_update')) ?></span><strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
+    <p class="small-muted"><?= h(t('station.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   </article>
   <article class="card">
     <h3><?= h(t('sea.title')) ?></h3>

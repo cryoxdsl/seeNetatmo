@@ -22,17 +22,9 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 @keyframes liveFlash{0%{transform:translateY(0) scale(1)}40%{transform:translateY(-1px) scale(1.02)}100%{transform:translateY(0) scale(1)}}
 .small-muted{margin:.3rem 0 0;font-size:.8rem;color:var(--muted)}
 .legal-content{line-height:1.55;white-space:normal}
-.station-card{position:relative;overflow:hidden;background:linear-gradient(145deg,#f8fbff,#eef5fc 68%,#eaf2fa);border-color:#cfdcea;border-radius:14px}
-.station-card::after{content:"";position:absolute;width:150px;height:150px;right:-52px;top:-58px;background:radial-gradient(circle at center,rgba(72,132,191,.22),rgba(72,132,191,0));pointer-events:none}
-.station-card h3{font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:#557190}
-.station-card .station-line{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin:.34rem 0 0}
-.station-card .station-location-value{display:inline-flex;align-items:center;gap:.3rem;min-width:0}
-.station-card .station-label{font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#607a95}
-.station-card .station-line strong{color:#1f3e5e}
-.station-card .station-line .code{background:#f4f8fc;border-color:#d5e2ef;padding:.22rem .34rem;font-size:.76rem}
-.station-card .station-map-link{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;border:1px solid #c6d8e9;background:#f6fbff;color:#2f6ea4;text-decoration:none;transition:all .2s ease}
-.station-card .station-map-link:hover{background:#e7f3ff;color:#1f5788;border-color:#9fbddd}
-.station-card .station-map-link svg{width:14px;height:14px}
+.station-card .station-map-link{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;margin-left:.28rem;color:#4a6785;text-decoration:none;vertical-align:middle}
+.station-card .station-map-link:hover{color:#2f6ea4}
+.station-card .station-map-link svg{width:12px;height:12px}
 .forecast-card .forecast-head{display:flex;align-items:center;gap:.55rem;margin:.1rem 0 .45rem}
 .forecast-card .forecast-icon{width:42px;height:42px;display:flex;align-items:center;justify-content:center;background:#f4f9ff;border:1px solid #d4e2ef;border-radius:10px;overflow:hidden}
 .forecast-card .forecast-icon svg{width:34px;height:34px}
