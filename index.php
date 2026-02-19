@@ -7,6 +7,7 @@ require_once __DIR__ . '/inc/data.php';
 require_once __DIR__ . '/inc/view.php';
 require_once __DIR__ . '/inc/sea_temp.php';
 require_once __DIR__ . '/inc/forecast.php';
+require_once __DIR__ . '/inc/metar.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -135,6 +136,7 @@ if (is_file($seasonFile)) {
 }
 $sea = sea_temp_nearest();
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
+$metar = metar_nearest(true);
 $forecast = forecast_summary(true);
 $forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
@@ -398,6 +400,45 @@ front_header(t('dashboard.title'));
     <?php endif; ?>
     <?php if (!empty($sea['time'])): ?>
       <p class="small-muted"><?= h(t('sea.updated')) ?>: <?= h((string) $sea['time']) ?></p>
+    <?php endif; ?>
+  </article>
+  <article class="card forecast-card metar-card">
+    <h3><?= h(t('metar.title')) ?></h3>
+    <?php if (!empty($metar['available'])): ?>
+      <div class="forecast-head">
+        <span class="forecast-icon metar-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M8 37h15l9 10h4l-6-10h8l5 7h3l-3-7h10v-4H43l3-7h-3l-5 7h-8l6-10h-4l-9 10H8z" fill="currentColor"/>
+          </svg>
+        </span>
+        <div class="forecast-current">
+          <div class="forecast-value"><?= h((string) ($metar['airport_icao'] ?? t('common.na'))) ?></div>
+          <?php if (!empty($metar['distance_km'])): ?>
+            <p class="small-muted"><?= h(t('metar.nearest')) ?>: <?= h(number_format((float) $metar['distance_km'], 1, '.', '')) ?> km</p>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php if (!empty($metar['headline'])): ?>
+        <p class="forecast-line"><?= h((string) $metar['headline']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['weather'])): ?>
+        <p class="forecast-line"><strong><?= h(t('metar.weather')) ?>:</strong> <?= h((string) $metar['weather']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['sky'])): ?>
+        <p class="forecast-line"><strong><?= h(t('metar.clouds')) ?>:</strong> <?= h((string) $metar['sky']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['raw_text'])): ?>
+        <p class="small-muted"><?= h(t('metar.raw')) ?>:</p>
+        <p class="code metar-raw"><?= h((string) $metar['raw_text']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['observed_at'])): ?>
+        <p class="small-muted"><?= h(t('metar.observed')) ?>: <?= h((string) $metar['observed_at']) ?></p>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="small-muted"><?= h(t('metar.unavailable')) ?></p>
+      <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
+        <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
+      <?php endif; ?>
     <?php endif; ?>
   </article>
   <article class="card forecast-card">

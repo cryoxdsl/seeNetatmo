@@ -16,7 +16,6 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .panel-dashboard.season-winter{background-image:url('../img/seasons/winter.svg')}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
 [data-live-key]{transition:background-color .35s ease,color .35s ease,transform .25s ease,box-shadow .35s ease}
-[data-live-key],.card div,.forecast-card .forecast-value,.extremes-card .extremes-line strong,.metric-group-card .metric-line-value,.day-minmax .v{white-space:nowrap}
 .live-updated{background:rgba(26,92,157,.11);border-radius:8px;padding:.04rem .28rem;box-shadow:0 0 0 1px rgba(26,92,157,.2) inset;animation:liveFlash .85s ease}
 .live-updated-up{color:#18733f}
 .live-updated-down{color:#a62d2d}
@@ -32,6 +31,8 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .forecast-card .forecast-current{display:flex;flex-direction:column}
 .forecast-card .forecast-value{font-size:1.1rem;font-weight:700}
 .sea-card .sea-illustration{color:#2f79b7;background:linear-gradient(180deg,#f7fcff,#e9f4ff)}
+.metar-card .metar-icon{color:#2f5f8a;background:linear-gradient(180deg,#f6fbff,#ebf4ff)}
+.metar-card .metar-raw{margin:.2rem 0 0;font-size:.76rem}
 .forecast-card .forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;margin-top:.45rem}
 .forecast-card .forecast-day{border:1px solid var(--line);border-radius:8px;padding:.35rem .45rem;background:#f8fbff}
 .forecast-card .forecast-day strong{display:block;margin-bottom:.25rem;font-size:.78rem;color:var(--muted)}
@@ -111,6 +112,9 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{padding:.48rem .35rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .foot{padding:1.2rem 0 2rem;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
+.git-badge{display:inline-flex;align-items:center;gap:.3rem;padding:.12rem .42rem;border:1px solid #cfd9e4;border-radius:999px;background:#f8fbff;color:#2d4761;text-decoration:none}
+.git-badge:hover{background:#eef5fd}
+.git-badge svg{width:14px;height:14px}
 .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.admin-nav{background:#102946;color:#dbe9f7;padding:1rem}.admin-nav h1{margin:.2rem 0 .8rem;font-size:1.2rem}.admin-nav a{display:block;color:#dbe9f7;text-decoration:none;margin:.38rem 0}.admin-main{padding:1rem}.alert{padding:.65rem .8rem;border-radius:8px;margin-bottom:.8rem}.alert-ok{background:#e4f4e7;color:#1e6e2f}.alert-bad{background:#f8e4e4;color:#8e1f1f}
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
 @media (max-width:820px){.admin-layout{grid-template-columns:1fr}.weather-hero{grid-template-columns:1fr}.weather-icon{width:100%;max-width:120px}.weather-temp-side{align-items:flex-start;min-width:0}.weather-temp-side .current-value{font-size:2rem}}
