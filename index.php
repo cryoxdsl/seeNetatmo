@@ -445,9 +445,12 @@ foreach ($metrics as $metric => $value):
 (function () {
   var PERIOD = 300;
   var storageKey = 'meteo13_auto_refresh_enabled';
+  var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
   var enabled = localStorage.getItem(storageKey);
   enabled = enabled === null ? true : enabled === '1';
   var remaining = PERIOD;
+  var isReloading = false;
+  var timerId = null;
 
   var dot = document.getElementById('autoRefreshDot');
   var progress = document.getElementById('autoRefreshProgress');
@@ -462,6 +465,14 @@ foreach ($metrics as $metric => $value):
   }
 
   function render() {
+    if (isReloading) {
+      countdown.textContent = reloadingText;
+      toggle.classList.add('is-loading');
+      dot.textContent = '';
+      progress.style.width = '100%';
+      return;
+    }
+    toggle.classList.remove('is-loading');
     countdown.textContent = fmt(remaining);
     toggle.classList.toggle('is-off', !enabled);
     dot.textContent = enabled ? '' : '||';
@@ -469,15 +480,26 @@ foreach ($metrics as $metric => $value):
   }
 
   toggle.addEventListener('click', function () {
+    if (isReloading) {
+      return;
+    }
     enabled = !enabled;
     localStorage.setItem(storageKey, enabled ? '1' : '0');
     render();
   });
 
-  setInterval(function () {
+  timerId = setInterval(function () {
+    if (isReloading) {
+      return;
+    }
     if (remaining <= 0) {
       if (enabled) {
-        window.location.reload();
+        isReloading = true;
+        render();
+        if (timerId) {
+          clearInterval(timerId);
+        }
+        setTimeout(function () { window.location.reload(); }, 120);
         return;
       }
       remaining = PERIOD;

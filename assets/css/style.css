@@ -81,6 +81,8 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .auto-chip .count{font-family:Consolas,monospace;font-size:.78rem;background:#eef4fb;border:1px solid #d8e4f0;padding:.08rem .28rem;border-radius:999px;min-width:44px;text-align:center}
 .auto-chip.is-off .dot{background:#8ea1b5}
 .auto-chip.is-off .count{opacity:.65}
+.auto-chip.is-loading{cursor:progress;pointer-events:none;opacity:.88}
+.auto-chip.is-loading .count{min-width:92px}
 .auto-progress{display:block;width:150px;height:4px;background:#dfe8f2;border-radius:999px;overflow:hidden}
 .auto-progress span{display:block;height:100%;width:0;background:linear-gradient(90deg,#2c88d9,#22b3be)}
 .btn-lite{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.42rem .65rem;border-radius:8px;cursor:pointer}
