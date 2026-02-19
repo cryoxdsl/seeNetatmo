@@ -5,6 +5,7 @@ require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/logger.php';
 
 const METAR_API_URL = 'https://aviationweather.gov/adds/dataserver_current/httpparam';
+const METAR_API_JSON_URL = 'https://aviationweather.gov/api/data/metar';
 const METAR_CACHE_TTL_SECONDS = 900;
 
 function metar_station_coordinates(): ?array
@@ -52,6 +53,33 @@ function metar_http_get_xml(string $url): string
         throw new RuntimeException('METAR HTTP ' . $http);
     }
     return $raw;
+}
+
+function metar_http_get_json(string $url): array
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 5,
+        CURLOPT_CONNECTTIMEOUT => 2,
+        CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
+    ]);
+    $raw = curl_exec($ch);
+    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if (!is_string($raw) || $raw === '') {
+        throw new RuntimeException('METAR JSON fetch failed: ' . $err);
+    }
+    if ($http >= 400) {
+        throw new RuntimeException('METAR JSON HTTP ' . $http);
+    }
+    $json = json_decode($raw, true);
+    if (!is_array($json)) {
+        throw new RuntimeException('METAR JSON invalid');
+    }
+    return $json;
 }
 
 function metar_decode_summary(array $metar): array
@@ -148,6 +176,67 @@ function metar_parse_items(string $xml): array
     return $items;
 }
 
+function metar_default_icao(): string
+{
+    $v = strtoupper(trim((string) (setting_get('metar_default_icao', 'LFML') ?? 'LFML')));
+    if (!preg_match('/^[A-Z]{4}$/', $v)) {
+        return 'LFML';
+    }
+    return $v;
+}
+
+function metar_fetch_by_icao(string $icao): ?array
+{
+    $icao = strtoupper(trim($icao));
+    if (!preg_match('/^[A-Z]{4}$/', $icao)) {
+        return null;
+    }
+    $query = http_build_query([
+        'ids' => $icao,
+        'format' => 'json',
+        'hours' => 6,
+    ]);
+    $url = METAR_API_JSON_URL . '?' . $query;
+    $json = metar_http_get_json($url);
+    if (!$json || !isset($json[0]) || !is_array($json[0])) {
+        return null;
+    }
+    $m = $json[0];
+
+    $sky = [];
+    if (isset($m['clouds']) && is_array($m['clouds'])) {
+        foreach ($m['clouds'] as $layer) {
+            if (!is_array($layer)) {
+                continue;
+            }
+            $cover = (string) ($layer['cover'] ?? '');
+            $base = isset($layer['base']) ? (string) $layer['base'] : '';
+            if ($cover === '') {
+                continue;
+            }
+            $sky[] = ['cover' => $cover, 'base' => $base];
+        }
+    }
+
+    return [
+        'station_id' => (string) ($m['icaoId'] ?? $icao),
+        'raw_text' => (string) ($m['rawOb'] ?? ''),
+        'observation_time' => (string) ($m['obsTime'] ?? ''),
+        'latitude' => isset($m['lat']) ? (string) $m['lat'] : '',
+        'longitude' => isset($m['lon']) ? (string) $m['lon'] : '',
+        'temp_c' => isset($m['temp']) ? (string) $m['temp'] : '',
+        'dewpoint_c' => isset($m['dewp']) ? (string) $m['dewp'] : '',
+        'wind_dir_degrees' => isset($m['wdir']) ? (string) $m['wdir'] : '',
+        'wind_speed_kt' => isset($m['wspd']) ? (string) $m['wspd'] : '',
+        'wind_gust_kt' => isset($m['wgst']) ? (string) $m['wgst'] : '',
+        'visibility_statute_mi' => isset($m['visib']) ? (string) $m['visib'] : '',
+        'altim_in_hg' => isset($m['altim']) ? (string) $m['altim'] : '',
+        'flight_category' => (string) ($m['flightCat'] ?? ''),
+        'wx_string' => (string) ($m['wxString'] ?? ''),
+        'sky' => $sky,
+    ];
+}
+
 function metar_nearest(bool $allowRemote = false): array
 {
     $coords = metar_station_coordinates();
@@ -242,6 +331,40 @@ function metar_nearest(bool $allowRemote = false): array
         }
     } catch (Throwable $e) {
         log_event('warning', 'front.metar', 'METAR fetch failed', ['err' => $e->getMessage()]);
+    }
+
+    if (empty($out['available'])) {
+        try {
+            $fallbackIcao = metar_default_icao();
+            $fallback = metar_fetch_by_icao($fallbackIcao);
+            if (is_array($fallback)) {
+                $decoded = metar_decode_summary($fallback);
+                $dist = null;
+                if (
+                    isset($fallback['latitude'], $fallback['longitude'])
+                    && is_numeric((string) $fallback['latitude'])
+                    && is_numeric((string) $fallback['longitude'])
+                ) {
+                    $dist = metar_haversine_km(
+                        $coords['lat'],
+                        $coords['lon'],
+                        (float) $fallback['latitude'],
+                        (float) $fallback['longitude']
+                    );
+                }
+                $out['available'] = true;
+                $out['reason'] = 'fallback_icao';
+                $out['airport_icao'] = (string) ($fallback['station_id'] ?? $fallbackIcao);
+                $out['distance_km'] = $dist !== null ? round($dist, 1) : null;
+                $out['observed_at'] = (string) ($fallback['observation_time'] ?? '');
+                $out['raw_text'] = (string) ($fallback['raw_text'] ?? '');
+                $out['headline'] = (string) ($decoded['headline'] ?? '');
+                $out['weather'] = (string) ($decoded['weather'] ?? '');
+                $out['sky'] = (string) ($decoded['sky'] ?? '');
+            }
+        } catch (Throwable $e) {
+            log_event('warning', 'front.metar', 'METAR fallback fetch failed', ['err' => $e->getMessage()]);
+        }
     }
 
     setting_set('metar_cache_json', json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));

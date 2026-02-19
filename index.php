@@ -402,45 +402,6 @@ front_header(t('dashboard.title'));
       <p class="small-muted"><?= h(t('sea.updated')) ?>: <?= h((string) $sea['time']) ?></p>
     <?php endif; ?>
   </article>
-  <article class="card forecast-card metar-card">
-    <h3><?= h(t('metar.title')) ?></h3>
-    <?php if (!empty($metar['available'])): ?>
-      <div class="forecast-head">
-        <span class="forecast-icon metar-icon" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path d="M8 37h15l9 10h4l-6-10h8l5 7h3l-3-7h10v-4H43l3-7h-3l-5 7h-8l6-10h-4l-9 10H8z" fill="currentColor"/>
-          </svg>
-        </span>
-        <div class="forecast-current">
-          <div class="forecast-value"><?= h((string) ($metar['airport_icao'] ?? t('common.na'))) ?></div>
-          <?php if (!empty($metar['distance_km'])): ?>
-            <p class="small-muted"><?= h(t('metar.nearest')) ?>: <?= h(number_format((float) $metar['distance_km'], 1, '.', '')) ?> km</p>
-          <?php endif; ?>
-        </div>
-      </div>
-      <?php if (!empty($metar['headline'])): ?>
-        <p class="forecast-line"><?= h((string) $metar['headline']) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($metar['weather'])): ?>
-        <p class="forecast-line"><strong><?= h(t('metar.weather')) ?>:</strong> <?= h((string) $metar['weather']) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($metar['sky'])): ?>
-        <p class="forecast-line"><strong><?= h(t('metar.clouds')) ?>:</strong> <?= h((string) $metar['sky']) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($metar['raw_text'])): ?>
-        <p class="small-muted"><?= h(t('metar.raw')) ?>:</p>
-        <p class="code metar-raw"><?= h((string) $metar['raw_text']) ?></p>
-      <?php endif; ?>
-      <?php if (!empty($metar['observed_at'])): ?>
-        <p class="small-muted"><?= h(t('metar.observed')) ?>: <?= h((string) $metar['observed_at']) ?></p>
-      <?php endif; ?>
-    <?php else: ?>
-      <p class="small-muted"><?= h(t('metar.unavailable')) ?></p>
-      <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
-        <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
-      <?php endif; ?>
-    <?php endif; ?>
-  </article>
   <article class="card forecast-card">
     <h3><?= h(t('forecast.title')) ?></h3>
     <?php if (!empty($forecast['available'])): ?>
@@ -502,7 +463,7 @@ front_header(t('dashboard.title'));
             <span class="sun-tick" style="left: <?= h(number_format($sunsetPct, 3, '.', '')) ?>%;"></span>
             <span class="sun-now" style="left: <?= h(number_format($sunNowPct, 3, '.', '')) ?>%;"></span>
           </div>
-          <p class="small-muted sun-caption"><span><?= h(t('extremes.moment')) ?>: <strong><?= h($sunPhaseLabel) ?></strong></span><span><?= h(date('H:i', $nowDayTs)) ?></span></p>
+          <p class="small-muted sun-caption"><span><?= h(t('extremes.moment')) ?>: <strong><?= h($sunPhaseLabel) ?></strong></span><span id="sunMomentClock"><?= h(date('H:i:s', $nowDayTs)) ?></span></p>
         </div>
       <?php endif; ?>
     </div>
@@ -638,6 +599,47 @@ $metricGroupIcons = [
     </article>
   </div>
 </section>
+<section class="cards">
+  <article class="card forecast-card metar-card">
+    <h3><?= h(t('metar.title')) ?></h3>
+    <?php if (!empty($metar['available'])): ?>
+      <div class="forecast-head">
+        <span class="forecast-icon metar-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M8 37h15l9 10h4l-6-10h8l5 7h3l-3-7h10v-4H43l3-7h-3l-5 7h-8l6-10h-4l-9 10H8z" fill="currentColor"/>
+          </svg>
+        </span>
+        <div class="forecast-current">
+          <div class="forecast-value"><?= h((string) ($metar['airport_icao'] ?? t('common.na'))) ?></div>
+          <?php if (!empty($metar['distance_km'])): ?>
+            <p class="small-muted"><?= h(t('metar.nearest')) ?>: <?= h(number_format((float) $metar['distance_km'], 1, '.', '')) ?> km</p>
+          <?php endif; ?>
+        </div>
+      </div>
+      <?php if (!empty($metar['headline'])): ?>
+        <p class="forecast-line"><?= h((string) $metar['headline']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['weather'])): ?>
+        <p class="forecast-line"><strong><?= h(t('metar.weather')) ?>:</strong> <?= h((string) $metar['weather']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['sky'])): ?>
+        <p class="forecast-line"><strong><?= h(t('metar.clouds')) ?>:</strong> <?= h((string) $metar['sky']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['raw_text'])): ?>
+        <p class="small-muted"><?= h(t('metar.raw')) ?>:</p>
+        <p class="code metar-raw"><?= h((string) $metar['raw_text']) ?></p>
+      <?php endif; ?>
+      <?php if (!empty($metar['observed_at'])): ?>
+        <p class="small-muted"><?= h(t('metar.observed')) ?>: <?= h((string) $metar['observed_at']) ?></p>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="small-muted"><?= h(t('metar.unavailable')) ?></p>
+      <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
+        <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
+      <?php endif; ?>
+    <?php endif; ?>
+  </article>
+</section>
 <script>
 (function () {
   var PERIOD = 300;
@@ -658,7 +660,30 @@ $metricGroupIcons = [
   var countdown = document.getElementById('autoRefreshCountdown');
   var toggle = document.getElementById('autoRefreshToggle');
   var refreshBox = document.getElementById('autoRefreshBox');
+  var sunMomentClock = document.getElementById('sunMomentClock');
+  var sunMomentTimezone = <?= json_encode(APP_TIMEZONE, JSON_UNESCAPED_UNICODE) ?>;
   if (!dot || !progress || !countdown || !toggle) return;
+
+  function refreshSunMomentClock() {
+    if (!sunMomentClock) return;
+    try {
+      var now = new Date();
+      var value = new Intl.DateTimeFormat('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false,
+        timeZone: sunMomentTimezone
+      }).format(now);
+      sunMomentClock.textContent = value.replace(/\u202f/g, ' ');
+    } catch (e) {
+      var d = new Date();
+      var hh = String(d.getHours()).padStart(2, '0');
+      var mm = String(d.getMinutes()).padStart(2, '0');
+      var ss = String(d.getSeconds()).padStart(2, '0');
+      sunMomentClock.textContent = hh + ':' + mm + ':' + ss;
+    }
+  }
 
   function syncProgressWidth() {
     if (!refreshBox) return;
@@ -804,6 +829,7 @@ $metricGroupIcons = [
   });
 
   timerId = setInterval(function () {
+    refreshSunMomentClock();
     if (isReloading) {
       return;
     }
@@ -845,6 +871,7 @@ $metricGroupIcons = [
   window.addEventListener('resize', syncProgressWidth);
 
   initValueUpdateEffects();
+  refreshSunMomentClock();
   render();
 })();
 </script>
