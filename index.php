@@ -184,17 +184,6 @@ front_header(t('dashboard.title'));
 <section class="cards">
   <article class="card station-card">
     <h3><?= h(t('station.card_title')) ?></h3>
-    <div class="station-visual">
-      <div class="station-alt-icon">
-        <svg viewBox="0 0 64 64" aria-hidden="true">
-          <path d="M6 53h52L42 23l-8 12-6-8L6 53zm27-10l-4 6h8l-4-6z" fill="currentColor"/>
-        </svg>
-      </div>
-      <div class="alt-meter-wrap">
-        <div class="alt-meter"><span style="height: <?= h((string) max(10, min(100, (int) round(((float) ($stationAlt !== '' ? $stationAlt : '0')) / 30)))) ?>%"></span></div>
-        <span class="alt-meter-label"><?= h($stationAltDisplay) ?></span>
-      </div>
-    </div>
     <p class="small-muted station-line">
       <span class="station-label"><?= h(t('station.location')) ?></span>
       <span class="station-location-value">
