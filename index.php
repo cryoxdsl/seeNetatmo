@@ -557,7 +557,7 @@ $metricGroupIcons = [
 ];
 ?>
 <section class="panel metric-groups-panel">
-  <h3><?= h(t('metrics.by_type')) ?></h3>
+  <h3 class="panel-title-with-icon"><span class="panel-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h4v-6H4zM10 18h4V9h-4zM16 18h4V5h-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span><?= h(t('metrics.by_type')) ?></h3>
   <div class="cards metrics-cards">
     <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
       <article class="card forecast-card metric-group-card js-live-card" data-card-ok="<?= $state['disconnected'] ? '0' : '1' ?>">
@@ -636,7 +636,7 @@ $metricGroupIcons = [
   </div>
 </section>
 <section class="panel rain-totals-panel">
-  <h3><?= h(t('rain.total')) ?></h3>
+  <h3 class="panel-title-with-icon"><span class="panel-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7.5 14h8.5a3 3 0 0 0 0-6 4 4 0 0 0-7.6-.9A3.2 3.2 0 0 0 7.5 14z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M9 16.5l-1 3M12 16.5l-1 3M15 16.5l-1 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><?= h(t('rain.total')) ?></h3>
   <div class="cards">
     <?php $rainDay = units_format('R', $rain['day']); ?>
     <?php $rainMonth = units_format('R', $rain['month']); ?>

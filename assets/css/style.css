@@ -54,6 +54,9 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .sun-caption{margin:.4rem 0 0;display:flex;align-items:center;justify-content:space-between;gap:.45rem}
 .metric-groups-panel{display:flex;flex-direction:column;gap:.7rem}
 .metric-groups-panel h3{margin:0 0 .2rem}
+.panel-title-with-icon{display:flex;align-items:center;gap:.4rem}
+.panel-title-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#4a6785}
+.panel-title-icon svg{width:16px;height:16px;display:block}
 .metrics-cards{margin:0}
 .metric-group-card{padding:.7rem}
 .metric-group-card h3{display:flex;align-items:center;gap:.45rem}
@@ -182,6 +185,7 @@ body.theme-dark .auto-chip.is-off + .auto-progress{background:#273a50}
 body.theme-dark .station-card .station-map-link{color:#8faec8}
 body.theme-dark .station-card .station-map-link:hover{color:#b4d0e8}
 body.theme-dark .btn-lite{background:#11233a}
+body.theme-dark .panel-title-icon{color:#9ab7d1}
 body.theme-dark select,
 body.theme-dark input,
 body.theme-dark .btn,
