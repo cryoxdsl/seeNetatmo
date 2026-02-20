@@ -62,10 +62,6 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .sun-caption{margin:.4rem 0 0;display:flex;align-items:center;justify-content:space-between;gap:.45rem}
 .metric-groups-panel{display:flex;flex-direction:column;gap:.7rem}
 .metric-groups-panel h3{margin:0 0 .2rem}
-.metric-groups-head{display:flex;align-items:center;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
-.metric-view-toggle{display:inline-flex;align-items:center;gap:.25rem}
-.metric-view-toggle .btn-lite{padding:.28rem .55rem;border-radius:999px;font-size:.76rem}
-.metric-view-toggle .btn-lite.is-active{background:#2f79b7;border-color:#2f79b7;color:#fff}
 .panel-title-with-icon{display:flex;align-items:center;gap:.4rem}
 .panel-title-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#4a6785}
 .panel-title-icon svg{width:16px;height:16px;display:block}
@@ -75,31 +71,8 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .metric-group-icon{width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;border:1px solid #d4e2ef;border-radius:8px;background:#f4f9ff;color:#3e678e;flex:0 0 24px}
 .metric-group-icon svg{width:16px;height:16px;display:block}
 .metric-group-card .metric-group-lines{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem}
-.metric-group-card .metric-group-gauges{display:none}
-.metric-groups-panel.metric-view-gauges .metric-group-lines{display:none}
-.metric-groups-panel.metric-view-gauges .metric-group-gauges{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.55rem}
 .metric-group-card .metric-line{margin:0}
 .metric-group-card .metric-line-value{font-size:1.05rem;font-weight:700;color:#1d3e60}
-.metric-gauge{border:1px solid var(--line);border-radius:12px;background:#f8fbff;padding:.45rem .52rem}
-.metric-gauge-title{display:block;margin-bottom:.25rem;font-size:.76rem;color:var(--muted);font-weight:700;letter-spacing:.01em}
-.metric-dial{position:relative;height:102px;--dial-size:86px}
-.metric-dial .metric-dial-bezel,
-.metric-dial .metric-dial-face,
-.metric-dial .metric-dial-ticks{position:absolute;left:50%;top:8px;transform:translateX(-50%);width:var(--dial-size);height:var(--dial-size);border-radius:50%}
-.metric-dial .metric-dial-bezel{background:#d7e4f2;box-shadow:inset 0 1px 0 rgba(255,255,255,.7),0 2px 6px rgba(16,36,58,.14)}
-.metric-dial .metric-dial-face{inset:6px auto auto 50%;width:calc(var(--dial-size) - 12px);height:calc(var(--dial-size) - 12px);background:radial-gradient(circle at 50% 35%,#ffffff 0%,#f4f8fd 70%,#edf3fa 100%);box-shadow:inset 0 1px 2px rgba(0,0,0,.06)}
-.metric-dial .metric-dial-ticks{inset:13px auto auto 50%;width:calc(var(--dial-size) - 26px);height:calc(var(--dial-size) - 26px);
-background:
-  repeating-conic-gradient(from -120deg, rgba(70,96,122,.45) 0deg 1deg, transparent 1deg 10deg),
-  radial-gradient(circle at center, transparent 63%, rgba(70,96,122,.42) 64%, rgba(70,96,122,.42) 65%, transparent 65%);
-opacity:.9}
-.metric-dial .metric-dial-needle{position:absolute;left:50%;top:56px;width:2.5px;height:34px;background:linear-gradient(180deg,#2f79b7,#245f92);transform-origin:50% calc(100% - 2px);transform:translateX(-50%) rotate(var(--needle-angle));border-radius:2px;box-shadow:0 0 1px rgba(0,0,0,.25)}
-.metric-dial .metric-dial-center{position:absolute;left:50%;top:86px;width:10px;height:10px;transform:translateX(-50%);border-radius:50%;background:#2f79b7;border:1px solid rgba(255,255,255,.85)}
-.metric-dial .metric-dial-min,.metric-dial .metric-dial-max{position:absolute;top:88px;font-size:.62rem;color:#5d738a;font-weight:700}
-.metric-dial .metric-dial-min{left:2px}
-.metric-dial .metric-dial-max{right:2px}
-.metric-dial.is-empty .metric-dial-needle{opacity:.4}
-.metric-gauge-value{margin:.2rem 0 0;font-size:1rem;font-weight:700;color:#1d3e60;text-align:center}
 .metric-trend{display:inline-block;margin-right:.22rem;font-weight:700}
 .metric-trend-up{color:#1f8a45}
 .metric-trend-down{color:#b23a2b}
@@ -189,7 +162,6 @@ body.theme-dark .chart-tooltip{background:rgba(8,16,28,.96);border-color:rgba(17
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
 @media (max-width:820px){.admin-layout{grid-template-columns:1fr}.weather-hero{grid-template-columns:1fr}.weather-icon{width:100%;max-width:120px}.weather-temp-side{align-items:flex-start;min-width:0}.weather-temp-side .current-value{font-size:2rem}}
 @media (max-width:820px){.metric-group-card .metric-group-lines{grid-template-columns:1fr}}
-@media (max-width:820px){.metric-groups-panel.metric-view-gauges .metric-group-gauges{grid-template-columns:1fr}}
 @media (max-width:820px){.chart-panel{min-height:250px}.weather-chart{height:220px!important}}
 
 body.theme-dark{--bg:#0b1220;--card:#10192b;--text:#d9e6f3;--muted:#97adbf;--line:#253852;background:linear-gradient(180deg,#0c1524,#0a1322 45%,#09111e)}
@@ -202,19 +174,6 @@ body.theme-dark .weather-icon{background:#0f1b2e}
 body.theme-dark .forecast-card .forecast-icon,
 body.theme-dark .metric-group-icon,
 body.theme-dark .wind-compass{background:#10243c;border-color:#2b4361;color:#89b2d8}
-body.theme-dark .metric-view-toggle .btn-lite{background:#11263f;border-color:#35506f;color:#c2d7ea}
-body.theme-dark .metric-view-toggle .btn-lite.is-active{background:#62a4dd;border-color:#62a4dd;color:#0d2238}
-body.theme-dark .metric-gauge{background:#12233a;border-color:#2b4361}
-body.theme-dark .metric-dial .metric-dial-bezel{background:#2f4662;box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 2px 6px rgba(1,6,12,.4)}
-body.theme-dark .metric-dial .metric-dial-face{background:radial-gradient(circle at 50% 35%,#21384f 0%,#162b43 75%,#12233a 100%)}
-body.theme-dark .metric-dial .metric-dial-ticks{background:
-  repeating-conic-gradient(from -120deg, rgba(182,204,225,.7) 0deg 1deg, transparent 1deg 10deg),
-  radial-gradient(circle at center, transparent 63%, rgba(182,204,225,.58) 63.8%, rgba(182,204,225,.58) 64.8%, transparent 64.8%)}
-body.theme-dark .metric-dial .metric-dial-needle{background:linear-gradient(180deg,#8ec7f2,#5ca1da)}
-body.theme-dark .metric-dial .metric-dial-center{background:#62a4dd;border-color:#1b2f46}
-body.theme-dark .metric-dial .metric-dial-min,
-body.theme-dark .metric-dial .metric-dial-max{color:#9eb7cb}
-body.theme-dark .metric-gauge-value{color:#e6f0fb}
 body.theme-dark .wind-rose-grid{stroke:#35506f}
 body.theme-dark .wind-rose-axis{stroke:#4a6685}
 body.theme-dark .wind-rose-spoke{stroke:#2f4866}

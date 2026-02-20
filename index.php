@@ -427,42 +427,6 @@ if (!function_exists('rain_episode_start_display')) {
         return to_hhmm_local($start);
     }
 }
-if (!function_exists('metric_gauge_limits')) {
-    function metric_gauge_limits(string $metric): array
-    {
-        return match ($metric) {
-            'T' => ['min' => -10.0, 'max' => 45.0],
-            'A' => ['min' => -15.0, 'max' => 50.0],
-            'D' => ['min' => -20.0, 'max' => 35.0],
-            'H' => ['min' => 0.0, 'max' => 100.0],
-            'W' => ['min' => 0.0, 'max' => 120.0],
-            'G' => ['min' => 0.0, 'max' => 180.0],
-            'B' => ['min' => 0.0, 'max' => 360.0],
-            'RR' => ['min' => 0.0, 'max' => 60.0],
-            'R' => ['min' => 0.0, 'max' => 120.0],
-            'P' => ['min' => 960.0, 'max' => 1045.0],
-            default => ['min' => 0.0, 'max' => 100.0],
-        };
-    }
-}
-if (!function_exists('metric_gauge_angle')) {
-    function metric_gauge_angle(string $metric, mixed $value): float
-    {
-        if ($value === null || $value === '' || !is_numeric((string) $value)) {
-            return -120.0;
-        }
-        $limits = metric_gauge_limits($metric);
-        $min = (float) ($limits['min'] ?? 0.0);
-        $max = (float) ($limits['max'] ?? 100.0);
-        if ($max <= $min) {
-            return -120.0;
-        }
-        $v = (float) $value;
-        $ratio = ($v - $min) / ($max - $min);
-        $ratio = max(0.0, min(1.0, $ratio));
-        return -120.0 + (240.0 * $ratio);
-    }
-}
 
 $perfTimings['total_prepare'] = (microtime(true) - $perfStart) * 1000.0;
 if ($perfEnabled && !headers_sent()) {
@@ -662,13 +626,7 @@ $metricGroupIcons = [
 ];
 ?>
 <section class="panel metric-groups-panel">
-  <div class="metric-groups-head">
-    <h3 class="panel-title-with-icon"><span class="panel-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h4v-6H4zM10 18h4V9h-4zM16 18h4V5h-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span><?= h(t('metrics.by_type')) ?></h3>
-    <div class="metric-view-toggle" role="group" aria-label="<?= h(t('metrics.by_type')) ?>">
-      <button type="button" class="btn-lite is-active" id="metricViewValues"><?= h(t('metrics.view.values')) ?></button>
-      <button type="button" class="btn-lite" id="metricViewGauges"><?= h(t('metrics.view.gauges')) ?></button>
-    </div>
-  </div>
+  <h3 class="panel-title-with-icon"><span class="panel-title-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 18h4v-6H4zM10 18h4V9h-4zM16 18h4V5h-4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span><?= h(t('metrics.by_type')) ?></h3>
   <div class="cards metrics-cards">
     <?php foreach ($metricGroups as $groupLabel => $groupMetrics): ?>
       <article class="card forecast-card metric-group-card js-live-card" data-card-ok="<?= $state['disconnected'] ? '0' : '1' ?>">
@@ -739,44 +697,6 @@ $metricGroupIcons = [
                 ?>
                 <p class="forecast-line"><strong><?= h(t('metric.pressure_trend')) ?>:</strong> <?= h($deltaTxt) ?></p>
               <?php endif; ?>
-            </div>
-          <?php endforeach; ?>
-        </div>
-        <div class="metric-group-gauges">
-          <?php foreach ($groupMetrics as $metric):
-              $value = $metrics[$metric] ?? null;
-              $display = units_format($metric, $value);
-              $displayWithUnit = $display;
-              if ($display !== t('common.na')) {
-                  $symbol = units_symbol($metric);
-                  if ($symbol !== '') {
-                      $displayWithUnit .= ' ' . $symbol;
-                  }
-              }
-              $limits = metric_gauge_limits((string) $metric);
-              $gMin = (float) ($limits['min'] ?? 0.0);
-              $gMax = (float) ($limits['max'] ?? 100.0);
-              $gAngle = metric_gauge_angle((string) $metric, $value);
-              $gMinLabel = units_format((string) $metric, $gMin, false);
-              $gMaxLabel = units_format((string) $metric, $gMax, false);
-              $gUnit = units_symbol((string) $metric);
-              if ($gUnit !== '') {
-                  $gMinLabel .= ' ' . $gUnit;
-                  $gMaxLabel .= ' ' . $gUnit;
-              }
-          ?>
-            <div class="metric-gauge">
-              <strong class="metric-gauge-title"><?= h(units_metric_name((string) $metric)) ?></strong>
-              <div class="metric-dial<?= $value === null ? ' is-empty' : '' ?>" style="--needle-angle:<?= h(number_format($gAngle, 1, '.', '')) ?>deg">
-                <span class="metric-dial-bezel"></span>
-                <span class="metric-dial-face"></span>
-                <span class="metric-dial-ticks"></span>
-                <span class="metric-dial-needle"></span>
-                <span class="metric-dial-center"></span>
-                <span class="metric-dial-min"><?= h($gMinLabel) ?></span>
-                <span class="metric-dial-max"><?= h($gMaxLabel) ?></span>
-              </div>
-              <p class="metric-gauge-value"><?= h($displayWithUnit) ?></p>
             </div>
           <?php endforeach; ?>
         </div>
@@ -1041,14 +961,6 @@ $metricGroupIcons = [
   var refreshCacheBtn = document.getElementById('refreshCacheBtn');
   var sunMomentClock = document.getElementById('sunMomentClock');
   var sunMomentTimezone = <?= json_encode(APP_TIMEZONE, JSON_UNESCAPED_UNICODE) ?>;
-  var metricViewKey = 'meteo13_metrics_view';
-  var metricPanel = document.querySelector('.metric-groups-panel');
-  var metricViewValuesBtn = document.getElementById('metricViewValues');
-  var metricViewGaugesBtn = document.getElementById('metricViewGauges');
-  var metricView = localStorage.getItem(metricViewKey) || 'values';
-  if (metricView !== 'values' && metricView !== 'gauges') {
-    metricView = 'values';
-  }
   if (!dot || !progress || !countdown || !toggle) return;
 
   if (refreshCacheBtn) {
@@ -1111,33 +1023,6 @@ $metricGroupIcons = [
     if (themeToggleLabel) {
       themeToggleLabel.textContent = themeText[themeMode] || themeText.auto;
     }
-  }
-
-  function applyMetricView() {
-    if (!metricPanel) return;
-    var gaugeMode = metricView === 'gauges';
-    metricPanel.classList.toggle('metric-view-gauges', gaugeMode);
-    if (metricViewValuesBtn) {
-      metricViewValuesBtn.classList.toggle('is-active', !gaugeMode);
-    }
-    if (metricViewGaugesBtn) {
-      metricViewGaugesBtn.classList.toggle('is-active', gaugeMode);
-    }
-  }
-
-  if (metricViewValuesBtn) {
-    metricViewValuesBtn.addEventListener('click', function () {
-      metricView = 'values';
-      localStorage.setItem(metricViewKey, metricView);
-      applyMetricView();
-    });
-  }
-  if (metricViewGaugesBtn) {
-    metricViewGaugesBtn.addEventListener('click', function () {
-      metricView = 'gauges';
-      localStorage.setItem(metricViewKey, metricView);
-      applyMetricView();
-    });
   }
 
   if (themeToggle) {
@@ -1396,7 +1281,6 @@ $metricGroupIcons = [
   initValueUpdateEffects();
   refreshCardHealth();
   applyTheme();
-  applyMetricView();
   refreshSunMomentClock();
   setTimeout(triggerAsyncCacheRefresh, 1200);
   render();
