@@ -570,10 +570,11 @@ $metricGroupIcons = [
                 <?php if ($metric === 'B'): ?>
                   <?php
                     $windDeg = $value !== null ? (float) $value : null;
-                    $windDegNorm = $windDeg !== null ? fmod(($windDeg + 360.0), 360.0) : 0.0;
+                    // Meteo wind direction is where it comes from; UI arrow shows where it goes.
+                    $windToDeg = $windDeg !== null ? fmod(($windDeg + 180.0 + 360.0), 360.0) : 0.0;
                   ?>
                   <span class="wind-compass" aria-label="<?= h(t('metric.wind_dir_compass')) ?>" title="<?= h(t('metric.wind_dir_compass')) ?>">
-                    <span class="needle" style="transform:rotate(<?= h(number_format($windDegNorm, 1, '.', '')) ?>deg)">↑</span>
+                    <span class="needle" style="transform:rotate(<?= h(number_format($windToDeg, 1, '.', '')) ?>deg)">↑</span>
                   </span>
                 <?php endif; ?>
                 <?= h($displayWithUnit) ?>
@@ -592,7 +593,11 @@ $metricGroupIcons = [
                 <p class="forecast-line"><strong><?= h(t('metric.day_min_max')) ?>:</strong> <?= h($wMinTxt) ?> / <?= h($wMaxTxt) ?></p>
               <?php endif; ?>
               <?php if ($metric === 'B'): ?>
-                <?php $windCardinal = wind_cardinal_label($value !== null ? (float) $value : null); ?>
+                <?php
+                  $windDeg = $value !== null ? (float) $value : null;
+                  $windToDeg = $windDeg !== null ? fmod(($windDeg + 180.0 + 360.0), 360.0) : null;
+                  $windCardinal = wind_cardinal_label($windToDeg);
+                ?>
                 <p class="forecast-line"><strong><?= h(t('metric.wind_dir_label')) ?>:</strong> <?= h($windCardinal) ?></p>
               <?php endif; ?>
               <?php if ($metric === 'P'): ?>
