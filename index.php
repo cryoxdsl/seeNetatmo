@@ -330,13 +330,20 @@ front_header(t('dashboard.title'));
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <div class="row status-row">
     <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
-    <div class="auto-refresh-mini" id="autoRefreshBox">
-      <button type="button" class="auto-chip" id="autoRefreshToggle" aria-label="<?= h(t('dashboard.auto_refresh')) ?>">
-        <span class="dot" id="autoRefreshDot"></span>
-        <span class="label"><?= h(t('dashboard.auto_refresh')) ?></span>
-        <span class="count" id="autoRefreshCountdown">05:00</span>
+    <div class="status-controls">
+      <button type="button" class="theme-toggle" id="themeToggle" aria-label="<?= h(t('dashboard.theme')) ?>">
+        <span class="theme-dot" id="themeToggleDot">◐</span>
+        <span class="theme-label"><?= h(t('dashboard.theme')) ?></span>
+        <span class="theme-mode" id="themeToggleLabel"><?= h(t('dashboard.theme_auto')) ?></span>
       </button>
-      <span class="auto-progress"><span id="autoRefreshProgress"></span></span>
+      <div class="auto-refresh-mini" id="autoRefreshBox">
+        <button type="button" class="auto-chip" id="autoRefreshToggle" aria-label="<?= h(t('dashboard.auto_refresh')) ?>">
+          <span class="dot" id="autoRefreshDot"></span>
+          <span class="label"><?= h(t('dashboard.auto_refresh')) ?></span>
+          <span class="count" id="autoRefreshCountdown">05:00</span>
+        </button>
+        <span class="auto-progress"><span id="autoRefreshProgress"></span></span>
+      </div>
     </div>
   </div>
 </section>
@@ -647,19 +654,33 @@ $metricGroupIcons = [
 <script>
 (function () {
   var PERIOD = 300;
+  var themeModeKey = 'meteo13_theme_mode';
   var storageKey = 'meteo13_auto_refresh_enabled';
   var lastReloadKey = 'meteo13_auto_refresh_last_reload_ts';
   var refreshIntentKey = 'meteo13_auto_refresh_intent';
   var valuesSnapshotKey = 'meteo13_live_values_snapshot_v1';
   var reloadCooldownMs = 15000;
+  var sunriseTs = <?= json_encode($sunriseTs !== null ? (int) $sunriseTs : null) ?>;
+  var sunsetTs = <?= json_encode($sunsetTs !== null ? (int) $sunsetTs : null) ?>;
+  var themeText = {
+    auto: <?= json_encode(t('dashboard.theme_auto'), JSON_UNESCAPED_UNICODE) ?>,
+    light: <?= json_encode(t('dashboard.theme_light'), JSON_UNESCAPED_UNICODE) ?>,
+    dark: <?= json_encode(t('dashboard.theme_dark'), JSON_UNESCAPED_UNICODE) ?>
+  };
   var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
   var stationDisconnected = <?= json_encode((bool) ($state['disconnected'] ?? true)) ?>;
   var enabled = localStorage.getItem(storageKey);
   enabled = enabled === null ? true : enabled === '1';
+  var themeMode = localStorage.getItem(themeModeKey) || 'auto';
+  if (themeMode !== 'auto' && themeMode !== 'light' && themeMode !== 'dark') {
+    themeMode = 'auto';
+  }
   var remaining = PERIOD;
   var isReloading = false;
   var timerId = null;
 
+  var themeToggle = document.getElementById('themeToggle');
+  var themeToggleLabel = document.getElementById('themeToggleLabel');
   var dot = document.getElementById('autoRefreshDot');
   var progress = document.getElementById('autoRefreshProgress');
   var countdown = document.getElementById('autoRefreshCountdown');
@@ -668,6 +689,37 @@ $metricGroupIcons = [
   var sunMomentClock = document.getElementById('sunMomentClock');
   var sunMomentTimezone = <?= json_encode(APP_TIMEZONE, JSON_UNESCAPED_UNICODE) ?>;
   if (!dot || !progress || !countdown || !toggle) return;
+
+  function computeAutoTheme() {
+    var nowSec = Math.floor(Date.now() / 1000);
+    if (typeof sunriseTs === 'number' && typeof sunsetTs === 'number' && sunsetTs > sunriseTs) {
+      return (nowSec >= sunriseTs && nowSec < sunsetTs) ? 'light' : 'dark';
+    }
+    var h = new Date().getHours();
+    return (h >= 7 && h < 20) ? 'light' : 'dark';
+  }
+
+  function applyTheme() {
+    var active = themeMode === 'auto' ? computeAutoTheme() : themeMode;
+    document.body.classList.toggle('theme-dark', active === 'dark');
+    document.body.classList.toggle('theme-light', active === 'light');
+    if (themeToggle) {
+      themeToggle.setAttribute('data-mode', themeMode);
+    }
+    if (themeToggleLabel) {
+      themeToggleLabel.textContent = themeText[themeMode] || themeText.auto;
+    }
+  }
+
+  if (themeToggle) {
+    themeToggle.addEventListener('click', function () {
+      if (themeMode === 'auto') themeMode = 'dark';
+      else if (themeMode === 'dark') themeMode = 'light';
+      else themeMode = 'auto';
+      localStorage.setItem(themeModeKey, themeMode);
+      applyTheme();
+    });
+  }
 
   function refreshSunMomentClock() {
     if (!sunMomentClock) return;
@@ -869,6 +921,9 @@ $metricGroupIcons = [
 
   timerId = setInterval(function () {
     refreshSunMomentClock();
+    if (themeMode === 'auto') {
+      applyTheme();
+    }
     if (isReloading) {
       return;
     }
@@ -911,6 +966,7 @@ $metricGroupIcons = [
 
   initValueUpdateEffects();
   refreshCardHealth();
+  applyTheme();
   refreshSunMomentClock();
   render();
 })();
