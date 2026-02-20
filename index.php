@@ -298,6 +298,7 @@ $windRosePeriodLabels = [
     '1m' => t('windrose.period.1m'),
     '1a' => t('windrose.period.1a'),
 ];
+$windRoseSamplesLabel = sprintf(t('windrose.samples_for'), $windRosePeriodLabels[$windRosePeriod] ?? $windRosePeriod);
 $windRoseBasePath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/index.php'), PHP_URL_PATH);
 $windRoseQueryBase = $_GET;
 unset($windRoseQueryBase['wrp']);
@@ -812,7 +813,7 @@ $metricGroupIcons = [
         <?php endforeach; ?>
         <circle cx="90" cy="90" r="3" class="wind-rose-center"></circle>
       </svg>
-      <p class="small-muted"><?= h(t('windrose.samples')) ?>: <strong><?= h((string) ((int) $windRose['total'])) ?></strong></p>
+      <p class="small-muted"><?= h($windRoseSamplesLabel) ?>: <strong><?= h((string) ((int) $windRose['total'])) ?></strong></p>
       <?php if (!empty($roseTop)): ?>
         <?php
           $main = $roseTop[0];
