@@ -25,6 +25,28 @@ function locale_switch_url(string $locale): string
     return $path . '?' . http_build_query($query);
 }
 
+function browser_preferred_locale(): string
+{
+    $accept = strtolower((string) ($_SERVER['HTTP_ACCEPT_LANGUAGE'] ?? ''));
+    if ($accept === '') {
+        return 'en_EN';
+    }
+
+    $parts = explode(',', $accept);
+    foreach ($parts as $part) {
+        $lang = trim(explode(';', $part)[0] ?? '');
+        if ($lang === '') {
+            continue;
+        }
+        if ($lang === 'fr' || str_starts_with($lang, 'fr-') || str_starts_with($lang, 'fr_')) {
+            return 'fr_FR';
+        }
+        return 'en_EN';
+    }
+
+    return 'en_EN';
+}
+
 function i18n_bootstrap(): void
 {
     $requested = isset($_GET['lang']) ? normalize_locale((string) $_GET['lang']) : null;
@@ -33,8 +55,7 @@ function i18n_bootstrap(): void
     }
 
     if (empty($_SESSION['lang'])) {
-        $default = normalize_locale((string) cfg('default_locale', 'fr_FR'));
-        $_SESSION['lang'] = $default;
+        $_SESSION['lang'] = browser_preferred_locale();
     }
 }
 
