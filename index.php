@@ -494,7 +494,7 @@ if (!function_exists('alert_datetime_label')) {
     }
 }
 if (!function_exists('alert_period_line')) {
-    function alert_period_line(array $alert, string $fallbackUpdated): string
+    function alert_period_line(array $alert): string
     {
         $fromRaw = '';
         foreach (['onset', 'start', 'effective', 'starts_at', 'from'] as $key) {
@@ -512,33 +512,20 @@ if (!function_exists('alert_period_line')) {
                 break;
             }
         }
-        $updatedRaw = '';
-        foreach (['sent', 'published', 'updated'] as $key) {
-            $v = trim((string) ($alert[$key] ?? ''));
-            if ($v !== '') {
-                $updatedRaw = $v;
-                break;
-            }
+
+        // Fallback for sources with published/updated but no explicit onset/expires.
+        if ($fromRaw === '') {
+            $fromRaw = trim((string) ($alert['published'] ?? ($alert['sent'] ?? '')));
         }
-        if ($updatedRaw === '' && trim($fallbackUpdated) !== '') {
-            $updatedRaw = trim($fallbackUpdated);
+        if ($toRaw === '') {
+            $toRaw = trim((string) ($alert['updated'] ?? ($alert['expires'] ?? '')));
         }
 
         $from = alert_datetime_label($fromRaw);
         $to = alert_datetime_label($toRaw);
-        $updated = alert_datetime_label($updatedRaw);
 
         if ($from !== '' && $to !== '') {
             return sprintf(t('alerts.period_from_to'), $from, $to);
-        }
-        if ($from !== '') {
-            return sprintf(t('alerts.period_from'), $from);
-        }
-        if ($to !== '') {
-            return sprintf(t('alerts.period_until'), $to);
-        }
-        if ($updated !== '') {
-            return sprintf(t('alerts.period_updated'), $updated);
         }
         return '';
     }
@@ -937,7 +924,7 @@ $metricGroupIcons = [
                 <?php if (!empty($alert['detail'])): ?>
                   <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
                 <?php endif; ?>
-                <?php $alertPeriod = alert_period_line(is_array($alert) ? $alert : [], $weatherAlertsUpdated); ?>
+                <?php $alertPeriod = alert_period_line(is_array($alert) ? $alert : []); ?>
                 <?php if ($alertPeriod !== ''): ?>
                   <span class="alerts-date"><?= h($alertPeriod) ?></span>
                 <?php endif; ?>
