@@ -9,8 +9,13 @@ const WEATHER_ALERTS_CACHE_TTL_SECONDS = 900;
 
 function weather_alerts_station_coordinates(): ?array
 {
-    $lat = setting_get('station_lat', '');
-    $lon = setting_get('station_lon', '');
+    // Optional override for alerts zone (admin setting), fallback to station coordinates.
+    $lat = setting_get('alerts_zone_lat', '');
+    $lon = setting_get('alerts_zone_lon', '');
+    if (!is_string($lat) || !is_string($lon) || $lat === '' || $lon === '') {
+        $lat = setting_get('station_lat', '');
+        $lon = setting_get('station_lon', '');
+    }
     if (!is_string($lat) || !is_string($lon) || $lat === '' || $lon === '') {
         return null;
     }
