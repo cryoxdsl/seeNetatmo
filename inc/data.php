@@ -467,53 +467,100 @@ function current_day_temp_reference(): array
     $t = data_table();
     $now = now_paris();
     $currentYear = (int) $now->format('Y');
-    $monthDay = $now->format('m-%d');
+    $monthDayIso = $now->format('m-d');
+    $dayMonthIso = $now->format('d-m');
 
-    $fetch = static function (bool $excludeCurrentYear) use ($t, $monthDay, $currentYear): array {
-        $whereYear = $excludeCurrentYear ? 'WHERE y <> :current_year' : '';
-        $sql = "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
-                FROM (
-                    SELECT
-                        CAST(DATE_FORMAT(dt_parsed, '%Y') AS UNSIGNED) AS y,
-                        DATE_FORMAT(dt_parsed, '%Y-%m-%d') AS d,
-                        MIN(CAST(REPLACE(CAST(`T` AS CHAR), ',', '.') AS DECIMAL(6,2))) AS day_min,
-                        MAX(CAST(REPLACE(CAST(`T` AS CHAR), ',', '.') AS DECIMAL(6,2))) AS day_max
-                    FROM (
-                        SELECT
-                            `T`,
-                            COALESCE(
-                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%Y-%m-%d %H:%i:%s'),
-                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%Y/%m/%d %H:%i:%s'),
-                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%d/%m/%Y %H:%i:%s')
-                            ) AS dt_parsed
-                        FROM `{$t}`
-                    ) s
-                    WHERE dt_parsed IS NOT NULL
-                      AND DATE_FORMAT(dt_parsed, '%m-%d') = :md
-                      AND `T` IS NOT NULL
-                    GROUP BY y, d
-                ) x
-                {$whereYear}";
-        $stmt = db()->prepare($sql);
-        $params = [':md' => $monthDay];
-        if ($excludeCurrentYear) {
-            $params[':current_year'] = $currentYear;
+    $stmt = db()->prepare(
+        "SELECT `DateTime`, `T`
+         FROM `{$t}`
+         WHERE `T` IS NOT NULL
+           AND (
+             REPLACE(CAST(`DateTime` AS CHAR), '/', '-') LIKE :p_ymd
+             OR REPLACE(CAST(`DateTime` AS CHAR), '/', '-') LIKE :p_dmy
+           )"
+    );
+    $stmt->execute([
+        ':p_ymd' => '____-' . $monthDayIso . '%',
+        ':p_dmy' => '__-' . $dayMonthIso . '-____%',
+    ]);
+    $rows = $stmt->fetchAll();
+
+    $byDay = [];
+    foreach ($rows as $r) {
+        $rawDt = trim((string) ($r['DateTime'] ?? ''));
+        $rawT = (string) ($r['T'] ?? '');
+        if ($rawDt === '' || $rawT === '') {
+            continue;
         }
-        $stmt->execute($params);
-        return $stmt->fetch() ?: [];
-    };
+        $temp = (float) str_replace(',', '.', $rawT);
+        if (!is_finite($temp)) {
+            continue;
+        }
 
-    $row = $fetch(true);
-    $sampleCount = isset($row['sample_count']) ? (int) $row['sample_count'] : 0;
-    if ($sampleCount <= 0) {
-        // Fallback: if no historical sample exists, use all available years.
-        $row = $fetch(false);
+        $dt = null;
+        $patterns = [
+            'Y-m-d H:i:s',
+            'Y/m/d H:i:s',
+            'd-m-Y H:i:s',
+            'd/m/Y H:i:s',
+            DateTimeInterface::ATOM,
+            'Y-m-d\TH:i:s',
+        ];
+        foreach ($patterns as $pattern) {
+            $parsed = DateTimeImmutable::createFromFormat($pattern, $rawDt, new DateTimeZone(APP_TIMEZONE));
+            if ($parsed instanceof DateTimeImmutable) {
+                $dt = $parsed;
+                break;
+            }
+        }
+        if (!$dt) {
+            $ts = strtotime($rawDt);
+            if ($ts !== false) {
+                $dt = (new DateTimeImmutable('@' . $ts))->setTimezone(new DateTimeZone(APP_TIMEZONE));
+            }
+        }
+        if (!$dt) {
+            continue;
+        }
+        if ($dt->format('m-d') !== $monthDayIso) {
+            continue;
+        }
+
+        $dayKey = $dt->format('Y-m-d');
+        if (!isset($byDay[$dayKey])) {
+            $byDay[$dayKey] = ['year' => (int) $dt->format('Y'), 'min' => $temp, 'max' => $temp];
+        } else {
+            if ($temp < $byDay[$dayKey]['min']) {
+                $byDay[$dayKey]['min'] = $temp;
+            }
+            if ($temp > $byDay[$dayKey]['max']) {
+                $byDay[$dayKey]['max'] = $temp;
+            }
+        }
+    }
+
+    if ($byDay === []) {
+        return ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
+    }
+
+    $historical = array_values(array_filter($byDay, static fn(array $d): bool => (int) ($d['year'] ?? 0) !== $currentYear));
+    $selected = $historical !== [] ? $historical : array_values($byDay);
+    $count = count($selected);
+    if ($count <= 0) {
+        return ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
+    }
+
+    $sumMin = 0.0;
+    $sumMax = 0.0;
+    foreach ($selected as $d) {
+        $sumMin += (float) $d['min'];
+        $sumMax += (float) $d['max'];
     }
 
     return [
-        'min_avg' => isset($row['avg_min']) && $row['avg_min'] !== null ? (float) $row['avg_min'] : null,
-        'max_avg' => isset($row['avg_max']) && $row['avg_max'] !== null ? (float) $row['avg_max'] : null,
-        'samples' => isset($row['sample_count']) ? (int) $row['sample_count'] : 0,
+        'min_avg' => round($sumMin / $count, 3),
+        'max_avg' => round($sumMax / $count, 3),
+        'samples' => $count,
     ];
 }
 
