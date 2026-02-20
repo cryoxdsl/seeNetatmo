@@ -13,11 +13,71 @@
   var isV2 = Number.isFinite(major) && major < 3;
   var charts = [];
   var resizeTimer = null;
+  var hoverGuidePlugin = {
+    id: 'meteoHoverGuide',
+    beforeDatasetsDraw: function (chart) {
+      var ctx = chart && chart.ctx;
+      var area = chart && chart.chartArea;
+      if (!ctx || !area) return;
+
+      var active = [];
+      if (chart.tooltip) {
+        if (typeof chart.tooltip.getActiveElements === 'function') {
+          active = chart.tooltip.getActiveElements() || [];
+        } else if (Array.isArray(chart.tooltip._active)) {
+          active = chart.tooltip._active;
+        }
+      }
+      if (!active.length) return;
+
+      var x = null;
+      if (active[0] && active[0].element && Number.isFinite(active[0].element.x)) {
+        x = active[0].element.x;
+      } else if (active[0] && active[0]._model && Number.isFinite(active[0]._model.x)) {
+        x = active[0]._model.x;
+      }
+      if (!Number.isFinite(x)) return;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, area.top);
+      ctx.lineTo(x, area.bottom);
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = 'rgba(35, 92, 146, 0.35)';
+      ctx.stroke();
+      ctx.restore();
+    }
+  };
 
   function safeNumber(v) {
     if (v === null || v === undefined || v === '') return null;
     var n = Number(v);
     return Number.isFinite(n) ? n : null;
+  }
+
+  function rawDateLabel(raw) {
+    if (typeof raw !== 'string') return String(raw || '');
+    if (raw.length >= 16) {
+      return raw.slice(8, 10) + '/' + raw.slice(5, 7) + ' ' + raw.slice(11, 16);
+    }
+    return raw;
+  }
+
+  function valueDecimals(values) {
+    var max = 0;
+    for (var i = 0; i < values.length; i++) {
+      var v = values[i];
+      if (!Number.isFinite(v)) continue;
+      var s = String(v);
+      var p = s.indexOf('.');
+      if (p >= 0) max = Math.max(max, s.length - p - 1);
+    }
+    return Math.min(2, max);
+  }
+
+  function formatValue(value, decimals) {
+    if (!Number.isFinite(value)) return 'N/A';
+    return Number(value).toFixed(decimals);
   }
 
   function compactDateLabel(raw) {
@@ -80,17 +140,21 @@
   }
 
   function commonDataset(label, color, data) {
+    var decimals = valueDecimals(data);
     return {
       label: label,
       data: data,
       borderColor: color,
-      backgroundColor: color,
-      borderWidth: 2,
+      backgroundColor: 'rgba(0,0,0,0)',
+      borderWidth: 2.4,
       pointRadius: 0,
-      pointHoverRadius: 3,
+      pointHitRadius: 14,
+      pointHoverRadius: 4,
+      pointHoverBorderWidth: 2,
       fill: false,
-      tension: 0.22,
-      spanGaps: true
+      tension: 0.2,
+      spanGaps: true,
+      _decimals: decimals
     };
   }
 
@@ -138,10 +202,27 @@
       return {
         responsive: true,
         maintainAspectRatio: false,
+        devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
         animation: { duration: 0 },
-        legend: { display: true, position: 'top' },
-        tooltips: { mode: 'index', intersect: false },
-        hover: { mode: 'index', intersect: false },
+        legend: { display: false },
+        tooltips: {
+          mode: 'nearest',
+          intersect: false,
+          displayColors: false,
+          callbacks: {
+            title: function (items) {
+              if (!items || !items.length) return '';
+              return rawDateLabel(items[0].label);
+            },
+            label: function (item, data) {
+              var ds = (data && data.datasets && data.datasets[item.datasetIndex]) || {};
+              var raw = item && item.yLabel !== undefined ? item.yLabel : item.value;
+              var val = Number(raw);
+              return (ds.label || '') + ': ' + formatValue(val, Number(ds._decimals || 0));
+            }
+          }
+        },
+        hover: { mode: 'nearest', intersect: false },
         scales: scales
       };
     }
@@ -149,11 +230,30 @@
     return {
       responsive: true,
       maintainAspectRatio: false,
+      devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
       animation: false,
-      interaction: { mode: 'index', intersect: false },
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
       plugins: {
-        legend: { display: true, position: 'top' },
-        tooltip: { mode: 'index', intersect: false }
+        legend: { display: false },
+        tooltip: {
+          mode: 'nearest',
+          intersect: false,
+          displayColors: false,
+          callbacks: {
+            title: function (items) {
+              if (!items || !items.length) return '';
+              return rawDateLabel(items[0].label);
+            },
+            label: function (ctx) {
+              var ds = ctx && ctx.dataset ? ctx.dataset : {};
+              var raw = ctx && ctx.parsed && ctx.parsed.y !== undefined
+                ? ctx.parsed.y
+                : (ctx ? ctx.raw : NaN);
+              var v = Number(raw);
+              return (ds.label || '') + ': ' + formatValue(v, Number(ds._decimals || 0));
+            }
+          }
+        }
       },
       scales: scales
     };
@@ -170,7 +270,8 @@
         labels: labels,
         datasets: [commonDataset(datasetLabel, color, values)]
       },
-      options: buildOptions(resolvedMode)
+      options: buildOptions(resolvedMode),
+      plugins: [hoverGuidePlugin]
     });
 
     charts.push(chart);

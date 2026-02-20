@@ -80,11 +80,26 @@ front_header(t('charts.title'));
     <button type="button" class="btn-lite" id="chartDensityToggle"><?= h(t('charts.density')) ?>: <?= h(t('charts.density.auto')) ?></button>
   </form>
 </section>
-<section class="panel chart-panel"><canvas class="weather-chart" id="chartT"></canvas></section>
-<section class="panel chart-panel"><canvas class="weather-chart" id="chartH"></canvas></section>
-<section class="panel chart-panel"><canvas class="weather-chart" id="chartP"></canvas></section>
-<section class="panel chart-panel"><canvas class="weather-chart" id="chartR"></canvas></section>
-<section class="panel chart-panel"><canvas class="weather-chart" id="chartW"></canvas></section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['T']) ?></h3>
+  <canvas class="weather-chart" id="chartT"></canvas>
+</section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['H']) ?></h3>
+  <canvas class="weather-chart" id="chartH"></canvas>
+</section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['P']) ?></h3>
+  <canvas class="weather-chart" id="chartP"></canvas>
+</section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['R']) ?></h3>
+  <canvas class="weather-chart" id="chartR"></canvas>
+</section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['W']) ?></h3>
+  <canvas class="weather-chart" id="chartW"></canvas>
+</section>
 <script src="/assets/js/chart.min.js"></script>
 <script>window.METEO_DATA = <?= json_encode($payload, JSON_UNESCAPED_SLASHES) ?>;</script>
 <script src="/assets/js/charts.js"></script>
