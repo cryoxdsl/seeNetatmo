@@ -52,6 +52,7 @@ $payload = [
         'density_auto' => t('charts.density.auto'),
         'density_compact' => t('charts.density.compact'),
         'density_dense' => t('charts.density.dense'),
+        'time_axis' => t('table.datetime'),
     ],
 ];
 

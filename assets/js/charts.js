@@ -158,30 +158,38 @@
     };
   }
 
-  function buildScales(resolvedMode) {
+  function buildScales(resolvedMode, yAxisTitle) {
     var maxXTicks = chooseMaxXTicks(labels.length, resolvedMode);
     var maxYTicks = chooseMaxYTicks(resolvedMode);
+    var xAxisTitle = ui.time_axis || 'Date/Heure';
+    var tickColor = 'rgba(60, 84, 112, 0.95)';
+    var gridColor = 'rgba(120,140,165,0.26)';
 
     if (isV2) {
       return {
         xAxes: [{
-          gridLines: { color: 'rgba(120,140,165,0.20)' },
+          gridLines: { color: gridColor },
+          scaleLabel: { display: true, labelString: xAxisTitle, fontColor: tickColor },
           ticks: {
+            fontColor: tickColor,
             maxTicksLimit: maxXTicks,
             callback: function (v) { return compactDateLabel(v); }
           }
         }],
         yAxes: [{
-          gridLines: { color: 'rgba(120,140,165,0.22)' },
-          ticks: { beginAtZero: false, maxTicksLimit: maxYTicks }
+          gridLines: { color: gridColor },
+          scaleLabel: { display: true, labelString: yAxisTitle, fontColor: tickColor },
+          ticks: { beginAtZero: false, maxTicksLimit: maxYTicks, fontColor: tickColor }
         }]
       };
     }
 
     return {
       x: {
-        grid: { color: 'rgba(120,140,165,0.20)' },
+        title: { display: true, text: xAxisTitle, color: tickColor },
+        grid: { color: gridColor },
         ticks: {
+          color: tickColor,
           maxTicksLimit: maxXTicks,
           callback: function (_value, index) {
             return compactDateLabel(labels[index]);
@@ -189,14 +197,15 @@
         }
       },
       y: {
-        grid: { color: 'rgba(120,140,165,0.22)' },
-        ticks: { maxTicksLimit: maxYTicks }
+        title: { display: true, text: yAxisTitle, color: tickColor },
+        grid: { color: gridColor },
+        ticks: { maxTicksLimit: maxYTicks, color: tickColor }
       }
     };
   }
 
-  function buildOptions(resolvedMode) {
-    var scales = buildScales(resolvedMode);
+  function buildOptions(resolvedMode, yAxisTitle) {
+    var scales = buildScales(resolvedMode, yAxisTitle);
 
     if (isV2) {
       return {
@@ -206,7 +215,7 @@
         animation: { duration: 0 },
         legend: { display: false },
         tooltips: {
-          mode: 'nearest',
+          mode: 'index',
           intersect: false,
           displayColors: false,
           callbacks: {
@@ -222,7 +231,7 @@
             }
           }
         },
-        hover: { mode: 'nearest', intersect: false },
+        hover: { mode: 'index', intersect: false },
         scales: scales
       };
     }
@@ -232,11 +241,11 @@
       maintainAspectRatio: false,
       devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
       animation: false,
-      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      interaction: { mode: 'index', intersect: false, axis: 'x' },
       plugins: {
         legend: { display: false },
         tooltip: {
-          mode: 'nearest',
+          mode: 'index',
           intersect: false,
           displayColors: false,
           callbacks: {
@@ -270,7 +279,7 @@
         labels: labels,
         datasets: [commonDataset(datasetLabel, color, values)]
       },
-      options: buildOptions(resolvedMode),
+      options: buildOptions(resolvedMode, datasetLabel),
       plugins: [hoverGuidePlugin]
     });
 

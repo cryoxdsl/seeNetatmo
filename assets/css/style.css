@@ -120,7 +120,7 @@ button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;curso
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{padding:.48rem .35rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
 .chart-panel{position:relative;min-height:320px}
 .chart-title{margin:0 0 .55rem;font-size:.95rem;color:var(--muted);font-weight:700}
-.weather-chart{display:block;width:100%!important;height:280px!important}
+.weather-chart{display:block;width:100%!important;height:280px!important;pointer-events:auto;cursor:crosshair}
 .foot{padding:1.2rem 0 2rem;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
 .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.admin-nav{background:#102946;color:#dbe9f7;padding:1rem}.admin-nav h1{margin:.2rem 0 .8rem;font-size:1.2rem}.admin-nav a{display:block;color:#dbe9f7;text-decoration:none;margin:.38rem 0}.admin-main{padding:1rem}.alert{padding:.65rem .8rem;border-radius:8px;margin-bottom:.8rem}.alert-ok{background:#e4f4e7;color:#1e6e2f}.alert-bad{background:#f8e4e4;color:#8e1f1f}
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
