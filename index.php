@@ -193,6 +193,10 @@ $weatherAlertsReason = (string) ($weatherAlerts['reason'] ?? '');
 $weatherAlertsUpdated = trim((string) ($weatherAlerts['updated_at'] ?? ''));
 $weatherAlertsWindow = trim((string) ($weatherAlerts['window'] ?? '48h'));
 $weatherAlertsList = is_array($weatherAlerts['alerts'] ?? null) ? $weatherAlerts['alerts'] : [];
+$weatherAlertsZoneLabel = trim((string) ($weatherAlerts['zone_label'] ?? ''));
+if ($weatherAlertsZoneLabel === '') {
+    $weatherAlertsZoneLabel = t('alerts.zone_station');
+}
 $weatherAlertsUnavailableMsg = t('alerts.unavailable');
 if ($weatherAlertsReason === 'no_station_coords') {
     $weatherAlertsUnavailableMsg = t('alerts.coords_required');
@@ -828,7 +832,7 @@ $metricGroupIcons = [
           </svg>
         </span>
         <div class="forecast-current">
-          <div class="forecast-value"><?= h(t('alerts.zone_station')) ?></div>
+          <div class="forecast-value"><?= h($weatherAlertsZoneLabel) ?></div>
           <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
         </div>
       </div>
