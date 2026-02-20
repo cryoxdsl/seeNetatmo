@@ -474,6 +474,20 @@ if (!function_exists('rain_episode_start_display')) {
         return to_hhmm_local($start);
     }
 }
+if (!function_exists('alerts_type_icon_svg')) {
+    function alerts_type_icon_svg(string $type): string
+    {
+        return match ($type) {
+            'thunderstorm' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 13a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 7a3.5 3.5 0 0 1 0 7H7z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11l-2 4h2l-1 4 4-6h-2l1-2z" fill="currentColor"/></svg>',
+            'heavy_rain' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 13a4 4 0 1 1 1.2-7.8A5 5 0 0 1 18 7a3.5 3.5 0 0 1 0 7H7z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 15l-1 3M12 15l-1 3M15 15l-1 3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+            'strong_wind' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9h10c2.4 0 3.2-2.8 1-4M3 13h14c2.8 0 4 2.9 1.4 4.4M3 17h8c1.9 0 2.7-1.5 1.5-2.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+            'snow' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.5 7.5l15 9M19.5 7.5l-15 9" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+            'heat' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.8v2.2M12 19v2.2M2.8 12H5M19 12h2.2M5.1 5.1l1.6 1.6M17.3 17.3l1.6 1.6M18.9 5.1l-1.6 1.6M6.7 17.3l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+            'frost' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v18M4.8 7.2l14.4 9.6M19.2 7.2L4.8 16.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><circle cx="12" cy="12" r="2.2" fill="none" stroke="currentColor" stroke-width="1.6"/></svg>',
+            default => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>',
+        };
+    }
+}
 
 $perfTimings['total_prepare'] = (microtime(true) - $perfStart) * 1000.0;
 if ($perfEnabled && !headers_sent()) {
@@ -848,7 +862,7 @@ $metricGroupIcons = [
               }
             ?>
             <p class="forecast-line alerts-line">
-              <span class="alerts-severity alerts-severity-<?= h($severity) ?>"><?= h(t('alerts.severity.' . $severity)) ?></span>
+              <span class="alerts-severity alerts-severity-<?= h($severity) ?>" title="<?= h((string) ($alert['title'] ?? '')) ?>" aria-label="<?= h((string) ($alert['title'] ?? '')) ?>"><?= alerts_type_icon_svg((string) ($alert['type'] ?? '')) ?></span>
               <strong><?= h((string) ($alert['title'] ?? t('common.na'))) ?></strong>
               <?php if (!empty($alert['detail'])): ?>
                 <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
