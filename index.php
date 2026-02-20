@@ -269,6 +269,8 @@ if ($monthName !== '') {
 }
 $rainMonthLabel = t('rain.month_base') . ' (' . trim($monthName . ' ' . $nowRain->format('Y')) . ')';
 $rainYearLabel = t('rain.year_base') . ' (' . $nowRain->format('Y') . ')';
+$rollingStart = $nowRain->modify('-364 days');
+$rainRollingLabel = t('rain.rolling_year_base') . ' (' . $rollingStart->format('d/m/Y') . ' - ' . $nowRain->format('d/m/Y') . ')';
 if (!function_exists('wind_cardinal_label')) {
     function wind_cardinal_label(?float $deg): string
     {
@@ -595,10 +597,9 @@ $metricGroupIcons = [
               <?php if ($metric === 'B'): ?>
                 <?php
                   $windDeg = $value !== null ? (float) $value : null;
-                  $windToDeg = $windDeg !== null ? fmod(($windDeg + 180.0 + 360.0), 360.0) : null;
-                  $windCardinal = wind_cardinal_label($windToDeg);
+                  $windFromCardinal = wind_cardinal_label($windDeg);
                 ?>
-                <p class="forecast-line"><strong><?= h(t('metric.wind_dir_label')) ?>:</strong> <?= h($windCardinal) ?></p>
+                <p class="forecast-line"><strong><?= h(t('metric.wind_dir_label')) ?>:</strong> <?= h(t('metric.wind_from_sector') . ' ' . $windFromCardinal) ?></p>
               <?php endif; ?>
               <?php if ($metric === 'P'): ?>
                 <?php
@@ -637,7 +638,7 @@ $metricGroupIcons = [
       <p class="small-muted"><?= h(t('rain.delta_year_vs_same_date_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['year']) ? (float) $rain['year'] : null, isset($rainRefs['year_to_date_avg']) ? ($rainRefs['year_to_date_avg'] !== null ? (float) $rainRefs['year_to_date_avg'] : null) : null)) ?></strong></p>
     </article>
     <article class="card js-live-card" data-card-ok="<?= isset($rain['rolling_year']) ? '1' : '0' ?>">
-      <h3><?= h(t('rain.rolling_year_base')) ?></h3>
+      <h3><?= h($rainRollingLabel) ?></h3>
       <div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_rolling_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['rolling_year']) ? (float) $rain['rolling_year'] : null, isset($rainRefs['rolling_365_avg']) ? ($rainRefs['rolling_365_avg'] !== null ? (float) $rainRefs['rolling_365_avg'] : null) : null)) ?></strong></p>
     </article>
