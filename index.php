@@ -446,7 +446,11 @@ front_header(t('dashboard.title'));
         </button>
         <span class="auto-progress"><span id="autoRefreshProgress"></span></span>
       </div>
-      <button type="button" class="btn-lite" id="refreshCacheBtn"><?= h(t('dashboard.refresh_cache')) ?></button>
+      <button type="button" class="icon-btn refresh-cache-btn" id="refreshCacheBtn" aria-label="<?= h(t('dashboard.refresh_cache')) ?>" title="<?= h(t('dashboard.refresh_cache')) ?>">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 12a8 8 0 1 1-2.35-5.65M20 4v5h-5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
     </div>
   </div>
 </section>
@@ -904,7 +908,9 @@ $metricGroupIcons = [
     refreshCacheBtn.addEventListener('click', function () {
       if (refreshCacheBtn.disabled) return;
       refreshCacheBtn.disabled = true;
-      refreshCacheBtn.textContent = refreshCacheBusyText;
+      refreshCacheBtn.classList.add('is-loading');
+      refreshCacheBtn.setAttribute('title', refreshCacheBusyText);
+      refreshCacheBtn.setAttribute('aria-label', refreshCacheBusyText);
       var url = '/front_cache_refresh.php?t=' + encodeURIComponent(asyncRefreshToken) + '&force=1&scope=full';
       fetch(url, {
         method: 'GET',
