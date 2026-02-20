@@ -768,7 +768,9 @@ $metricGroupIcons = [
             <div class="metric-gauge">
               <strong class="metric-gauge-title"><?= h(units_metric_name((string) $metric)) ?></strong>
               <div class="metric-dial<?= $value === null ? ' is-empty' : '' ?>" style="--needle-angle:<?= h(number_format($gAngle, 1, '.', '')) ?>deg">
-                <span class="metric-dial-arc"></span>
+                <span class="metric-dial-bezel"></span>
+                <span class="metric-dial-face"></span>
+                <span class="metric-dial-ticks"></span>
                 <span class="metric-dial-needle"></span>
                 <span class="metric-dial-center"></span>
                 <span class="metric-dial-min"><?= h($gMinLabel) ?></span>
