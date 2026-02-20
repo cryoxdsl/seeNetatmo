@@ -6,6 +6,7 @@ require_once __DIR__ . '/logger.php';
 
 const WEATHER_ALERTS_API_URL = 'https://api.open-meteo.com/v1/forecast';
 const WEATHER_ALERTS_REVERSE_API_URL = 'https://nominatim.openstreetmap.org/reverse';
+const WEATHER_ALERTS_METEOALARM_FR_ATOM_URL = 'https://feeds.meteoalarm.org/feeds/meteoalarm-legacy-atom-france';
 const WEATHER_ALERTS_CACHE_TTL_SECONDS = 900;
 
 function weather_alerts_station_coordinates(): ?array
@@ -53,9 +54,103 @@ function weather_alerts_http_get_json(string $url): array
     return $json;
 }
 
+function weather_alerts_http_get_text(string $url): string
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 6,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
+    ]);
+    $raw = curl_exec($ch);
+    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if (!is_string($raw) || $raw === '') {
+        throw new RuntimeException('Weather alerts fetch failed: ' . $err);
+    }
+    if ($http >= 400) {
+        throw new RuntimeException('Weather alerts HTTP ' . $http);
+    }
+    return $raw;
+}
+
 function weather_alerts_localized_title(string $type): string
 {
     return t('alerts.type.' . $type);
+}
+
+function weather_alerts_source_setting(): string
+{
+    $v = strtolower(trim((string) (setting_get('alerts_source', 'openmeteo') ?? 'openmeteo')));
+    return in_array($v, ['openmeteo', 'meteoalarm'], true) ? $v : 'openmeteo';
+}
+
+function weather_alerts_severity_from_text(string $text): string
+{
+    $t = strtolower($text);
+    if (str_contains($t, 'red') || str_contains($t, 'rouge')) {
+        return 'high';
+    }
+    if (str_contains($t, 'orange') || str_contains($t, 'amber')) {
+        return 'moderate';
+    }
+    if (str_contains($t, 'yellow') || str_contains($t, 'jaune')) {
+        return 'low';
+    }
+    return 'moderate';
+}
+
+function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel): array
+{
+    if (!function_exists('simplexml_load_string')) {
+        throw new RuntimeException('SimpleXML not available');
+    }
+    libxml_use_internal_errors(true);
+    $sx = simplexml_load_string($xml);
+    if (!$sx) {
+        throw new RuntimeException('MeteoAlarm XML invalid');
+    }
+    $entries = $sx->xpath('//*[local-name()="entry"]');
+    if (!is_array($entries)) {
+        $entries = [];
+    }
+
+    $zoneNeedle = strtolower(trim((string) explode(',', $zoneLabel)[0]));
+    $all = [];
+    $filtered = [];
+    foreach ($entries as $entry) {
+        $title = trim((string) ($entry->title ?? ''));
+        $summaryRaw = (string) ($entry->summary ?? '');
+        $summary = trim(preg_replace('/\s+/', ' ', strip_tags($summaryRaw)) ?? '');
+        $updated = trim((string) ($entry->updated ?? ''));
+        if ($title === '' && $summary === '') {
+            continue;
+        }
+        $text = strtolower($title . ' ' . $summary);
+        $alert = [
+            'type' => 'official',
+            'title' => $title !== '' ? $title : t('alerts.official_warning'),
+            'severity' => weather_alerts_severity_from_text($title . ' ' . $summary),
+            'detail' => $summary,
+            'updated' => $updated,
+        ];
+        $all[] = $alert;
+        if ($zoneNeedle !== '' && str_contains($text, $zoneNeedle)) {
+            $filtered[] = $alert;
+        }
+    }
+    $use = $filtered !== [] ? $filtered : $all;
+    if ($use !== [] && count($use) > 6) {
+        $use = array_slice($use, 0, 6);
+    }
+    $updatedAt = '';
+    if ($use !== []) {
+        $updatedAt = trim((string) ($use[0]['updated'] ?? ''));
+    }
+    return ['alerts' => $use, 'updated_at' => $updatedAt];
 }
 
 function weather_alerts_reverse_admin_label(float $lat, float $lon): string
@@ -112,6 +207,7 @@ function weather_alerts_reverse_admin_label(float $lat, float $lon): string
 
 function weather_alerts_summary(bool $allowRemote = false): array
 {
+    $source = weather_alerts_source_setting();
     $coords = weather_alerts_station_coordinates();
     if ($coords === null) {
         return ['available' => false, 'reason' => 'no_station_coords'];
@@ -124,6 +220,11 @@ function weather_alerts_summary(bool $allowRemote = false): array
     if ($cacheRaw !== '') {
         $cache = json_decode($cacheRaw, true);
         if (is_array($cache)) {
+            if ((string) ($cache['source'] ?? 'openmeteo') !== $source) {
+                $cache = [];
+            }
+        }
+        if (is_array($cache) && $cache !== []) {
             if ((string) ($cache['zone_label'] ?? '') === '') {
                 $cache['zone_label'] = weather_alerts_reverse_admin_label($coords['lat'], $coords['lon']);
                 if ((string) ($cache['zone_label'] ?? '') === '') {
@@ -169,6 +270,7 @@ function weather_alerts_summary(bool $allowRemote = false): array
         'fetched_at' => time(),
         'station_lat' => $coords['lat'],
         'station_lon' => $coords['lon'],
+        'source' => $source,
         'zone_label' => '',
         'updated_at' => '',
         'window' => '48h',
@@ -177,6 +279,23 @@ function weather_alerts_summary(bool $allowRemote = false): array
 
     try {
         setting_set('weather_alerts_last_try', (string) time());
+        $out['zone_label'] = weather_alerts_reverse_admin_label($coords['lat'], $coords['lon']);
+        if ($out['zone_label'] === '') {
+            $out['zone_label'] = number_format($coords['lat'], 3, '.', '') . ', ' . number_format($coords['lon'], 3, '.', '');
+        }
+
+        if ($source === 'meteoalarm') {
+            $out['window'] = t('alerts.window_official');
+            $xml = weather_alerts_http_get_text(WEATHER_ALERTS_METEOALARM_FR_ATOM_URL);
+            $parsed = weather_alerts_parse_meteoalarm_atom($xml, $out['zone_label']);
+            $out['alerts'] = is_array($parsed['alerts'] ?? null) ? $parsed['alerts'] : [];
+            $out['updated_at'] = trim((string) ($parsed['updated_at'] ?? ''));
+            $out['available'] = true;
+            $out['reason'] = '';
+            setting_set('weather_alerts_cache_json', json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            return $out;
+        }
+
         $json = weather_alerts_http_get_json($url);
 
         $hourly = is_array($json['hourly'] ?? null) ? $json['hourly'] : [];
@@ -302,10 +421,6 @@ function weather_alerts_summary(bool $allowRemote = false): array
         $out['available'] = true;
         $out['reason'] = '';
         $out['updated_at'] = isset($times[0]) ? (string) $times[0] : date('Y-m-d H:i:s');
-        $out['zone_label'] = weather_alerts_reverse_admin_label($coords['lat'], $coords['lon']);
-        if ($out['zone_label'] === '') {
-            $out['zone_label'] = number_format($coords['lat'], 3, '.', '') . ', ' . number_format($coords['lon'], 3, '.', '');
-        }
     } catch (Throwable $e) {
         log_event('warning', 'front.alerts', 'Weather alerts fetch failed', ['err' => $e->getMessage()]);
     }

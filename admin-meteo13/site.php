@@ -25,6 +25,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
     $stationAlt = trim((string) ($_POST['station_altitude'] ?? ''));
     $alertsZoneLat = trim((string) ($_POST['alerts_zone_lat'] ?? ''));
     $alertsZoneLon = trim((string) ($_POST['alerts_zone_lon'] ?? ''));
+    $alertsSource = strtolower(trim((string) ($_POST['alerts_source'] ?? (setting_get('alerts_source', 'openmeteo') ?? 'openmeteo'))));
     $metarDefaultIcao = strtoupper(trim((string) ($_POST['metar_default_icao'] ?? '')));
     $stationLock = isset($_POST['station_lock_position']) ? '1' : '0';
     $termsContent = (string) ($_POST['terms_of_use_content'] ?? terms_of_use_content());
@@ -98,6 +99,8 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         $err=t('site.invalid');
     } elseif (($alertsZoneLat === '') xor ($alertsZoneLon === '')) {
         $err=t('site.invalid');
+    } elseif (!in_array($alertsSource, ['openmeteo', 'meteoalarm'], true)) {
+        $err=t('site.invalid');
     } elseif ($metarDefaultIcao !== '' && preg_match('/^[A-Z]{4}$/', $metarDefaultIcao) !== 1) {
         $err=t('site.invalid');
     } elseif ($err === '') {
@@ -129,6 +132,7 @@ if ($_SERVER['REQUEST_METHOD']==='POST') {
         setting_set('station_altitude', $stationAlt !== '' ? (string) ((float) $stationAlt) : '');
         setting_set('alerts_zone_lat', $alertsZoneLat !== '' ? (string) ((float) $alertsZoneLat) : '');
         setting_set('alerts_zone_lon', $alertsZoneLon !== '' ? (string) ((float) $alertsZoneLon) : '');
+        setting_set('alerts_source', $alertsSource);
         setting_set('metar_default_icao', $metarDefaultIcao);
         setting_set('station_lock_position', $stationLock);
         setting_set('terms_of_use_content', $termsContent);
@@ -176,6 +180,13 @@ admin_header(t('admin.site'));
   <label><?= h(t('site.alerts_zone_lat')) ?><br><input name="alerts_zone_lat" value="<?=h((string) setting_get('alerts_zone_lat', ''))?>" placeholder="43.30"></label><br><br>
   <label><?= h(t('site.alerts_zone_lon')) ?><br><input name="alerts_zone_lon" value="<?=h((string) setting_get('alerts_zone_lon', ''))?>" placeholder="5.37"></label><br><br>
   <p class="small-muted"><?= h(t('site.alerts_zone_help')) ?></p><br>
+  <label><?= h(t('site.alerts_source')) ?><br>
+    <?php $alertsSourceCurrent = strtolower((string) (setting_get('alerts_source', 'openmeteo') ?? 'openmeteo')); ?>
+    <select name="alerts_source">
+      <option value="openmeteo" <?= $alertsSourceCurrent === 'openmeteo' ? 'selected' : '' ?>><?= h(t('site.alerts_source_openmeteo')) ?></option>
+      <option value="meteoalarm" <?= $alertsSourceCurrent === 'meteoalarm' ? 'selected' : '' ?>><?= h(t('site.alerts_source_meteoalarm')) ?></option>
+    </select>
+  </label><br><br>
   <label><?= h(t('site.metar_default_icao')) ?><br><input name="metar_default_icao" value="<?=h(strtoupper((string) setting_get('metar_default_icao', 'LFML')))?>" placeholder="LFML" maxlength="4" pattern="[A-Za-z]{4}"></label>
   <p class="small-muted"><?= h(t('site.metar_default_icao_help')) ?></p><br>
   <label><input type="checkbox" name="station_lock_position" value="1" <?= station_position_locked() ? 'checked' : '' ?>> <?= h(t('site.station_lock_position')) ?></label><br><br>
