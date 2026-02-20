@@ -1,463 +1,212 @@
-# PHP 8 Development & Deployment Guide
+# SETUP Guide (Domain-Agnostic)
 
-## Repo Layout for OVH Deployment
+Ce document décrit l’installation, le développement et le déploiement de `seeNetatmo` sans dépendre d’un nom de domaine spécifique.
+La terminologie est alignée avec `README.md`.
 
-Your project is already well-organized for OVH shared hosting deployment. Here's how it maps to `/www`:
+## 1) Architecture du projet
 
-```
-OVH /www (Document Root)
-│
-├── index.php                    # Main entry point
-├── charts.php                   # Public pages
+```text
+project-root/
+├── index.php
+├── charts.php
+├── climat.php
 ├── history.php
+├── terms.php
 ├── upgrade.php
+├── admin-meteo13/              # Administration (modifiable via constante)
+├── assets/                     # CSS/JS/images publics
+├── cron/                       # Points d’entrée HTTP pour jobs
+├── inc/                        # Code applicatif interne
+├── install/                    # Assistant d'installation + schema SQL
+├── config/                     # Config runtime (non versionnée)
+├── logs/                       # Logs runtime (non versionnés)
 ├── README.md
-├── .gitignore                   # Git exclusions
-├── .github/                     # CI/CD workflows (not served)
-│   └── workflows/
-│       └── ci.yml
-├── .vscode/                     # IDE config (not served)
-│   ├── settings.json
-│   ├── launch.json
-│   └── tasks.json
-├── admin-meteo13/               # Admin panel (protected path)
-│   ├── index.php
-│   ├── login.php
-│   ├── netatmo.php
-│   └── ...
-├── assets/                      # Public CSS, JS
-│   ├── css/
-│   │   └── style.css
-│   └── js/
-│       ├── chart.min.js
-│       └── charts.js
-├── config/                      # Configuration (NOT committed)
-│   ├── config.php               # ⛔ .gitignored
-│   ├── secrets.php              # ⛔ .gitignored
-│   ├── config.php.example       # Template (committed)
-│   └── secrets.php.example      # Template (committed)
-├── cron/                        # Cron jobs (can be restricted)
-│   ├── fetch.php
-│   ├── daily.php
-│   └── external.php
-├── inc/                         # Internal includes (not web-accessible)
-│   ├── bootstrap.php
-│   ├── auth.php
-│   ├── db.php
-│   ├── config.php
-│   └── ...
-├── install/                     # Installation script (optional)
-│   ├── index.php
-│   └── schema.sql
-└── logs/                        # Application logs (NOT committed)
-    └── .gitkeep
+└── SETUP.md
 ```
 
-**Key Points:**
-- All public files at root level or in `assets/`
-- Admin panel: `/admin-meteo13/` (configure htaccess or firewall)
-- Config files: Never committed, created locally from `.example` files
-- Logs & storage: Generated at runtime, git-ignored
-- `inc/` folder: Protected from direct web access (use htaccess if needed)
+## 2) Pré-requis
 
----
+- PHP 8.1+ (8.2 recommandé)
+- MySQL/MariaDB
+- Extensions PHP:
+  - `pdo_mysql`
+  - `curl`
+  - `json`
+  - `mbstring`
+  - `openssl` (ou libsodium selon environnement)
 
-## Git Workflow
+Permissions en écriture:
 
-### Branch Structure
+- `config/`
+- `logs/`
+- `assets/uploads/` (si upload favicon)
 
-```
-main (production)
- └─ Protected branch
-    └─ Requires PR review before merge
-    └─ All checks must pass (lint CI)
+## 3) Installation (nouveau projet)
 
-dev (development)
- └─ Integration branch
-    └─ Merges from feature branches
-    └─ Creates PR to main when ready
+1. Déployer le code dans le document root.
+2. Créer la base de données.
+3. Vérifier la table météo cible (par défaut `alldata`) avec PK `DateTime`.
+4. Ouvrir:
+   - `https://your-domain.tld/install/index.php`
+5. Suivre l'assistant.
+6. Configurer Netatmo OAuth Redirect URI:
+   - `https://your-domain.tld/admin-meteo13/netatmo_callback.php`
+7. Configurer les jobs cron HTTP (section 7).
 
-feature/... (feature branches)
- └─ Create from: dev
- └─ Merge back to: dev via PR
- └─ Naming: feature/login-2fa, feature/api-call, etc.
-    
-hotfix/... (emergency fixes)
- └─ Create from: main
- └─ Merge to: main AND dev via PR
- └─ Naming: hotfix/security-patch, hotfix/db-migration
-```
+## 4) Configuration runtime
 
-### Typical Workflow
+Fichiers sensibles générés/maintenus hors Git :
 
-1. **Feature Development:**
-   ```bash
-   git checkout dev
-   git pull origin dev
-   git checkout -b feature/my-feature
-   # Make changes
-   git add .
-   git commit -m "feat: add feature description"
-   git push origin feature/my-feature
-   # Create PR on GitHub: feature/my-feature → dev
-   ```
+- `config/config.php`
+- `config/secrets.php`
+- `config/installed.lock`
+- `logs/*`
 
-2. **Integration & Testing:**
-   - PR triggers CI/CD (PHP lint)
-   - Team reviews code
-   - Merge to dev when approved
+Vérifier `.gitignore` pour exclure ces fichiers.
 
-3. **Release to Production:**
-   ```bash
-   # When dev is stable
-   git checkout dev
-   git pull origin dev
-   git checkout -b release/v1.x.x
-   # Optional: bump version in README
-   git commit -m "chore: version bump v1.x.x"
-   git push origin release/v1.x.x
-   # Create PR: release/v1.x.x → main
-   # After approval/merge: automatic OVH deploy
-   ```
+## 5) Local development
 
-4. **Hotfix:**
-   ```bash
-   git checkout main
-   git pull origin main
-   git checkout -b hotfix/critical-fix
-   # Make fix
-   git push origin hotfix/critical-fix
-   # Create PR: hotfix/critical-fix → main
-   # Merge to main AND dev after approval
-   ```
+### 5.1 Clone
 
-### Branch Protection Rules for `main`
-
-Configure in GitHub > Settings > Branches > Branch protection rules:
-
-✅ **Require pull request reviews:**
-   - Dismiss stale PR approvals when new commits are pushed
-   - Allow force pushes: ❌ No
-   
-✅ **Require status checks:**
-   - CI lint workflow must pass
-   - Require branches to be up to date before merging
-
-✅ **Restrict who can push:**
-   - Allow only admins to push directly (emergency only)
-
-✅ **Require signed commits:** (Optional, recommend for security)
-
----
-
-## Local Development Setup
-
-### Prerequisites
-- PHP 8.x (verify: `php --version`)
-- MySQL 5.7+ or MariaDB (optional, can use SQLite for testing)
-- Git
-
-### 1. Clone Repository
 ```bash
-git clone https://github.com/cryoxdsl/seeNetatmo.git
+git clone <your-repo-url>
 cd seeNetatmo
 ```
 
-### 2. Configure Local Environment
+### 5.2 Configuration locale
+
 ```bash
-# Copy default config files
 cp config/config.php.example config/config.php
 cp config/secrets.php.example config/secrets.php
-
-# Edit config files with your local settings
-code config/config.php
-code config/secrets.php
 ```
 
-**Example `config/config.php` (modify as needed):**
-```php
-<?php
-return [
-    'db' => [
-        'host' => 'localhost',
-        'user' => 'root',
-        'pass' => 'password',  // or empty for SQLite
-        'name' => 'meteo13_dev',
-    ],
-    'netatmo' => [
-        'api_url' => 'https://api.netatmo.com',
-    ],
-];
-```
+Puis adapter `config/config.php` et `config/secrets.php` à l’environnement local.
 
-**Example `config/secrets.php`:**
-```php
-<?php
-return [
-    'netatmo_client_id'     => 'your_client_id',
-    'netatmo_client_secret' => 'your_secret',
-    'totp_secret'           => 'your_totp_secret_or_empty',
-];
-```
+### 5.3 Base de données
 
-### 3. Set Up Database (Optional)
-
-**Option A: MySQL/MariaDB**
 ```bash
-# Create database
-mysql -u root -p -e "CREATE DATABASE meteo13_dev;"
-
-# Import schema
-mysql -u root -p meteo13_dev < install/schema.sql
+# Exemple MySQL
+mysql -u <user> -p -e "CREATE DATABASE seennetatmo_dev;"
+mysql -u <user> -p seennetatmo_dev < install/schema.sql
 ```
 
-**Option B: Docker (Clean Environment)**
-```bash
-docker run --name mysql-meteo13 \
-  -e MYSQL_ROOT_PASSWORD=root \
-  -e MYSQL_DATABASE=meteo13_dev \
-  -p 3306:3306 \
-  -d mysql:8.0
+### 5.4 Lancer l'application
 
-# Import schema
-mysql -h 127.0.0.1 -u root -proot meteo13_dev < install/schema.sql
-```
-
-### 4. Run Built-in PHP Server
-
-**Option A: Command Line**
 ```bash
 php -S localhost:8000 -t .
-# Visit: http://localhost:8000
 ```
 
-**Option B: VS Code**
-- Open Command Palette: `Ctrl+Shift+P`
-- Run task: `"Start PHP Built-in Server"`
-- Terminal shows: `Development Server started`
-- Visit: `http://localhost:8000`
+- Interface publique: `http://localhost:8000/index.php`
+- Install: `http://localhost:8000/install/index.php`
 
-**Debugging with Xdebug:**
-- Install Xdebug extension: `pecl install xdebug`
-- Add to `php.ini`:
-  ```ini
-  zend_extension=xdebug.so
-  xdebug.mode=debug
-  xdebug.start_with_request=yes
-  xdebug.client_port=9003
-  ```
-- In VS Code: Press `F5` or go to Run > Start Debugging
-- Set breakpoints and debug
+## 6) Déploiement production
 
-### 5. Open in VS Code
+### 6.1 Principe général
+
+- Déployer uniquement le code versionné.
+- Garder les secrets/config runtime sur le serveur.
+- Exécuter `/upgrade.php` après déploiement si nécessaire.
+
+### 6.2 Checklist post-déploiement
+
+1. Vérifier les permissions (`config`, `logs`, `assets/uploads`).
+2. Vérifier l’accès admin:
+   - `https://your-domain.tld/admin-meteo13/`
+3. Vérifier les points d’entrée publics:
+   - `index.php`, `charts.php`, `history.php`, `climat.php`
+4. Lancer migrations:
+   - `https://your-domain.tld/upgrade.php`
+
+## 7) Cron recommandés
+
+Exemples de fréquence:
+
+- Toutes les 5 minutes:
+  - `https://your-domain.tld/cron/fetch.php?key=CRON_KEY_FETCH`
+- Quotidien (ex: 00:10):
+  - `https://your-domain.tld/cron/daily.php?key=CRON_KEY_DAILY`
+- Toutes les 10-15 minutes:
+  - `https://your-domain.tld/cron/external.php?key=CRON_KEY_EXTERNAL`
+
+## 8) Sécurité
+
+- Administration protégée par session + CSRF.
+- 2FA TOTP activable côté admin.
+- Protection anti-bruteforce (verrouillage temporaire).
+- Cookies sécurisés (`HttpOnly`, `SameSite`, `Secure` si HTTPS).
+- Secrets chiffrés côté application.
+- Éviter toute exposition directe de `config/`.
+
+## 9) Performance
+
+- Stratégie cache prioritaire pour prévisions / mer / METAR.
+- Rafraîchissement asynchrone des caches après rendu.
+- Caches applicatifs pour agrégats lourds.
+- Mesure ponctuelle:
+  - `https://your-domain.tld/index.php?perf=1`
+
+## 10) Flux Git (CI/CD et branches)
+
+Stratégie recommandée:
+
+- `main`: production
+- `dev`: intégration
+- `feature/*`: développement
+- `hotfix/*`: correctifs urgents
+
+Protection recommandée sur `main`:
+
+- PR obligatoire
+- contrôles CI obligatoires
+- push direct restreint
+
+## 11) Dépannage rapide
+
+- Erreur de langue:
+  - vérifier `Accept-Language` navigateur et paramètres `?lang=`.
+- METAR/prévisions indisponibles:
+  - vérifier connectivité sortante + coordonnées station.
+- Déconnexions admin:
+  - vérifier timeout session et horloge serveur.
+- Accents corrompus:
+  - vérifier UTF-8 des contenus saisis et DB/collation.
+
+## 12) Mise à jour applicative
+
+Après déploiement d'une nouvelle version:
+
+1. Se connecter à l'admin.
+2. Ouvrir `https://your-domain.tld/upgrade.php`.
+3. Exécuter les migrations en attente.
+
+## 13) Commandes utiles
 
 ```bash
-code .
+# Rechercher rapidement dans le projet
+rg "pattern" .
+
+# Afficher changements en cours
+git status
+git diff
+
+# Vérifier hooks/actions (selon repo)
+# Voir .github/workflows/
 ```
 
-**VS Code Extensions (Recommended):**
-- PHP Intelephense (bmewburn.vscode-intelephense-client)
-- Thunder Client or REST Client (for API testing)
-- MySQL extension (if using database)
+## 14) Variables et URL à personnaliser
 
----
+Remplacer systématiquement:
 
-## Deployment to OVH
+- `your-domain.tld`
+- clés cron `CRON_KEY_*`
+- credentials DB
+- credentials Netatmo OAuth
 
-### How OVH Git Deployment Works
+## 15) Notes OVH (optionnel)
 
-OVH provides Git-based deployment:
-1. You push to the main branch
-2. OVH Git webhook is triggered
-3. Automatic deployment pulls latest main → `/www`
-4. **Important:** Only committed files are deployed
+Le projet reste compatible OVH mutualisé, mais ce guide est volontairement générique.
+Adapter:
 
-### Pre-Deployment Checklist
-
-✅ **Verify .gitignore excludes:**
-```bash
-# These must NOT be in git
-git check-ignore config/config.php        # Should match
-git check-ignore config/secrets.php       # Should match
-git check-ignore config/installed.lock    # Should match
-git check-ignore logs/                    # Should match
-git check-ignore storage/                 # Should match
-```
-
-✅ **Commit template files instead:**
-```bash
-# Committed to repo (tracked)
-config/config.php.example
-config/secrets.php.example
-
-# Can push instructions in README:
-echo "After deployment: copy config/config.php.example to config/config.php"
-```
-
-✅ **No conflicts with runtime files:**
-All `.gitignore`d files are **safe from overwriting** because they're not tracked.
-
-### Deployment Steps
-
-1. **Code Review & Merge to main:**
-   ```bash
-   # On GitHub: PR approved and merged to main
-   # CI workflow runs automatically
-   # All lint checks pass ✓
-   ```
-
-2. **OVH Auto-Deploys:**
-   - Webhook triggered
-   - `git pull origin main` in `/www`
-   - Server automatically updates
-
-3. **Post-Deployment on OVH:**
-   - SSH into OVH server
-   ```bash
-   # One-time setup after first deployment:
-   cd /www
-   cp config/config.php.example config/config.php
-   cp config/secrets.php.example config/secrets.php
-   
-   # Edit files with production values
-   nano config/config.php
-   nano config/secrets.php
-   
-   # Run installer if first time
-   php install/index.php
-   
-   # Set permissions
-   chmod 755 logs/ storage/
-   chmod 644 config/config.php
-   chmod 644 config/secrets.php
-   ```
-
-4. **Verify Deployment:**
-   - Visit: `https://yourdomain.com`
-   - Check admin: `https://yourdomain.com/admin-meteo13/`
-   - Test login and functionality
-
-### Avoiding Overwrites
-
-**Files that will NOT be overwritten (git-ignored):**
-- `config/config.php` (production DB credentials)
-- `config/secrets.php` (API keys, TOTP)
-- `logs/*` (existing logs preserved)
-- `storage/*` (runtime data preserved)
-
-**Safe to deploy frequently** - No data loss on re-deploy.
-
-### Emergency Rollback
-
-```bash
-# On OVH server
-cd /www
-git log --oneline | head -5     # See recent commits
-git revert <commit-hash>         # Revert to previous state
-# Or: git reset --hard <commit>  (⚠️ careful!)
-```
-
----
-
-## VS Code Configuration Files Guide
-
-### `.vscode/settings.json`
-- **PHP version:** Set to 8.0, 8.1, or 8.2
-- **Formatting:** Uses Intelephense, formats on save
-- **Validation:** Real-time syntax checking
-- **Exclude patterns:** Ignores node_modules, vendor, logs
-
-### `.vscode/launch.json`
-- **Listen for Xdebug:** Debug remotely or built-in server
-- **Client port:** 9003 (standard Xdebug port)
-- **Path mapping:** Maps remote `/` to your workspace
-
-### `.vscode/tasks.json`
-- **PHP Lint All Files:** Syntax check current file (Ctrl+Shift+B)
-- **PHP Lint Workspace:** Check all PHP files in project
-- **Start PHP Server:** Launch built-in server in background
-
-### Usage:
-```bash
-# Run lint (default build task)
-Ctrl+Shift+B
-
-# Debug
-F5 → Select "Listen for Xdebug"
-
-# Start server
-Ctrl+Shift+P → Tasks: Run Task → Start PHP Built-in Server
-```
-
----
-
-## GitHub Actions CI Workflow
-
-File: `.github/workflows/ci.yml`
-
-**Runs on:**
-- Every push to main or dev
-- Every PR to main
-
-**Checks:**
-- Setup PHP 8.2 environment
-- Run `php -l` on all PHP files
-- Report syntax errors (blocks merge if failed)
-
-**Example Output:**
-```
-✓ Setup PHP 8.2
-✓ PHP Lint - Check all PHP files for syntax errors
-✓ No syntax errors found!
-```
-
-**To skip CI (not recommended):**
-```bash
-git commit --no-verify  # ⚠️ Not recommended
-```
-
----
-
-## Common Issues & Solutions
-
-### Issue: `config/config.php` not found
-```bash
-# Fix: Run install or copy template
-cp config/config.php.example config/config.php
-```
-
-### Issue: OVH deployment not triggering
-- Check Repository Settings > Webhooks (OVH control panel)
-- Ensure branch is `main`
-- Verify SSH key added to OVH account
-
-### Issue: Permission denied on logs folder
-```bash
-ssh user@ovh
-cd /www
-chmod 755 logs/
-chmod 755 storage/
-```
-
-### Issue: Xdebug not working
-- Verify `php -i | grep xdebug` shows enabled
-- Check firewall allows port 9003
-- Restart VS Code debugger if hanging
-
----
-
-## Summary Checklist
-
-- [x] Repo layout organized for OVH `/www`
-- [x] `.vscode/settings.json` - PHP 8 validation & formatting
-- [x] `.vscode/launch.json` - Xdebug debugging
-- [x] `.vscode/tasks.json` - Lint and server tasks
-- [x] `.github/workflows/ci.yml` - Automated lint checks
-- [x] `.gitignore` - Excludes secrets and runtime files
-- [x] Git workflow with main/dev/feature branches
-- [x] Branch protection rules documented
-- [x] Local development setup steps
-- [x] OVH deployment process explained
-- [x] CI/CD integration ready
-
-You're all set! 🚀
+- chemin webroot
+- méthode de déploiement (Git/FTP/CI)
+- planification cron (OVH ou service tiers)

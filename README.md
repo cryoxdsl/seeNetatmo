@@ -1,111 +1,134 @@
-# meteo13-netatmo
+# seeNetatmo
 
-PHP 8 weather application for OVH shared hosting (`hosting-starter`), without framework, Composer, or Node.js.
+Application météo PHP 8 sans framework (ni Composer, ni Node.js), conçue pour l’hébergement mutualisé.
 
-- Domain: `meteo13.fr`
-- Admin path: `/admin-meteo13/` (fixed)
-- License: CC BY 4.0
+- Interface publique : `index.php`, `charts.php`, `climat.php`, `history.php`, `terms.php`
+- Admin: `APP_ADMIN_PATH` (par défaut `/admin-meteo13`)
+- Installation guidée : `/install/`
+- Mises à jour de schéma : `/upgrade.php`
+- Guide d'installation détaillé: `SETUP.md`
 
-## FR - Fonctionnalités
-- Collecte Netatmo OAuth2 (station météo)
-- Insertion dans table existante `alldata` (structure non modifiée)
-- Front responsive:
-  - `/index.php` (dashboard live)
-  - `/charts.php` (24h, 7j, 30j, mois courant, année courante, 365j glissants)
-  - `/history.php` (pagination + export CSV filtré)
-- Back office sécurisé `/admin-meteo13/`:
-  - login + mot de passe
-  - 2FA TOTP obligatoire
-  - lockout 10 échecs / 10 min (username + IP)
-  - timeout session 30 min
-  - cookies `Secure`, `HttpOnly`, `SameSite=Strict`
-- Installer web one-shot: `/install/`
-- Upgrade: `/upgrade.php` (migrations PHP embarquées)
-- Cron HTTP via cron-job.org:
-  - `/cron/fetch.php?key=...` (5 min)
-  - `/cron/daily.php?key=...` (00:10)
-  - `/cron/external.php?key=...` (10-15 min, sea temperature cache)
+## 1) Fonctionnalités
 
-## FR - Déploiement OVH (Git vers /www)
-1. Créer la base MySQL OVH.
-2. Vérifier que la table `alldata` existe déjà avec PK `DateTime`.
-3. Déployer ce dépôt via OVH Git deployment dans `/www`.
-4. Vérifier droits d’écriture sur `/www/config` et `/www/logs`.
-5. Ouvrir `https://meteo13.fr/install/index.php`.
-6. Suivre les 8 étapes:
-   - prérequis serveur
-   - connexion DB
-   - vérification table `alldata` + PK `DateTime`
-   - création tables applicatives
-   - compte admin + setup 2FA (QR + backup codes)
-   - credentials Netatmo
-   - génération clés master + cron
-   - génération `config/config.php`, `config/secrets.php`, `config/installed.lock`
-7. Configurer l’app Netatmo avec URI de redirection:
-   - `https://meteo13.fr/admin-meteo13/netatmo_callback.php`
-8. Configurer cron-job.org:
-   - toutes les 5 min: `https://meteo13.fr/cron/fetch.php?key=CRON_KEY_FETCH`
-   - tous les jours 00:10: `https://meteo13.fr/cron/daily.php?key=CRON_KEY_DAILY`
-   - toutes les 10-15 min: `https://meteo13.fr/cron/external.php?key=CRON_KEY_EXTERNAL`
-9. Optionnel: supprimer `/install/` (bloqué de toute façon par `installed.lock`).
+- Collecte Netatmo via OAuth2.
+- Ingestion dans une table météo existante (par défaut `alldata`) sans modifier sa structure métier.
+- Tableau de bord en direct, responsive, avec cartes météo.
+- Historique avec pagination et export CSV filtré.
+- Prévisions externes, température de mer, METAR (avec décodage lisible).
+- Administration sécurisée :
+  - login/mot de passe
+  - 2FA TOTP
+  - limitation des tentatives (verrouillage temporaire)
+  - timeout de session
+  - option « appareil de confiance »
+- Cron HTTP pour la collecte et les consolidations.
 
-## FR - Règles métier météo
-- `DateTime` stocké en heure locale `Europe/Paris`, arrondi inférieur à 5 minutes.
-- UPSERT: ne remplace jamais une valeur existante par `NULL`.
-- Mapping:
-  - Outdoor -> `T`, `H`
-  - Base station -> `P`
-  - Rain -> `RR`, `R`
-  - Wind -> `W`, `G`, `B`
-- Calculs fetch:
-  - `Tmax=T`, `Tmin=T`
-  - `D` point de rosée (Magnus)
-  - `A` température apparente
-- Job daily:
-  - `Tmax=max(T)` et `Tmin=min(T)` du jour
-  - recalcul `D` et `A`
-  - recalc veille optionnelle activée par défaut
-- Module déconnecté: champs du module à `NULL`.
-- Front: indicateur déconnecté si dernier point > 15 min.
+## 2) Pré-requis
 
-## EN - Features
-- Netatmo OAuth2 weather ingestion
-- Write into existing `alldata` table (no schema change)
-- Responsive front office (`index.php`, `charts.php`, `history.php` + filtered raw CSV export)
-- Secure admin `/admin-meteo13/` (password + mandatory TOTP 2FA)
-- Lockout: 10 failures / 10 minutes per username+IP
-- Session inactivity timeout: 30 minutes
-- Installer wizard `/install/`
-- Upgrade endpoint `/upgrade.php` with embedded PHP migrations
-- Cron-job.org HTTP endpoints for fetch and daily recalculation
+- PHP 8.1+ (8.2 recommandé)
+- MySQL / MariaDB
+- Extensions PHP recommandées:
+  - `pdo_mysql`
+  - `curl`
+  - `mbstring`
+  - `json`
+  - `openssl` (ou libsodium selon environnement)
+- Écriture autorisée sur:
+  - `config/`
+  - `logs/`
+  - `assets/uploads/` (si upload favicon utilisé)
 
-## EN - OVH hosting-starter deployment
-1. Provision OVH MySQL database.
-2. Ensure existing `alldata` table has primary key `DateTime`.
-3. Deploy repository to `/www` using OVH Git deployment.
-4. Ensure `/www/config` and `/www/logs` are writable.
-5. Run `https://meteo13.fr/install/index.php`.
-6. Configure Netatmo OAuth redirect URI:
-   - `https://meteo13.fr/admin-meteo13/netatmo_callback.php`
-7. Configure cron-job.org:
-   - every 5 minutes: `/cron/fetch.php?key=...`
-   - daily 00:10: `/cron/daily.php?key=...`
-   - every 10-15 minutes: `/cron/external.php?key=...`
+## 3) Installation (nouveau projet)
 
-## Security & secrets
-- `config/.htaccess` denies direct access.
-- Runtime secrets encrypted in DB (`secrets` table):
-  - libsodium XChaCha20-Poly1305 if available
-  - fallback OpenSSL AES-256-GCM
-- `config/secrets.php` stores only master key.
-- `.gitignore` excludes runtime config + lock + logs.
+1. Déployer le code dans le webroot.
+2. Créer la base de données.
+3. Vérifier la présence de la table météo cible (ex: `alldata`) avec PK `DateTime`.
+4. Ouvrir:
+   - `https://your-domain.tld/install/index.php`
+5. Suivre l’assistant d’installation.
+6. Configurer l’app Netatmo (redirect URI):
+   - `https://your-domain.tld/admin-meteo13/netatmo_callback.php`
+   - Remplacer `admin-meteo13` si vous avez changé `APP_ADMIN_PATH`.
+7. Configurer les cron HTTP (voir section 6).
 
-## Upgrade
-- Go to `/upgrade.php` with active admin session.
-- Missing migrations are executed and recorded in `schema_migrations`.
-- `settings.app_version` is updated.
+## 4) Configuration runtime
 
-## CSV export
-- `history.php?period=<period>&export=csv`
-- Exports only selected period.
-- Exports raw DB values.
+Fichiers générés à l’installation:
+
+- `config/config.php`
+- `config/secrets.php`
+- `config/installed.lock`
+
+Ne pas versionner ces fichiers.
+
+## 5) URLs importantes
+
+- Front live: `https://your-domain.tld/index.php`
+- Admin: `https://your-domain.tld/admin-meteo13/`
+- Upgrade: `https://your-domain.tld/upgrade.php`
+
+## 6) Cron recommandés
+
+Planification typique:
+
+- toutes les 5 min:
+  - `https://your-domain.tld/cron/fetch.php?key=CRON_KEY_FETCH`
+- quotidien (ex 00:10):
+  - `https://your-domain.tld/cron/daily.php?key=CRON_KEY_DAILY`
+- toutes les 10-15 min:
+  - `https://your-domain.tld/cron/external.php?key=CRON_KEY_EXTERNAL`
+
+## 7) Sécurité
+
+- Zone admin protégée par session + CSRF.
+- 2FA TOTP supporté.
+- Cookies de session sécurisés (`HttpOnly`, `SameSite`, `Secure` si HTTPS).
+- Secrets applicatifs chiffrés en base et/ou protégés via clé maître.
+- `config/.htaccess` bloque l’accès direct aux secrets.
+
+## 8) Données météo et calculs
+
+- Timezone applicative: `Europe/Paris`.
+- `DateTime` est l’axe principal des séries.
+- Les cumuls pluie et deltas climatologiques sont calculés côté SQL/PHP.
+- Les cartes externes (prévisions/mer/METAR) utilisent une stratégie cache prioritaire pour accélérer le rendu.
+
+## 9) Performance
+
+- Cache mémoire des paramètres (réduction des requêtes répétées).
+- Cache persistant pour certains agrégats lourds (pluie, références).
+- Rafraîchissement asynchrone des caches externes après affichage.
+- Mode de mesure ponctuel :
+  - `https://your-domain.tld/index.php?perf=1`
+  - ajoute l’en-tête `Server-Timing`.
+
+## 10) Mise à jour applicative
+
+Après déploiement d’une nouvelle version:
+
+1. Se connecter à l’admin.
+2. Ouvrir `https://your-domain.tld/upgrade.php`.
+3. Exécuter les migrations en attente.
+
+## 11) Dépannage rapide
+
+- "METAR indisponible":
+  - vérifier latitude/longitude station et connectivité sortante.
+- Déconnexions admin fréquentes:
+  - vérifier timeout session et horloge serveur.
+- Texte accentué incorrect:
+  - vérifier encodage UTF-8 des contenus admin.
+
+## 12) Développement
+
+- Pas de build frontend requis.
+- CSS/JS servis en statique depuis `assets/`.
+- Entrées principales:
+  - `index.php`
+  - `inc/` (métier)
+  - `admin-meteo13/` (back office)
+  - `cron/` (jobs HTTP)
+
+## Licence
+
+CC BY 4.0
