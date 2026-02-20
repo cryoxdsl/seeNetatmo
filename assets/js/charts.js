@@ -213,8 +213,10 @@
         maintainAspectRatio: false,
         devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
         animation: { duration: 0 },
+        events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
         legend: { display: false },
         tooltips: {
+          enabled: true,
           mode: 'index',
           intersect: false,
           displayColors: false,
@@ -241,10 +243,12 @@
       maintainAspectRatio: false,
       devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
       animation: false,
+      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
       interaction: { mode: 'index', intersect: false, axis: 'x' },
       plugins: {
         legend: { display: false },
         tooltip: {
+          enabled: true,
           mode: 'index',
           intersect: false,
           displayColors: false,

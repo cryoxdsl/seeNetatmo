@@ -101,7 +101,7 @@ front_header(t('charts.title'));
   <h3 class="chart-title"><?= h($payload['chart_labels']['W']) ?></h3>
   <canvas class="weather-chart" id="chartW"></canvas>
 </section>
-<script src="/assets/js/chart.min.js"></script>
+<script src="/assets/js/chart.min.js?v=<?= @filemtime(__DIR__ . '/assets/js/chart.min.js') ?: time() ?>"></script>
 <script>window.METEO_DATA = <?= json_encode($payload, JSON_UNESCAPED_SLASHES) ?>;</script>
-<script src="/assets/js/charts.js"></script>
+<script src="/assets/js/charts.js?v=<?= @filemtime(__DIR__ . '/assets/js/charts.js') ?: time() ?>"></script>
 <?php front_footer();
