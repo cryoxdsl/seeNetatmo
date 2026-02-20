@@ -578,7 +578,7 @@ $metricGroupIcons = [
     <?php endforeach; ?>
   </div>
 </section>
-<section class="panel">
+<section class="panel rain-totals-panel">
   <h3><?= h(t('rain.total')) ?></h3>
   <div class="cards">
     <?php $rainDay = units_format('R', $rain['day']); ?>
