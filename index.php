@@ -107,6 +107,14 @@ if (function_exists('current_day_temp_extreme_times')) {
         $dayTempTimes = ['min_time' => null, 'max_time' => null];
     }
 }
+$dayTempRef = ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
+if (function_exists('current_day_temp_reference')) {
+    try {
+        $dayTempRef = $perfMeasure('current_day_temp_reference', static fn() => current_day_temp_reference());
+    } catch (Throwable $e) {
+        $dayTempRef = ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
+    }
+}
 $dayWind = ['min' => null, 'max' => null];
 if (function_exists('current_day_wind_avg_range')) {
     try {
@@ -227,6 +235,18 @@ $dayMaxDisplay = units_format('T', $dayTemp['max'] ?? null);
 if ($dayMaxDisplay !== t('common.na')) {
     $dayMaxDisplay .= ' ' . units_symbol('T');
 }
+$todayMonthDayLabel = now_paris()->format('d/m');
+$refSamples = (int) ($dayTempRef['samples'] ?? 0);
+$dayMinRefDisplay = units_format('T', $dayTempRef['min_avg'] ?? null);
+if ($dayMinRefDisplay !== t('common.na')) {
+    $dayMinRefDisplay .= ' ' . units_symbol('T');
+}
+$dayMaxRefDisplay = units_format('T', $dayTempRef['max_avg'] ?? null);
+if ($dayMaxRefDisplay !== t('common.na')) {
+    $dayMaxRefDisplay .= ' ' . units_symbol('T');
+}
+$dayMinRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . ', n=' . $refSamples . '): ' . $dayMinRefDisplay;
+$dayMaxRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . ', n=' . $refSamples . '): ' . $dayMaxRefDisplay;
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
 $dayLengthDisplay = t('common.na');
@@ -527,11 +547,11 @@ front_header(t('dashboard.title'));
     <div class="extremes-grid">
       <p class="extremes-line">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 4a2 2 0 1 1 4 0v8.6a4.5 4.5 0 1 1-4 0V4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M12 15.2v-7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></span><?= h(t('extremes.day_min')) ?></span>
-        <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h($dayMinDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?>)</small></strong>
+        <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>" title="<?= h($dayMinRefTooltip) ?>"><?= h($dayMinDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?>)</small></strong>
       </p>
       <p class="extremes-line">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3c1.5 2.2 3.8 3.7 3.8 6.5 0 2.7-2 4.1-2 5.8 0 1.1.8 2.1 2 2.1 2.2 0 3.4-2 3.4-4.3 0-3.4-2.3-6.1-5.1-8.1M7.2 13.2c-1.3 1.2-2.2 2.8-2.2 4.6C5 20.8 7.4 23 10.7 23c3.5 0 5.8-2.5 5.8-5.7 0-2-1-3.7-2.6-4.8-.3 1.5-1.4 2.6-2.9 2.6-2.2 0-3.7-1.7-3.8-3.9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><?= h(t('extremes.day_max')) ?></span>
-        <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?>)</small></strong>
+        <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>" title="<?= h($dayMaxRefTooltip) ?>"><?= h($dayMaxDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?>)</small></strong>
       </p>
       <p class="extremes-line">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18h18M6 18a6 6 0 0 1 12 0M12 3v3M5.6 6.6l2.1 2.1M18.4 6.6l-2.1 2.1M3 12h3M18 12h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><?= h(t('extremes.sunrise')) ?></span>
