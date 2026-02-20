@@ -505,7 +505,6 @@ function current_day_rain_episode(): array
     $episodes = [];
     $activeStart = null;
     $activeEnd = null;
-    $previousR = null;
     $lastRaining = false;
 
     foreach ($rows as $row) {
@@ -513,10 +512,9 @@ function current_day_rain_episode(): array
         if ($dtRaw === '') {
             continue;
         }
-        $rr = isset($row['RR']) && $row['RR'] !== null ? (float) $row['RR'] : 0.0;
-        $r = isset($row['R']) && $row['R'] !== null ? (float) $row['R'] : null;
-        $rainByCumulative = $r !== null && $previousR !== null && ($r - $previousR) > 0.001;
-        $isRaining = $rr > 0.0 || $rainByCumulative;
+        $rr = isset($row['RR']) && $row['RR'] !== null ? (float) $row['RR'] : null;
+        // Rule: a rain episode exists only when 1h rain reaches at least 1.0 mm.
+        $isRaining = $rr !== null && $rr >= 1.0;
 
         if ($isRaining) {
             if ($activeStart === null) {
@@ -530,9 +528,6 @@ function current_day_rain_episode(): array
         }
 
         $lastRaining = $isRaining;
-        if ($r !== null) {
-            $previousR = $r;
-        }
     }
 
     if ($activeStart !== null && $activeEnd !== null) {
