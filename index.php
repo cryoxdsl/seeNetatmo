@@ -343,7 +343,7 @@ if (!function_exists('rain_episode_start_display')) {
 }
 
 $perfTimings['total_prepare'] = (microtime(true) - $perfStart) * 1000.0;
-if (!headers_sent()) {
+if ($perfEnabled && !headers_sent()) {
     $serverTiming = [];
     foreach ($perfTimings as $name => $ms) {
         $token = preg_replace('/[^a-z0-9_]/i', '_', (string) $name);
@@ -356,14 +356,6 @@ if (!headers_sent()) {
 
 front_header(t('dashboard.title'));
 ?>
-<?php if ($perfEnabled): ?>
-<section class="panel">
-  <h3>Perf serveur (prep index)</h3>
-  <?php foreach ($perfTimings as $name => $ms): ?>
-    <p class="small-muted"><strong><?= h((string) $name) ?></strong>: <?= h(number_format((float) $ms, 2, '.', '')) ?> ms</p>
-  <?php endforeach; ?>
-</section>
-<?php endif; ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
