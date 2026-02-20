@@ -193,6 +193,8 @@ $weatherAlertsReason = (string) ($weatherAlerts['reason'] ?? '');
 $weatherAlertsUpdated = trim((string) ($weatherAlerts['updated_at'] ?? ''));
 $weatherAlertsWindow = trim((string) ($weatherAlerts['window'] ?? '48h'));
 $weatherAlertsList = is_array($weatherAlerts['alerts'] ?? null) ? $weatherAlerts['alerts'] : [];
+$weatherAlertsDebug = is_array($weatherAlerts['debug'] ?? null) ? $weatherAlerts['debug'] : [];
+$alertsDebugEnabled = ((string) ($_GET['alerts_debug'] ?? '')) === '1';
 $weatherAlertsZoneLabel = trim((string) ($weatherAlerts['zone_label'] ?? ''));
 if ($weatherAlertsZoneLabel === '') {
     $weatherAlertsZoneLabel = t('alerts.zone_station');
@@ -859,6 +861,10 @@ $metricGroupIcons = [
       <?php endif; ?>
       <?php if ($weatherAlertsUpdated !== ''): ?>
         <p class="small-muted"><?= h(t('alerts.updated')) ?>: <?= h($weatherAlertsUpdated) ?></p>
+      <?php endif; ?>
+      <?php if ($alertsDebugEnabled && $weatherAlertsDebug !== []): ?>
+        <p class="small-muted"><strong>alerts_debug</strong></p>
+        <p class="code metar-raw"><?= h(json_encode($weatherAlertsDebug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></p>
       <?php endif; ?>
     <?php else: ?>
       <p class="small-muted"><?= h(t('alerts.unavailable')) ?></p>

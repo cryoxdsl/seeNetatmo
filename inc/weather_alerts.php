@@ -115,22 +115,62 @@ function weather_alerts_location_needles(string $zoneLabel): array
         if ($norm !== '' && strlen($norm) >= 3) {
             $needles[] = $norm;
         }
-        $words = explode(' ', $norm);
-        foreach ($words as $w) {
-            if (strlen($w) >= 4) {
-                $needles[] = $w;
-            }
-        }
-    }
-    $zipcode = trim((string) (setting_get('station_zipcode', '') ?? ''));
-    if (preg_match('/^\d{5}$/', $zipcode) === 1) {
-        $dep = substr($zipcode, 0, 2);
-        if ($dep !== '') {
-            $needles[] = $dep;
-        }
     }
     $needles = array_values(array_unique(array_filter($needles, static fn(string $n): bool => $n !== '')));
     return $needles;
+}
+
+function weather_alerts_simplify_plural(string $v): string
+{
+    $parts = explode(' ', $v);
+    foreach ($parts as &$p) {
+        if (strlen($p) > 4 && str_ends_with($p, 's')) {
+            $p = substr($p, 0, -1);
+        }
+    }
+    unset($p);
+    return trim(implode(' ', $parts));
+}
+
+function weather_alerts_extract_area_from_title(string $title): string
+{
+    $raw = trim($title);
+    if ($raw === '') {
+        return '';
+    }
+    if (preg_match('/\bFrance\s*-\s*(.+)$/i', $raw, $m) === 1) {
+        return weather_alerts_normalize_text((string) $m[1]);
+    }
+    if (preg_match('/\bfor\s+(.+)$/i', $raw, $m) === 1) {
+        return weather_alerts_normalize_text((string) $m[1]);
+    }
+    return '';
+}
+
+function weather_alerts_area_matches(string $areaNorm, array $needles): bool
+{
+    if ($areaNorm === '' || $needles === []) {
+        return false;
+    }
+    $areaSimple = weather_alerts_simplify_plural($areaNorm);
+    foreach ($needles as $needle) {
+        $needleNorm = weather_alerts_normalize_text($needle);
+        if ($needleNorm === '') {
+            continue;
+        }
+        $needleSimple = weather_alerts_simplify_plural($needleNorm);
+        if (
+            $areaNorm === $needleNorm
+            || $areaSimple === $needleSimple
+            || str_contains($areaNorm, $needleNorm)
+            || str_contains($needleNorm, $areaNorm)
+            || str_contains($areaSimple, $needleSimple)
+            || str_contains($needleSimple, $areaSimple)
+        ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function weather_alerts_severity_from_text(string $text): string
@@ -163,13 +203,15 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, ar
         $entries = [];
     }
 
-    $zoneNeedle = weather_alerts_normalize_text((string) explode(',', $zoneLabel)[0]);
     $needles = $locationNeedles;
+    $zoneNeedle = weather_alerts_normalize_text((string) explode(',', $zoneLabel)[0]);
     if ($zoneNeedle !== '' && !in_array($zoneNeedle, $needles, true)) {
         $needles[] = $zoneNeedle;
     }
     $all = [];
     $filtered = [];
+    $matchedTitles = [];
+    $unmatchedTitles = [];
     foreach ($entries as $entry) {
         $title = trim((string) ($entry->title ?? ''));
         $summaryRaw = (string) ($entry->summary ?? '');
@@ -188,11 +230,22 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, ar
         ];
         $all[] = $alert;
         if ($needles !== []) {
+            $areaNorm = weather_alerts_extract_area_from_title($title);
+            if ($areaNorm !== '' && weather_alerts_area_matches($areaNorm, $needles)) {
+                $filtered[] = $alert;
+                $matchedTitles[] = $alert['title'];
+                continue;
+            }
             foreach ($needles as $needle) {
-                if ($needle !== '' && str_contains($text, $needle)) {
+                $needleNorm = weather_alerts_normalize_text((string) $needle);
+                if ($needleNorm !== '' && str_contains(weather_alerts_normalize_text($title), $needleNorm)) {
                     $filtered[] = $alert;
+                    $matchedTitles[] = $alert['title'];
                     break;
                 }
+            }
+            if (!in_array($alert, $filtered, true)) {
+                $unmatchedTitles[] = $alert['title'];
             }
         }
     }
@@ -204,7 +257,14 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, ar
     if ($use !== []) {
         $updatedAt = trim((string) ($use[0]['updated'] ?? ''));
     }
-    return ['alerts' => $use, 'updated_at' => $updatedAt];
+    return [
+        'alerts' => $use,
+        'updated_at' => $updatedAt,
+        'total_entries' => count($all),
+        'matched_entries' => count($filtered),
+        'matched_titles' => array_values(array_slice(array_unique($matchedTitles), 0, 5)),
+        'unmatched_titles' => array_values(array_slice(array_unique($unmatchedTitles), 0, 5)),
+    ];
 }
 
 function weather_alerts_reverse_admin_label(float $lat, float $lon): string
@@ -329,6 +389,7 @@ function weather_alerts_summary(bool $allowRemote = false): array
         'updated_at' => '',
         'window' => '48h',
         'alerts' => [],
+        'debug' => [],
     ];
 
     try {
@@ -341,9 +402,19 @@ function weather_alerts_summary(bool $allowRemote = false): array
         if ($source === 'meteoalarm') {
             $out['window'] = t('alerts.window_official');
             $xml = weather_alerts_http_get_text(WEATHER_ALERTS_METEOALARM_FR_ATOM_URL);
-            $parsed = weather_alerts_parse_meteoalarm_atom($xml, $out['zone_label'], weather_alerts_location_needles($out['zone_label']));
+            $needles = weather_alerts_location_needles($out['zone_label']);
+            $parsed = weather_alerts_parse_meteoalarm_atom($xml, $out['zone_label'], $needles);
             $out['alerts'] = is_array($parsed['alerts'] ?? null) ? $parsed['alerts'] : [];
             $out['updated_at'] = trim((string) ($parsed['updated_at'] ?? ''));
+            $out['debug'] = [
+                'source' => 'meteoalarm',
+                'zone_label' => $out['zone_label'],
+                'needles' => $needles,
+                'total_entries' => (int) ($parsed['total_entries'] ?? 0),
+                'matched_entries' => (int) ($parsed['matched_entries'] ?? 0),
+                'matched_titles' => is_array($parsed['matched_titles'] ?? null) ? $parsed['matched_titles'] : [],
+                'unmatched_titles' => is_array($parsed['unmatched_titles'] ?? null) ? $parsed['unmatched_titles'] : [],
+            ];
             $out['available'] = true;
             $out['reason'] = '';
             setting_set('weather_alerts_cache_json', json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
