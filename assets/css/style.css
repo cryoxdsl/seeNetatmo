@@ -42,6 +42,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .extremes-grid{display:flex;flex-direction:column;gap:.35rem}
 .extremes-card .extremes-line{margin:0;padding:.32rem .45rem;display:flex;align-items:center;justify-content:space-between;gap:.45rem;background:#f8fbff;border:1px solid #d7e3ef;border-radius:8px}
 .extremes-card .extremes-label{font-size:.77rem;color:#5e7590}
+.extremes-card .extremes-label .extremes-icon{display:inline-block;margin-right:.35rem;vertical-align:-1px;opacity:.9}
 .extremes-card .extremes-line strong{font-size:.87rem;color:#1d3e60}
 .extremes-card .extremes-line strong .extremes-time{font-size:.82em;font-weight:600;opacity:.86}
 .extremes-card .sun-visual{padding:.4rem .45rem;background:#f8fbff;border:1px solid #d7e3ef;border-radius:8px}

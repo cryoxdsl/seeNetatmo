@@ -486,23 +486,23 @@ front_header(t('dashboard.title'));
     <h3><?= h(t('extremes.card_title')) ?></h3>
     <div class="extremes-grid">
       <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.day_min')) ?></span>
+        <span class="extremes-label"><span class="extremes-icon" aria-hidden="true">🌡️</span><?= h(t('extremes.day_min')) ?></span>
         <strong data-live-key="extremes_day_min" data-live-value="<?= h(isset($dayTemp['min']) && $dayTemp['min'] !== null ? (string) $dayTemp['min'] : '') ?>"><?= h($dayMinDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['min_time']) ? (string) $dayTempTimes['min_time'] : null)) ?>)</small></strong>
       </p>
       <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.day_max')) ?></span>
+        <span class="extremes-label"><span class="extremes-icon" aria-hidden="true">🔥</span><?= h(t('extremes.day_max')) ?></span>
         <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>"><?= h($dayMaxDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?>)</small></strong>
       </p>
       <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.sunrise')) ?></span>
+        <span class="extremes-label"><span class="extremes-icon" aria-hidden="true">🌅</span><?= h(t('extremes.sunrise')) ?></span>
         <strong><?= h($sunriseDisplay) ?></strong>
       </p>
       <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.sunset')) ?></span>
+        <span class="extremes-label"><span class="extremes-icon" aria-hidden="true">🌇</span><?= h(t('extremes.sunset')) ?></span>
         <strong><?= h($sunsetDisplay) ?></strong>
       </p>
       <p class="extremes-line">
-        <span class="extremes-label"><?= h(t('extremes.day_length')) ?></span>
+        <span class="extremes-label"><span class="extremes-icon" aria-hidden="true">⏱️</span><?= h(t('extremes.day_length')) ?></span>
         <strong><?= h($dayLengthDisplay) ?></strong>
       </p>
       <?php if ($solarVisualAvailable): ?>
