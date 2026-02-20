@@ -265,6 +265,8 @@ $dayMaxRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . 
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
 $dayLengthDisplay = t('common.na');
+$sunriseTooltip = t('common.na');
+$sunsetTooltip = t('common.na');
 $sunriseTs = null;
 $sunsetTs = null;
 $nowDayTs = now_paris()->getTimestamp();
@@ -376,6 +378,27 @@ if (!function_exists('to_hhmm_local')) {
             return t('common.na');
         }
     }
+}
+if (!function_exists('hhmm_duration_from_seconds')) {
+    function hhmm_duration_from_seconds(int $seconds): string
+    {
+        $abs = abs($seconds);
+        $hours = (int) floor($abs / 3600);
+        $minutes = (int) floor(($abs % 3600) / 60);
+        return sprintf('%02d:%02d', $hours, $minutes);
+    }
+}
+if ($sunriseTs !== null) {
+    $d = $nowDayTs - $sunriseTs;
+    $sunriseTooltip = $d >= 0
+        ? sprintf(t('extremes.event_ago'), hhmm_duration_from_seconds($d))
+        : sprintf(t('extremes.event_in'), hhmm_duration_from_seconds($d));
+}
+if ($sunsetTs !== null) {
+    $d = $nowDayTs - $sunsetTs;
+    $sunsetTooltip = $d >= 0
+        ? sprintf(t('extremes.event_ago'), hhmm_duration_from_seconds($d))
+        : sprintf(t('extremes.event_in'), hhmm_duration_from_seconds($d));
 }
 if (!function_exists('to_hhmm_from_db')) {
     function to_hhmm_from_db(?string $dt): string
@@ -573,13 +596,13 @@ front_header(t('dashboard.title'));
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3c1.5 2.2 3.8 3.7 3.8 6.5 0 2.7-2 4.1-2 5.8 0 1.1.8 2.1 2 2.1 2.2 0 3.4-2 3.4-4.3 0-3.4-2.3-6.1-5.1-8.1M7.2 13.2c-1.3 1.2-2.2 2.8-2.2 4.6C5 20.8 7.4 23 10.7 23c3.5 0 5.8-2.5 5.8-5.7 0-2-1-3.7-2.6-4.8-.3 1.5-1.4 2.6-2.9 2.6-2.2 0-3.7-1.7-3.8-3.9z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span><?= h(t('extremes.day_max')) ?></span>
         <strong data-live-key="extremes_day_max" data-live-value="<?= h(isset($dayTemp['max']) && $dayTemp['max'] !== null ? (string) $dayTemp['max'] : '') ?>" title="<?= h($dayMaxRefTooltip) ?>"><?= h($dayMaxDisplay) ?> <small class="extremes-time">(<?= h(to_hhmm_from_db(isset($dayTempTimes['max_time']) ? (string) $dayTempTimes['max_time'] : null)) ?>)</small></strong>
       </p>
-      <p class="extremes-line">
+      <p class="extremes-line" title="<?= h($sunriseTooltip) ?>">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18h18M6 18a6 6 0 0 1 12 0M12 3v3M5.6 6.6l2.1 2.1M18.4 6.6l-2.1 2.1M3 12h3M18 12h3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></span><?= h(t('extremes.sunrise')) ?></span>
-        <strong><?= h($sunriseDisplay) ?></strong>
+        <strong title="<?= h($sunriseTooltip) ?>"><?= h($sunriseDisplay) ?></strong>
       </p>
-      <p class="extremes-line">
+      <p class="extremes-line" title="<?= h($sunsetTooltip) ?>">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18h18M6 18a6 6 0 0 1 12 0M12 3v3M5.6 6.6l2.1 2.1M18.4 6.6l-2.1 2.1M3 12h3M18 12h3M9 21l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><?= h(t('extremes.sunset')) ?></span>
-        <strong><?= h($sunsetDisplay) ?></strong>
+        <strong title="<?= h($sunsetTooltip) ?>"><?= h($sunsetDisplay) ?></strong>
       </p>
       <p class="extremes-line">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 13V9M12 13l3 2M9 3h6M12 6V4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><?= h(t('extremes.day_length')) ?></span>
