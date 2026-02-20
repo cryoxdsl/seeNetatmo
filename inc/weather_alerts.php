@@ -188,6 +188,54 @@ function weather_alerts_severity_from_text(string $text): string
     return 'moderate';
 }
 
+function weather_alerts_localize_official_title(string $title): string
+{
+    if (locale_current() !== 'fr_FR') {
+        return $title;
+    }
+    $raw = trim($title);
+    if ($raw === '') {
+        return $raw;
+    }
+    $pattern = '/^(Yellow|Orange|Red)\s+(.+?)\s+Warning issued for\s+(.+)$/i';
+    if (preg_match($pattern, $raw, $m) !== 1) {
+        return $raw;
+    }
+    $colorEn = strtolower((string) $m[1]);
+    $hazardEn = strtolower(trim((string) $m[2]));
+    $area = trim((string) $m[3]);
+
+    $colorFr = match ($colorEn) {
+        'yellow' => 'jaune',
+        'orange' => 'orange',
+        'red' => 'rouge',
+        default => $colorEn,
+    };
+
+    $hazardMap = [
+        'avalanches' => 'avalanches',
+        'snow-ice' => 'neige-verglas',
+        'rain-flood' => 'pluie-inondation',
+        'flood' => 'crues',
+        'wind' => 'vent',
+        'thunderstorm' => 'orages',
+        'thunderstorms' => 'orages',
+        'high-temperature' => 'canicule',
+        'low-temperature' => 'grand froid',
+        'coastal-event' => 'vagues-submersion',
+        'rain' => 'pluie',
+        'ice' => 'verglas',
+        'snow' => 'neige',
+    ];
+    $hazardFr = $hazardMap[$hazardEn] ?? $hazardEn;
+    $zone = preg_replace('/^\s*France\s*-\s*/i', '', $area) ?? $area;
+    $zone = trim($zone);
+    if ($zone === '') {
+        return 'Vigilance ' . $colorFr . ' ' . $hazardFr;
+    }
+    return 'Vigilance ' . $colorFr . ' ' . $hazardFr . ' (' . $zone . ')';
+}
+
 function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, array $locationNeedles = []): array
 {
     if (!function_exists('simplexml_load_string')) {
@@ -223,7 +271,7 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, ar
         $text = weather_alerts_normalize_text($title . ' ' . $summary);
         $alert = [
             'type' => 'official',
-            'title' => $title !== '' ? $title : t('alerts.official_warning'),
+            'title' => $title !== '' ? weather_alerts_localize_official_title($title) : t('alerts.official_warning'),
             'severity' => weather_alerts_severity_from_text($title . ' ' . $summary),
             'detail' => $summary,
             'updated' => $updated,
