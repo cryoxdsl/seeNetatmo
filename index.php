@@ -474,6 +474,75 @@ if (!function_exists('rain_episode_start_display')) {
         return to_hhmm_local($start);
     }
 }
+if (!function_exists('alert_datetime_label')) {
+    function alert_datetime_label(?string $value): string
+    {
+        $raw = trim((string) $value);
+        if ($raw === '') {
+            return '';
+        }
+        try {
+            $dt = new DateTimeImmutable($raw);
+            $dt = $dt->setTimezone(new DateTimeZone(APP_TIMEZONE));
+            if (locale_current() === 'en_EN') {
+                return $dt->format('Y-m-d H:i');
+            }
+            return $dt->format('d/m/Y H:i');
+        } catch (Throwable) {
+            return $raw;
+        }
+    }
+}
+if (!function_exists('alert_period_line')) {
+    function alert_period_line(array $alert, string $fallbackUpdated): string
+    {
+        $fromRaw = '';
+        foreach (['onset', 'start', 'effective', 'starts_at', 'from'] as $key) {
+            $v = trim((string) ($alert[$key] ?? ''));
+            if ($v !== '') {
+                $fromRaw = $v;
+                break;
+            }
+        }
+        $toRaw = '';
+        foreach (['expires', 'end', 'ends_at', 'to'] as $key) {
+            $v = trim((string) ($alert[$key] ?? ''));
+            if ($v !== '') {
+                $toRaw = $v;
+                break;
+            }
+        }
+        $updatedRaw = '';
+        foreach (['sent', 'published', 'updated'] as $key) {
+            $v = trim((string) ($alert[$key] ?? ''));
+            if ($v !== '') {
+                $updatedRaw = $v;
+                break;
+            }
+        }
+        if ($updatedRaw === '' && trim($fallbackUpdated) !== '') {
+            $updatedRaw = trim($fallbackUpdated);
+        }
+
+        $from = alert_datetime_label($fromRaw);
+        $to = alert_datetime_label($toRaw);
+        $updated = alert_datetime_label($updatedRaw);
+
+        if ($from !== '' && $to !== '') {
+            return sprintf(t('alerts.period_from_to'), $from, $to);
+        }
+        if ($from !== '') {
+            return sprintf(t('alerts.period_from'), $from);
+        }
+        if ($to !== '') {
+            return sprintf(t('alerts.period_until'), $to);
+        }
+        if ($updated !== '') {
+            return sprintf(t('alerts.period_updated'), $updated);
+        }
+        return '';
+    }
+}
 if (!function_exists('alerts_type_icon_svg')) {
     function alerts_type_icon_svg(string $type): string
     {
@@ -863,10 +932,16 @@ $metricGroupIcons = [
             ?>
             <p class="forecast-line alerts-line">
               <span class="alerts-severity alerts-severity-<?= h($severity) ?>" title="<?= h((string) ($alert['title'] ?? '')) ?>" aria-label="<?= h((string) ($alert['title'] ?? '')) ?>"><?= alerts_type_icon_svg((string) ($alert['type'] ?? '')) ?></span>
-              <strong><?= h((string) ($alert['title'] ?? t('common.na'))) ?></strong>
-              <?php if (!empty($alert['detail'])): ?>
-                <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
-              <?php endif; ?>
+              <span class="alerts-copy">
+                <strong class="alerts-title"><?= h((string) ($alert['title'] ?? t('common.na'))) ?></strong>
+                <?php if (!empty($alert['detail'])): ?>
+                  <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
+                <?php endif; ?>
+                <?php $alertPeriod = alert_period_line(is_array($alert) ? $alert : [], $weatherAlertsUpdated); ?>
+                <?php if ($alertPeriod !== ''): ?>
+                  <span class="alerts-date"><?= h($alertPeriod) ?></span>
+                <?php endif; ?>
+              </span>
             </p>
           <?php endforeach; ?>
         </div>

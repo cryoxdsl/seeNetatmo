@@ -274,6 +274,7 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, ar
             'title' => $title !== '' ? weather_alerts_localize_official_title($title) : t('alerts.official_warning'),
             'severity' => weather_alerts_severity_from_text($title . ' ' . $summary),
             'detail' => $summary,
+            'published' => trim((string) ($entry->published ?? '')),
             'updated' => $updated,
         ];
         $all[] = $alert;
@@ -479,6 +480,8 @@ function weather_alerts_summary(bool $allowRemote = false): array
         $temps = is_array($hourly['temperature_2m'] ?? null) ? $hourly['temperature_2m'] : [];
 
         $count = max(count($codes), count($precips), count($winds), count($temps));
+        $windowStart = isset($times[0]) ? trim((string) $times[0]) : '';
+        $windowEnd = ($times !== []) ? trim((string) $times[count($times) - 1]) : '';
         $maxPrecip = 0.0;
         $maxWind = 0.0;
         $maxTemp = -999.0;
@@ -521,6 +524,8 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'thunderstorm',
                 'severity' => 'high',
                 'detail' => $thunderHours . 'h ' . t('alerts.hours_affected'),
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -529,12 +534,16 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'heavy_rain',
                 'severity' => 'high',
                 'detail' => number_format($maxPrecip, 1, '.', '') . ' mm/h',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         } elseif ($maxPrecip >= 6.0) {
             $alerts[] = [
                 'type' => 'heavy_rain',
                 'severity' => 'moderate',
                 'detail' => number_format($maxPrecip, 1, '.', '') . ' mm/h',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -543,12 +552,16 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'strong_wind',
                 'severity' => 'high',
                 'detail' => number_format($maxWind, 0, '.', '') . ' km/h',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         } elseif ($maxWind >= 60.0) {
             $alerts[] = [
                 'type' => 'strong_wind',
                 'severity' => 'moderate',
                 'detail' => number_format($maxWind, 0, '.', '') . ' km/h',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -557,6 +570,8 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'snow',
                 'severity' => 'moderate',
                 'detail' => $snowHours . 'h ' . t('alerts.hours_affected'),
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -565,6 +580,8 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'heat',
                 'severity' => $maxTemp >= 38.0 ? 'high' : 'moderate',
                 'detail' => number_format($maxTemp, 1, '.', '') . ' °C',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -573,6 +590,8 @@ function weather_alerts_summary(bool $allowRemote = false): array
                 'type' => 'frost',
                 'severity' => $minTemp <= -3.0 ? 'moderate' : 'low',
                 'detail' => number_format($minTemp, 1, '.', '') . ' °C',
+                'onset' => $windowStart,
+                'expires' => $windowEnd,
             ];
         }
 
@@ -583,17 +602,21 @@ function weather_alerts_summary(bool $allowRemote = false): array
             return $rb <=> $ra;
         });
 
-        $out['alerts'] = array_map(static function (array $a): array {
+        $alertsUpdated = isset($times[0]) ? (string) $times[0] : date('Y-m-d H:i:s');
+        $out['alerts'] = array_map(static function (array $a) use ($alertsUpdated): array {
             return [
                 'type' => (string) ($a['type'] ?? ''),
                 'title' => weather_alerts_localized_title((string) ($a['type'] ?? '')),
                 'severity' => (string) ($a['severity'] ?? 'low'),
                 'detail' => (string) ($a['detail'] ?? ''),
+                'onset' => (string) ($a['onset'] ?? ''),
+                'expires' => (string) ($a['expires'] ?? ''),
+                'updated' => $alertsUpdated,
             ];
         }, $alerts);
         $out['available'] = true;
         $out['reason'] = '';
-        $out['updated_at'] = isset($times[0]) ? (string) $times[0] : date('Y-m-d H:i:s');
+        $out['updated_at'] = $alertsUpdated;
     } catch (Throwable $e) {
         log_event('warning', 'front.alerts', 'Weather alerts fetch failed', ['err' => $e->getMessage()]);
     }
