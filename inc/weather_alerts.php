@@ -88,6 +88,51 @@ function weather_alerts_source_setting(): string
     return in_array($v, ['openmeteo', 'meteoalarm'], true) ? $v : 'openmeteo';
 }
 
+function weather_alerts_normalize_text(string $text): string
+{
+    $v = trim($text);
+    if ($v === '') {
+        return '';
+    }
+    if (function_exists('iconv')) {
+        $tmp = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $v);
+        if (is_string($tmp) && $tmp !== '') {
+            $v = $tmp;
+        }
+    }
+    $v = strtolower($v);
+    $v = preg_replace('/[^a-z0-9]+/', ' ', $v) ?? '';
+    $v = trim(preg_replace('/\s+/', ' ', $v) ?? '');
+    return $v;
+}
+
+function weather_alerts_location_needles(string $zoneLabel): array
+{
+    $needles = [];
+    $parts = array_values(array_filter(array_map('trim', explode(',', $zoneLabel)), static fn(string $p): bool => $p !== ''));
+    foreach ($parts as $part) {
+        $norm = weather_alerts_normalize_text($part);
+        if ($norm !== '' && strlen($norm) >= 3) {
+            $needles[] = $norm;
+        }
+        $words = explode(' ', $norm);
+        foreach ($words as $w) {
+            if (strlen($w) >= 4) {
+                $needles[] = $w;
+            }
+        }
+    }
+    $zipcode = trim((string) (setting_get('station_zipcode', '') ?? ''));
+    if (preg_match('/^\d{5}$/', $zipcode) === 1) {
+        $dep = substr($zipcode, 0, 2);
+        if ($dep !== '') {
+            $needles[] = $dep;
+        }
+    }
+    $needles = array_values(array_unique(array_filter($needles, static fn(string $n): bool => $n !== '')));
+    return $needles;
+}
+
 function weather_alerts_severity_from_text(string $text): string
 {
     $t = strtolower($text);
@@ -103,7 +148,7 @@ function weather_alerts_severity_from_text(string $text): string
     return 'moderate';
 }
 
-function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel): array
+function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel, array $locationNeedles = []): array
 {
     if (!function_exists('simplexml_load_string')) {
         throw new RuntimeException('SimpleXML not available');
@@ -118,7 +163,11 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel): a
         $entries = [];
     }
 
-    $zoneNeedle = strtolower(trim((string) explode(',', $zoneLabel)[0]));
+    $zoneNeedle = weather_alerts_normalize_text((string) explode(',', $zoneLabel)[0]);
+    $needles = $locationNeedles;
+    if ($zoneNeedle !== '' && !in_array($zoneNeedle, $needles, true)) {
+        $needles[] = $zoneNeedle;
+    }
     $all = [];
     $filtered = [];
     foreach ($entries as $entry) {
@@ -129,7 +178,7 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel): a
         if ($title === '' && $summary === '') {
             continue;
         }
-        $text = strtolower($title . ' ' . $summary);
+        $text = weather_alerts_normalize_text($title . ' ' . $summary);
         $alert = [
             'type' => 'official',
             'title' => $title !== '' ? $title : t('alerts.official_warning'),
@@ -138,11 +187,16 @@ function weather_alerts_parse_meteoalarm_atom(string $xml, string $zoneLabel): a
             'updated' => $updated,
         ];
         $all[] = $alert;
-        if ($zoneNeedle !== '' && str_contains($text, $zoneNeedle)) {
-            $filtered[] = $alert;
+        if ($needles !== []) {
+            foreach ($needles as $needle) {
+                if ($needle !== '' && str_contains($text, $needle)) {
+                    $filtered[] = $alert;
+                    break;
+                }
+            }
         }
     }
-    $use = $filtered !== [] ? $filtered : $all;
+    $use = $needles !== [] ? $filtered : $all;
     if ($use !== [] && count($use) > 6) {
         $use = array_slice($use, 0, 6);
     }
@@ -287,7 +341,7 @@ function weather_alerts_summary(bool $allowRemote = false): array
         if ($source === 'meteoalarm') {
             $out['window'] = t('alerts.window_official');
             $xml = weather_alerts_http_get_text(WEATHER_ALERTS_METEOALARM_FR_ATOM_URL);
-            $parsed = weather_alerts_parse_meteoalarm_atom($xml, $out['zone_label']);
+            $parsed = weather_alerts_parse_meteoalarm_atom($xml, $out['zone_label'], weather_alerts_location_needles($out['zone_label']));
             $out['alerts'] = is_array($parsed['alerts'] ?? null) ? $parsed['alerts'] : [];
             $out['updated_at'] = trim((string) ($parsed['updated_at'] ?? ''));
             $out['available'] = true;
