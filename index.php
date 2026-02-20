@@ -749,10 +749,10 @@ $metricGroupIcons = [
         $roseCounts = array_values(array_map(static fn($v) => (int) $v, $windRose['counts']));
         $roseMax = (int) $windRose['max'];
         $roseTotal = max(1, (int) $windRose['total']);
-        $cx = 72.0;
-        $cy = 72.0;
-        $inner = 12.0;
-        $span = 42.0;
+        $cx = 90.0;
+        $cy = 90.0;
+        $inner = 14.0;
+        $span = 58.0;
         $roseRanked = [];
         foreach ($roseCounts as $i => $count) {
             if ($count <= 0) {
@@ -763,32 +763,54 @@ $metricGroupIcons = [
         usort($roseRanked, static fn($a, $b) => $b['count'] <=> $a['count']);
         $roseTop = array_slice($roseRanked, 0, 3);
       ?>
-      <svg class="wind-rose-svg" viewBox="0 0 144 144" role="img" aria-label="<?= h(t('windrose.title')) ?>">
-        <circle cx="72" cy="72" r="52" class="wind-rose-grid"></circle>
-        <circle cx="72" cy="72" r="34" class="wind-rose-grid"></circle>
-        <circle cx="72" cy="72" r="16" class="wind-rose-grid"></circle>
-        <line x1="72" y1="10" x2="72" y2="134" class="wind-rose-axis"></line>
-        <line x1="10" y1="72" x2="134" y2="72" class="wind-rose-axis"></line>
+      <svg class="wind-rose-svg" viewBox="0 0 180 180" role="img" aria-label="<?= h(t('windrose.title')) ?>">
+        <circle cx="90" cy="90" r="72" class="wind-rose-grid"></circle>
+        <circle cx="90" cy="90" r="54" class="wind-rose-grid"></circle>
+        <circle cx="90" cy="90" r="36" class="wind-rose-grid"></circle>
+        <circle cx="90" cy="90" r="18" class="wind-rose-grid"></circle>
+        <line x1="90" y1="10" x2="90" y2="170" class="wind-rose-axis"></line>
+        <line x1="10" y1="90" x2="170" y2="90" class="wind-rose-axis"></line>
+        <text x="95" y="20" class="wind-rose-scale">100%</text>
+        <text x="95" y="38" class="wind-rose-scale">75%</text>
+        <text x="95" y="56" class="wind-rose-scale">50%</text>
+        <text x="95" y="74" class="wind-rose-scale">25%</text>
+        <?php for ($i = 0; $i < 16; $i++): ?>
+          <?php
+            $a = deg2rad(($i * 22.5) - 90.0);
+            $sx = $cx + cos($a) * ($inner - 2.0);
+            $sy = $cy + sin($a) * ($inner - 2.0);
+            $ex = $cx + cos($a) * 72.0;
+            $ey = $cy + sin($a) * 72.0;
+          ?>
+          <line x1="<?= h(number_format($sx, 2, '.', '')) ?>" y1="<?= h(number_format($sy, 2, '.', '')) ?>" x2="<?= h(number_format($ex, 2, '.', '')) ?>" y2="<?= h(number_format($ey, 2, '.', '')) ?>" class="wind-rose-spoke"></line>
+        <?php endfor; ?>
         <?php foreach ($roseCounts as $i => $count): ?>
           <?php
             $a = deg2rad(($i * 22.5) - 90.0);
             $len = $roseMax > 0 ? (($count / $roseMax) * $span) : 0.0;
-            $x1 = $cx + cos($a) * $inner;
-            $y1 = $cy + sin($a) * $inner;
-            $x2 = $cx + cos($a) * ($inner + $len);
-            $y2 = $cy + sin($a) * ($inner + $len);
-            $labelX = $cx + cos($a) * 62.0;
-            $labelY = $cy + sin($a) * 62.0;
+            $a0 = deg2rad(($i * 22.5) - 101.25);
+            $a1 = deg2rad(($i * 22.5) - 78.75);
+            $x0i = $cx + cos($a0) * $inner;
+            $y0i = $cy + sin($a0) * $inner;
+            $x1i = $cx + cos($a1) * $inner;
+            $y1i = $cy + sin($a1) * $inner;
+            $x0o = $cx + cos($a0) * ($inner + $len);
+            $y0o = $cy + sin($a0) * ($inner + $len);
+            $x1o = $cx + cos($a1) * ($inner + $len);
+            $y1o = $cy + sin($a1) * ($inner + $len);
+            $labelX = $cx + cos($a) * 82.0;
+            $labelY = $cy + sin($a) * 82.0;
             $tip = ($windRoseDirs[$i] ?? (string) $i) . ': ' . $count;
+            $alpha = 0.35 + ($roseMax > 0 ? (($count / $roseMax) * 0.55) : 0.0);
           ?>
-          <line x1="<?= h(number_format($x1, 2, '.', '')) ?>" y1="<?= h(number_format($y1, 2, '.', '')) ?>" x2="<?= h(number_format($x2, 2, '.', '')) ?>" y2="<?= h(number_format($y2, 2, '.', '')) ?>" class="wind-rose-bar">
+          <path d="M <?= h(number_format($x0i, 2, '.', '')) ?> <?= h(number_format($y0i, 2, '.', '')) ?> L <?= h(number_format($x0o, 2, '.', '')) ?> <?= h(number_format($y0o, 2, '.', '')) ?> A <?= h(number_format($inner + $len, 2, '.', '')) ?> <?= h(number_format($inner + $len, 2, '.', '')) ?> 0 0 1 <?= h(number_format($x1o, 2, '.', '')) ?> <?= h(number_format($y1o, 2, '.', '')) ?> L <?= h(number_format($x1i, 2, '.', '')) ?> <?= h(number_format($y1i, 2, '.', '')) ?> A <?= h(number_format($inner, 2, '.', '')) ?> <?= h(number_format($inner, 2, '.', '')) ?> 0 0 0 <?= h(number_format($x0i, 2, '.', '')) ?> <?= h(number_format($y0i, 2, '.', '')) ?> Z" class="wind-rose-sector" style="opacity:<?= h(number_format($alpha, 3, '.', '')) ?>">
             <title><?= h($tip) ?></title>
-          </line>
+          </path>
           <?php if (($i % 2) === 0): ?>
             <text x="<?= h(number_format($labelX, 2, '.', '')) ?>" y="<?= h(number_format($labelY, 2, '.', '')) ?>" class="wind-rose-label"><?= h($windRoseDirs[$i] ?? '') ?></text>
           <?php endif; ?>
         <?php endforeach; ?>
-        <circle cx="72" cy="72" r="2.5" class="wind-rose-center"></circle>
+        <circle cx="90" cy="90" r="3" class="wind-rose-center"></circle>
       </svg>
       <p class="small-muted"><?= h(t('windrose.samples')) ?>: <strong><?= h((string) ((int) $windRose['total'])) ?></strong></p>
       <?php if (!empty($roseTop)): ?>
