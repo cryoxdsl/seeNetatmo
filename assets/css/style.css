@@ -69,6 +69,13 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .metric-trend-unknown{color:#7a8fa5}
 .wind-compass{display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;margin-right:.22rem;border:1px solid #c8d6e5;border-radius:50%;background:#f7fbff;vertical-align:middle}
 .wind-compass .needle{display:inline-block;line-height:1;font-size:.9em;color:#2f5f8a;transform-origin:50% 55%}
+.wind-rose-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.wind-rose-svg{width:min(100%,220px);height:auto;display:block;margin:.2rem auto .35rem}
+.wind-rose-grid{fill:none;stroke:#d3e0ec;stroke-width:1}
+.wind-rose-axis{stroke:#b4c7db;stroke-width:1}
+.wind-rose-bar{stroke:#2f79b7;stroke-width:4;stroke-linecap:round}
+.wind-rose-center{fill:#2f79b7}
+.wind-rose-label{font-size:6.5px;fill:#5a7592;text-anchor:middle;dominant-baseline:middle;font-weight:700}
 .weather-hero{display:grid;grid-template-columns:130px 1fr auto;align-items:center;gap:1rem;background:linear-gradient(125deg,#f5fbff,#edf5fc)}
 .weather-icon{width:120px;height:120px;display:flex;align-items:center;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:16px}
 .weather-icon svg{width:100px;height:100px}
@@ -144,6 +151,11 @@ body.theme-dark .weather-icon{background:#0f1b2e}
 body.theme-dark .forecast-card .forecast-icon,
 body.theme-dark .metric-group-icon,
 body.theme-dark .wind-compass{background:#10243c;border-color:#2b4361;color:#89b2d8}
+body.theme-dark .wind-rose-grid{stroke:#35506f}
+body.theme-dark .wind-rose-axis{stroke:#4a6685}
+body.theme-dark .wind-rose-bar{stroke:#62a4dd}
+body.theme-dark .wind-rose-center{fill:#62a4dd}
+body.theme-dark .wind-rose-label{fill:#a9c2d8}
 body.theme-dark .forecast-card .forecast-line{color:#b7cde0}
 body.theme-dark .forecast-card .forecast-day,
 body.theme-dark .extremes-card .extremes-line,

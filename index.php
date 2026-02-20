@@ -115,6 +115,14 @@ if (function_exists('current_day_wind_avg_range')) {
         $dayWind = ['min' => null, 'max' => null];
     }
 }
+$windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0];
+if (function_exists('current_day_wind_rose')) {
+    try {
+        $windRose = $perfMeasure('current_day_wind_rose', static fn() => current_day_wind_rose());
+    } catch (Throwable $e) {
+        $windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0];
+    }
+}
 $rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
 if (function_exists('current_day_rain_episode')) {
     try {
@@ -271,6 +279,9 @@ $rainMonthLabel = t('rain.month_base') . ' (' . trim($monthName . ' ' . $nowRain
 $rainYearLabel = t('rain.year_base') . ' (' . $nowRain->format('Y') . ')';
 $rollingStart = $nowRain->modify('-364 days');
 $rainRollingLabel = t('rain.rolling_year_base') . ' (' . $rollingStart->format('d/m/Y') . ' - ' . $nowRain->format('d/m/Y') . ')';
+$windRoseDirs = locale_current() === 'en_EN'
+    ? ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+    : ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
 if (!function_exists('wind_cardinal_label')) {
     function wind_cardinal_label(?float $deg): string
     {
@@ -694,6 +705,49 @@ $metricGroupIcons = [
       <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
         <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
       <?php endif; ?>
+    <?php endif; ?>
+  </article>
+  <article class="card wind-rose-card js-live-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">
+    <h3><?= h(t('windrose.title')) ?></h3>
+    <?php if (!empty($windRose['total']) && !empty($windRose['max']) && is_array($windRose['counts'])): ?>
+      <?php
+        $roseCounts = array_values(array_map(static fn($v) => (int) $v, $windRose['counts']));
+        $roseMax = (int) $windRose['max'];
+        $cx = 72.0;
+        $cy = 72.0;
+        $inner = 12.0;
+        $span = 42.0;
+      ?>
+      <svg class="wind-rose-svg" viewBox="0 0 144 144" role="img" aria-label="<?= h(t('windrose.title')) ?>">
+        <circle cx="72" cy="72" r="52" class="wind-rose-grid"></circle>
+        <circle cx="72" cy="72" r="34" class="wind-rose-grid"></circle>
+        <circle cx="72" cy="72" r="16" class="wind-rose-grid"></circle>
+        <line x1="72" y1="10" x2="72" y2="134" class="wind-rose-axis"></line>
+        <line x1="10" y1="72" x2="134" y2="72" class="wind-rose-axis"></line>
+        <?php foreach ($roseCounts as $i => $count): ?>
+          <?php
+            $a = deg2rad(($i * 22.5) - 90.0);
+            $len = $roseMax > 0 ? (($count / $roseMax) * $span) : 0.0;
+            $x1 = $cx + cos($a) * $inner;
+            $y1 = $cy + sin($a) * $inner;
+            $x2 = $cx + cos($a) * ($inner + $len);
+            $y2 = $cy + sin($a) * ($inner + $len);
+            $labelX = $cx + cos($a) * 62.0;
+            $labelY = $cy + sin($a) * 62.0;
+            $tip = ($windRoseDirs[$i] ?? (string) $i) . ': ' . $count;
+          ?>
+          <line x1="<?= h(number_format($x1, 2, '.', '')) ?>" y1="<?= h(number_format($y1, 2, '.', '')) ?>" x2="<?= h(number_format($x2, 2, '.', '')) ?>" y2="<?= h(number_format($y2, 2, '.', '')) ?>" class="wind-rose-bar">
+            <title><?= h($tip) ?></title>
+          </line>
+          <?php if (($i % 2) === 0): ?>
+            <text x="<?= h(number_format($labelX, 2, '.', '')) ?>" y="<?= h(number_format($labelY, 2, '.', '')) ?>" class="wind-rose-label"><?= h($windRoseDirs[$i] ?? '') ?></text>
+          <?php endif; ?>
+        <?php endforeach; ?>
+        <circle cx="72" cy="72" r="2.5" class="wind-rose-center"></circle>
+      </svg>
+      <p class="small-muted"><?= h(t('windrose.samples')) ?>: <strong><?= h((string) ((int) $windRose['total'])) ?></strong></p>
+    <?php else: ?>
+      <p class="small-muted"><?= h(t('windrose.no_data')) ?></p>
     <?php endif; ?>
   </article>
 </section>

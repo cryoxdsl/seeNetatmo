@@ -482,6 +482,40 @@ function current_day_wind_avg_range(): array
     ];
 }
 
+function current_day_wind_rose(): array
+{
+    $t = data_table();
+    $now = now_paris();
+    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $dayEnd = $now->setTime(0, 0, 0)->modify('+1 day')->format('Y-m-d H:i:s');
+    $stmt = db()->prepare(
+        "SELECT `B`
+         FROM `{$t}`
+         WHERE `DateTime` >= :day_start
+           AND `DateTime` < :day_end
+           AND `B` IS NOT NULL"
+    );
+    $stmt->execute([':day_start' => $dayStart, ':day_end' => $dayEnd]);
+    $rows = $stmt->fetchAll();
+
+    $counts = array_fill(0, 16, 0);
+    foreach ($rows as $row) {
+        $deg = isset($row['B']) ? (float) $row['B'] : null;
+        if ($deg === null) {
+            continue;
+        }
+        $norm = fmod(($deg + 360.0), 360.0);
+        $idx = (int) floor(($norm + 11.25) / 22.5) % 16;
+        $counts[$idx]++;
+    }
+
+    return [
+        'counts' => $counts,
+        'max' => max($counts),
+        'total' => array_sum($counts),
+    ];
+}
+
 function current_day_rain_episode(): array
 {
     $t = data_table();
