@@ -118,11 +118,14 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .row{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}select,input,button,.btn{font:inherit;border:1px solid var(--line);background:#fff;color:var(--text);padding:.5rem .7rem;border-radius:8px;text-decoration:none}
 button,.btn{background:var(--accent);border-color:var(--accent);color:#fff;cursor:pointer}
 .table-wrap{overflow:auto}table{width:100%;border-collapse:collapse;font-size:.87rem}th,td{padding:.48rem .35rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+.chart-panel{position:relative;min-height:320px}
+.weather-chart{display:block;width:100%!important;height:280px!important}
 .foot{padding:1.2rem 0 2rem;border-top:1px solid var(--line);font-size:.9rem;color:var(--muted)}
 .admin-layout{display:grid;grid-template-columns:220px 1fr;min-height:100vh}.admin-nav{background:#102946;color:#dbe9f7;padding:1rem}.admin-nav h1{margin:.2rem 0 .8rem;font-size:1.2rem}.admin-nav a{display:block;color:#dbe9f7;text-decoration:none;margin:.38rem 0}.admin-main{padding:1rem}.alert{padding:.65rem .8rem;border-radius:8px;margin-bottom:.8rem}.alert-ok{background:#e4f4e7;color:#1e6e2f}.alert-bad{background:#f8e4e4;color:#8e1f1f}
 .code{font-family:Consolas,monospace;background:#eef4fb;border:1px solid var(--line);padding:.3rem .4rem;border-radius:6px;word-break:break-all}
 @media (max-width:820px){.admin-layout{grid-template-columns:1fr}.weather-hero{grid-template-columns:1fr}.weather-icon{width:100%;max-width:120px}.weather-temp-side{align-items:flex-start;min-width:0}.weather-temp-side .current-value{font-size:2rem}}
 @media (max-width:820px){.metric-group-card .metric-group-lines{grid-template-columns:1fr}}
+@media (max-width:820px){.chart-panel{min-height:250px}.weather-chart{height:220px!important}}
 
 body.theme-dark{--bg:#0b1220;--card:#10192b;--text:#d9e6f3;--muted:#97adbf;--line:#253852;background:linear-gradient(180deg,#0c1524,#0a1322 45%,#09111e)}
 body.theme-dark .top{background:#081a2f}

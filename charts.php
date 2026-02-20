@@ -47,6 +47,12 @@ $payload = [
         'R' => units_metric_name('R') . ' (' . units_symbol('R') . ')',
         'W' => units_metric_name('W') . ' (' . units_symbol('W') . ')',
     ],
+    'chart_ui' => [
+        'density_label' => t('charts.density'),
+        'density_auto' => t('charts.density.auto'),
+        'density_compact' => t('charts.density.compact'),
+        'density_dense' => t('charts.density.dense'),
+    ],
 ];
 
 $periodLabels = [
@@ -71,13 +77,14 @@ front_header(t('charts.title'));
       <?php endforeach; ?>
     </select>
     <button type="submit"><?= h(t('btn.apply')) ?></button>
+    <button type="button" class="btn-lite" id="chartDensityToggle"><?= h(t('charts.density')) ?>: <?= h(t('charts.density.auto')) ?></button>
   </form>
 </section>
-<section class="panel"><canvas id="chartT"></canvas></section>
-<section class="panel"><canvas id="chartH"></canvas></section>
-<section class="panel"><canvas id="chartP"></canvas></section>
-<section class="panel"><canvas id="chartR"></canvas></section>
-<section class="panel"><canvas id="chartW"></canvas></section>
+<section class="panel chart-panel"><canvas class="weather-chart" id="chartT"></canvas></section>
+<section class="panel chart-panel"><canvas class="weather-chart" id="chartH"></canvas></section>
+<section class="panel chart-panel"><canvas class="weather-chart" id="chartP"></canvas></section>
+<section class="panel chart-panel"><canvas class="weather-chart" id="chartR"></canvas></section>
+<section class="panel chart-panel"><canvas class="weather-chart" id="chartW"></canvas></section>
 <script src="/assets/js/chart.min.js"></script>
 <script>window.METEO_DATA = <?= json_encode($payload, JSON_UNESCAPED_SLASHES) ?>;</script>
 <script src="/assets/js/charts.js"></script>
