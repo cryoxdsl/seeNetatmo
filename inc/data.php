@@ -65,6 +65,14 @@ function period_bounds(string $period): array
 function period_rows(string $period): array
 {
     [$from, $to] = period_bounds($period);
+    return period_rows_between($from, $to);
+}
+
+function period_rows_between(DateTimeImmutable $from, DateTimeImmutable $to): array
+{
+    if ($from > $to) {
+        [$from, $to] = [$to, $from];
+    }
     $t = data_table();
     $stmt = db()->prepare("SELECT * FROM `{$t}` WHERE `DateTime` BETWEEN :f AND :to ORDER BY `DateTime` ASC");
     $stmt->execute([':f' => $from->format('Y-m-d H:i:s'), ':to' => $to->format('Y-m-d H:i:s')]);

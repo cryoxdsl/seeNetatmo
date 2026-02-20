@@ -10,13 +10,45 @@ if (!app_is_installed()) {
     redirect('/install/index.php');
 }
 
-$allowed = ['24h','7d','30d','month','year','365d'];
+$allowed = ['24h','7d','30d','month','year','365d','custom'];
 $period = (string) ($_GET['period'] ?? '24h');
 if (!in_array($period, $allowed, true)) {
     $period = '24h';
 }
 
-$rows = period_rows($period);
+$tz = new DateTimeZone(APP_TIMEZONE);
+$now = now_paris();
+$defaultFrom = $now->modify('-24 hours');
+$customFromInput = (string) ($_GET['from'] ?? $defaultFrom->format('Y-m-d\TH:i'));
+$customToInput = (string) ($_GET['to'] ?? $now->format('Y-m-d\TH:i'));
+
+$parseCustomDate = static function (string $raw, DateTimeZone $tz): ?DateTimeImmutable {
+    $raw = trim($raw);
+    if ($raw === '') {
+        return null;
+    }
+    foreach (['Y-m-d\TH:i', 'Y-m-d\TH:i:s', 'Y-m-d H:i:s'] as $format) {
+        $dt = DateTimeImmutable::createFromFormat($format, $raw, $tz);
+        if ($dt instanceof DateTimeImmutable) {
+            return $dt;
+        }
+    }
+    return null;
+};
+
+if ($period === 'custom') {
+    $fromDt = $parseCustomDate($customFromInput, $tz) ?? $defaultFrom;
+    $toDt = $parseCustomDate($customToInput, $tz) ?? $now;
+    if ($fromDt > $toDt) {
+        [$fromDt, $toDt] = [$toDt, $fromDt];
+    }
+    $customFromInput = $fromDt->format('Y-m-d\TH:i');
+    $customToInput = $toDt->format('Y-m-d\TH:i');
+    $rows = period_rows_between($fromDt, $toDt);
+} else {
+    $rows = period_rows($period);
+}
+
 $state = last_update_state();
 
 $metricSeries = static function (string $metric) use ($rows): array {
@@ -65,6 +97,7 @@ $periodLabels = [
     'month' => t('period.month'),
     'year' => t('period.year'),
     '365d' => t('period.365d'),
+    'custom' => t('period.custom'),
 ];
 
 front_header(t('charts.title'));
@@ -79,6 +112,10 @@ front_header(t('charts.title'));
         <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($periodLabels[$p]) ?></option>
       <?php endforeach; ?>
     </select>
+    <label for="customFrom"><?= h(t('charts.from')) ?></label>
+    <input id="customFrom" type="datetime-local" name="from" value="<?= h($customFromInput) ?>">
+    <label for="customTo"><?= h(t('charts.to')) ?></label>
+    <input id="customTo" type="datetime-local" name="to" value="<?= h($customToInput) ?>">
     <button type="submit"><?= h(t('btn.apply')) ?></button>
     <button type="button" class="btn-lite" id="chartDensityToggle"><?= h(t('charts.density')) ?>: <?= h(t('charts.density.auto')) ?></button>
   </form>
