@@ -466,102 +466,70 @@ function current_day_temp_reference(): array
 {
     $t = data_table();
     $now = now_paris();
+    $today = $now->format('Y-m-d');
     $currentYear = (int) $now->format('Y');
-    $monthDayIso = $now->format('m-d');
-    $dayMonthIso = $now->format('d-m');
+    $month = (int) $now->format('m');
+    $day = (int) $now->format('d');
 
-    $stmt = db()->prepare(
-        "SELECT `DateTime`, `T`
-         FROM `{$t}`
-         WHERE `T` IS NOT NULL
-           AND (
-             REPLACE(CAST(`DateTime` AS CHAR), '/', '-') LIKE :p_ymd
-             OR REPLACE(CAST(`DateTime` AS CHAR), '/', '-') LIKE :p_dmy
-           )"
-    );
-    $stmt->execute([
-        ':p_ymd' => '____-' . $monthDayIso . '%',
-        ':p_dmy' => '__-' . $dayMonthIso . '-____%',
-    ]);
-    $rows = $stmt->fetchAll();
-
-    $byDay = [];
-    foreach ($rows as $r) {
-        $rawDt = trim((string) ($r['DateTime'] ?? ''));
-        $rawT = (string) ($r['T'] ?? '');
-        if ($rawDt === '' || $rawT === '') {
-            continue;
-        }
-        $temp = (float) str_replace(',', '.', $rawT);
-        if (!is_finite($temp)) {
-            continue;
-        }
-
-        $dt = null;
-        $patterns = [
-            'Y-m-d H:i:s',
-            'Y/m/d H:i:s',
-            'd-m-Y H:i:s',
-            'd/m/Y H:i:s',
-            DateTimeInterface::ATOM,
-            'Y-m-d\TH:i:s',
-        ];
-        foreach ($patterns as $pattern) {
-            $parsed = DateTimeImmutable::createFromFormat($pattern, $rawDt, new DateTimeZone(APP_TIMEZONE));
-            if ($parsed instanceof DateTimeImmutable) {
-                $dt = $parsed;
-                break;
-            }
-        }
-        if (!$dt) {
-            $ts = strtotime($rawDt);
-            if ($ts !== false) {
-                $dt = (new DateTimeImmutable('@' . $ts))->setTimezone(new DateTimeZone(APP_TIMEZONE));
-            }
-        }
-        if (!$dt) {
-            continue;
-        }
-        if ($dt->format('m-d') !== $monthDayIso) {
-            continue;
-        }
-
-        $dayKey = $dt->format('Y-m-d');
-        if (!isset($byDay[$dayKey])) {
-            $byDay[$dayKey] = ['year' => (int) $dt->format('Y'), 'min' => $temp, 'max' => $temp];
-        } else {
-            if ($temp < $byDay[$dayKey]['min']) {
-                $byDay[$dayKey]['min'] = $temp;
-            }
-            if ($temp > $byDay[$dayKey]['max']) {
-                $byDay[$dayKey]['max'] = $temp;
-            }
-        }
+    $cacheKey = 'current_day_temp_ref_cache_json';
+    $cacheTtl = 300;
+    $cache = data_cache_read($cacheKey);
+    if (
+        is_array($cache)
+        && (string) ($cache['table'] ?? '') === $t
+        && (string) ($cache['day'] ?? '') === $today
+        && (int) ($cache['computed_at'] ?? 0) > (time() - $cacheTtl)
+        && isset($cache['ref']) && is_array($cache['ref'])
+    ) {
+        return $cache['ref'];
     }
 
-    if ($byDay === []) {
-        return ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
+    $fetch = static function (bool $excludeCurrentYear) use ($t, $month, $day, $currentYear): array {
+        $whereYear = $excludeCurrentYear ? 'AND YEAR(`DateTime`) <> :current_year' : '';
+        $stmt = db()->prepare(
+            "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
+             FROM (
+                SELECT YEAR(`DateTime`) AS y,
+                       DATE(`DateTime`) AS d,
+                       MIN(`T`) AS day_min,
+                       MAX(`T`) AS day_max
+                FROM `{$t}`
+                WHERE `T` IS NOT NULL
+                  AND MONTH(`DateTime`) = :m
+                  AND DAY(`DateTime`) = :d
+                  {$whereYear}
+                GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
+             ) x"
+        );
+        $params = [':m' => $month, ':d' => $day];
+        if ($excludeCurrentYear) {
+            $params[':current_year'] = $currentYear;
+        }
+        $stmt->execute($params);
+        return $stmt->fetch() ?: [];
+    };
+
+    $row = $fetch(true);
+    $sampleCount = isset($row['sample_count']) ? (int) $row['sample_count'] : 0;
+    if ($sampleCount <= 0) {
+        // Fallback: if no historical sample exists, use all available years.
+        $row = $fetch(false);
     }
 
-    $historical = array_values(array_filter($byDay, static fn(array $d): bool => (int) ($d['year'] ?? 0) !== $currentYear));
-    $selected = $historical !== [] ? $historical : array_values($byDay);
-    $count = count($selected);
-    if ($count <= 0) {
-        return ['min_avg' => null, 'max_avg' => null, 'samples' => 0];
-    }
-
-    $sumMin = 0.0;
-    $sumMax = 0.0;
-    foreach ($selected as $d) {
-        $sumMin += (float) $d['min'];
-        $sumMax += (float) $d['max'];
-    }
-
-    return [
-        'min_avg' => round($sumMin / $count, 3),
-        'max_avg' => round($sumMax / $count, 3),
-        'samples' => $count,
+    $ref = [
+        'min_avg' => isset($row['avg_min']) && $row['avg_min'] !== null ? (float) $row['avg_min'] : null,
+        'max_avg' => isset($row['avg_max']) && $row['avg_max'] !== null ? (float) $row['avg_max'] : null,
+        'samples' => isset($row['sample_count']) ? (int) $row['sample_count'] : 0,
     ];
+
+    data_cache_write($cacheKey, [
+        'table' => $t,
+        'day' => $today,
+        'computed_at' => time(),
+        'ref' => $ref,
+    ]);
+
+    return $ref;
 }
 
 function current_day_wind_avg_range(): array
