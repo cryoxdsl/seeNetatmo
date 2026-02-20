@@ -4,18 +4,54 @@ declare(strict_types=1);
 require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/constants.php';
 
+function settings_cache_all(?array $newValue = null): ?array
+{
+    static $cache = null;
+    if ($newValue !== null) {
+        $cache = $newValue;
+    }
+    return $cache;
+}
+
+function settings_cache_load(): array
+{
+    $cache = settings_cache_all();
+    if (is_array($cache)) {
+        return $cache;
+    }
+    $out = [];
+    try {
+        $rows = db()->query('SELECT setting_key, setting_value FROM settings')->fetchAll();
+        foreach ($rows as $row) {
+            $k = (string) ($row['setting_key'] ?? '');
+            if ($k === '') {
+                continue;
+            }
+            $out[$k] = (string) ($row['setting_value'] ?? '');
+        }
+    } catch (Throwable) {
+        $out = [];
+    }
+    settings_cache_all($out);
+    return $out;
+}
+
 function setting_get(string $key, ?string $default = null): ?string
 {
-    $stmt = db()->prepare('SELECT setting_value FROM settings WHERE setting_key=:k LIMIT 1');
-    $stmt->execute([':k' => $key]);
-    $v = $stmt->fetchColumn();
-    return ($v === false || $v === null) ? $default : (string) $v;
+    $cache = settings_cache_load();
+    if (array_key_exists($key, $cache)) {
+        return (string) $cache[$key];
+    }
+    return $default;
 }
 
 function setting_set(string $key, string $value): void
 {
     $stmt = db()->prepare('INSERT INTO settings(setting_key,setting_value,updated_at) VALUES(:k,:v,NOW()) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value), updated_at=NOW()');
     $stmt->execute([':k' => $key, ':v' => $value]);
+    $cache = settings_cache_load();
+    $cache[$key] = $value;
+    settings_cache_all($cache);
 }
 
 function app_name(): string

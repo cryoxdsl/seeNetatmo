@@ -16,19 +16,29 @@ if (!app_is_installed()) {
     redirect('/install/index.php');
 }
 
+$perfEnabled = ((string) ($_GET['perf'] ?? '')) === '1';
+$perfStart = microtime(true);
+$perfTimings = [];
+$perfMeasure = static function (string $key, callable $fn) use (&$perfTimings) {
+    $t0 = microtime(true);
+    $result = $fn();
+    $perfTimings[$key] = (microtime(true) - $t0) * 1000.0;
+    return $result;
+};
+
 $state = ['last' => null, 'age' => null, 'disconnected' => true];
 $row = null;
 $prev = null;
 try {
     if (function_exists('last_update_state')) {
-        $state = last_update_state();
+        $state = $perfMeasure('last_update_state', static fn() => last_update_state());
     }
     if (function_exists('latest_rows')) {
-        $rows = latest_rows(2);
+        $rows = $perfMeasure('latest_rows', static fn() => latest_rows(2));
         $row = $rows[0] ?? null;
         $prev = $rows[1] ?? null;
     } elseif (function_exists('latest_row')) {
-        $row = latest_row();
+        $row = $perfMeasure('latest_row', static fn() => latest_row());
     }
 } catch (Throwable $e) {
     $state = ['last' => null, 'age' => null, 'disconnected' => true];
@@ -44,7 +54,7 @@ $weather = [
 ];
 if (function_exists('weather_condition_from_row')) {
     try {
-        $weather = weather_condition_from_row($row, $state, $prev);
+        $weather = $perfMeasure('weather_condition', static fn() => weather_condition_from_row($row, $state, $prev));
     } catch (Throwable $e) {
         $weather = [
           'type' => 'offline',
@@ -68,7 +78,7 @@ $currentTrendLabel = function_exists('weather_trend_label')
 $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
 if (function_exists('rain_totals')) {
     try {
-        $rain = rain_totals();
+        $rain = $perfMeasure('rain_totals', static fn() => rain_totals());
     } catch (Throwable $e) {
         $rain = ['day' => 0.0, 'month' => 0.0, 'year' => 0.0, 'rolling_year' => 0.0];
     }
@@ -76,7 +86,7 @@ if (function_exists('rain_totals')) {
 $rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null, 'rolling_365_avg' => null];
 if (function_exists('rain_reference_averages')) {
     try {
-        $rainRefs = rain_reference_averages();
+        $rainRefs = $perfMeasure('rain_reference_averages', static fn() => rain_reference_averages());
     } catch (Throwable $e) {
         $rainRefs = ['day_avg' => null, 'month_avg' => null, 'year_to_date_avg' => null, 'rolling_365_avg' => null];
     }
@@ -84,7 +94,7 @@ if (function_exists('rain_reference_averages')) {
 $dayTemp = ['min' => null, 'max' => null];
 if (function_exists('current_day_temp_range')) {
     try {
-        $dayTemp = current_day_temp_range();
+        $dayTemp = $perfMeasure('current_day_temp_range', static fn() => current_day_temp_range());
     } catch (Throwable $e) {
         $dayTemp = ['min' => null, 'max' => null];
     }
@@ -92,7 +102,7 @@ if (function_exists('current_day_temp_range')) {
 $dayTempTimes = ['min_time' => null, 'max_time' => null];
 if (function_exists('current_day_temp_extreme_times')) {
     try {
-        $dayTempTimes = current_day_temp_extreme_times();
+        $dayTempTimes = $perfMeasure('current_day_temp_extreme_times', static fn() => current_day_temp_extreme_times());
     } catch (Throwable $e) {
         $dayTempTimes = ['min_time' => null, 'max_time' => null];
     }
@@ -100,7 +110,7 @@ if (function_exists('current_day_temp_extreme_times')) {
 $dayWind = ['min' => null, 'max' => null];
 if (function_exists('current_day_wind_avg_range')) {
     try {
-        $dayWind = current_day_wind_avg_range();
+        $dayWind = $perfMeasure('current_day_wind_avg_range', static fn() => current_day_wind_avg_range());
     } catch (Throwable $e) {
         $dayWind = ['min' => null, 'max' => null];
     }
@@ -108,7 +118,7 @@ if (function_exists('current_day_wind_avg_range')) {
 $rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
 if (function_exists('current_day_rain_episode')) {
     try {
-        $rainEpisode = current_day_rain_episode();
+        $rainEpisode = $perfMeasure('current_day_rain_episode', static fn() => current_day_rain_episode());
     } catch (Throwable $e) {
         $rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
     }
@@ -116,7 +126,7 @@ if (function_exists('current_day_rain_episode')) {
 $pressureTrend = ['trend' => 'unknown', 'delta' => null];
 if (function_exists('pressure_trend_snapshot')) {
     try {
-        $pressureTrend = pressure_trend_snapshot();
+        $pressureTrend = $perfMeasure('pressure_trend_snapshot', static fn() => pressure_trend_snapshot());
     } catch (Throwable $e) {
         $pressureTrend = ['trend' => 'unknown', 'delta' => null];
     }
@@ -134,11 +144,20 @@ $seasonUrl = '/assets/img/seasons/' . $season . '.svg';
 if (is_file($seasonFile)) {
     $seasonUrl .= '?v=' . filemtime($seasonFile);
 }
-$sea = sea_temp_nearest();
+$sea = $perfMeasure('sea_temp_cached', static fn() => sea_temp_nearest(false));
+if (empty($sea['available']) && (($sea['reason'] ?? '') === 'cache_only')) {
+    $sea = $perfMeasure('sea_temp_remote', static fn() => sea_temp_nearest(true));
+}
 $seaValue = $sea['available'] ? units_format('T', $sea['value_c']) : t('common.na');
-$metar = metar_nearest(true);
+$metar = $perfMeasure('metar_cached', static fn() => metar_nearest(false));
+if (empty($metar['available']) && (($metar['reason'] ?? '') === 'cache_only')) {
+    $metar = $perfMeasure('metar_remote', static fn() => metar_nearest(true));
+}
 $metarHumanLines = metar_decode_human($metar);
-$forecast = forecast_summary(true);
+$forecast = $perfMeasure('forecast_cached', static fn() => forecast_summary(false));
+if (empty($forecast['available']) && (($forecast['reason'] ?? '') === 'cache_only')) {
+    $forecast = $perfMeasure('forecast_remote', static fn() => forecast_summary(true));
+}
 $forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
 $forecastCurrentLabel = t((string) ($forecast['current_label_key'] ?? 'forecast.condition.unknown'));
@@ -323,8 +342,28 @@ if (!function_exists('rain_episode_start_display')) {
     }
 }
 
+$perfTimings['total_prepare'] = (microtime(true) - $perfStart) * 1000.0;
+if (!headers_sent()) {
+    $serverTiming = [];
+    foreach ($perfTimings as $name => $ms) {
+        $token = preg_replace('/[^a-z0-9_]/i', '_', (string) $name);
+        $serverTiming[] = $token . ';dur=' . number_format((float) $ms, 2, '.', '');
+    }
+    if ($serverTiming !== []) {
+        header('Server-Timing: ' . implode(', ', $serverTiming));
+    }
+}
+
 front_header(t('dashboard.title'));
 ?>
+<?php if ($perfEnabled): ?>
+<section class="panel">
+  <h3>Perf serveur (prep index)</h3>
+  <?php foreach ($perfTimings as $name => $ms): ?>
+    <p class="small-muted"><strong><?= h((string) $name) ?></strong>: <?= h(number_format((float) $ms, 2, '.', '')) ?> ms</p>
+  <?php endforeach; ?>
+</section>
+<?php endif; ?>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
@@ -654,6 +693,9 @@ $metricGroupIcons = [
 <script>
 (function () {
   var PERIOD = 300;
+  var asyncRefreshToken = <?= json_encode(csrf_token(), JSON_UNESCAPED_UNICODE) ?>;
+  var asyncRefreshLocalKey = 'meteo13_front_async_refresh_last_ping';
+  var asyncRefreshThrottleMs = 180000;
   var themeModeKey = 'meteo13_theme_mode';
   var storageKey = 'meteo13_auto_refresh_enabled';
   var lastReloadKey = 'meteo13_auto_refresh_last_reload_ts';
@@ -689,6 +731,28 @@ $metricGroupIcons = [
   var sunMomentClock = document.getElementById('sunMomentClock');
   var sunMomentTimezone = <?= json_encode(APP_TIMEZONE, JSON_UNESCAPED_UNICODE) ?>;
   if (!dot || !progress || !countdown || !toggle) return;
+
+  function triggerAsyncCacheRefresh() {
+    if (!asyncRefreshToken) return;
+    if (typeof navigator !== 'undefined' && 'onLine' in navigator && !navigator.onLine) return;
+    try {
+      var nowTs = Date.now();
+      var last = parseInt(localStorage.getItem(asyncRefreshLocalKey) || '0', 10);
+      if (Number.isFinite(last) && last > 0 && (nowTs - last) < asyncRefreshThrottleMs) {
+        return;
+      }
+      localStorage.setItem(asyncRefreshLocalKey, String(nowTs));
+    } catch (e) {}
+
+    var url = '/front_cache_refresh.php?t=' + encodeURIComponent(asyncRefreshToken);
+    fetch(url, {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+      keepalive: true,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    }).catch(function () {});
+  }
 
   function computeAutoTheme() {
     var nowSec = Math.floor(Date.now() / 1000);
@@ -968,6 +1032,7 @@ $metricGroupIcons = [
   refreshCardHealth();
   applyTheme();
   refreshSunMomentClock();
+  setTimeout(triggerAsyncCacheRefresh, 1200);
   render();
 })();
 </script>

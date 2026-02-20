@@ -5,6 +5,21 @@ require_once __DIR__ . '/db.php';
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/constants.php';
 
+function data_cache_read(string $key): ?array
+{
+    $raw = setting_get($key, '');
+    if (!is_string($raw) || $raw === '') {
+        return null;
+    }
+    $parsed = json_decode($raw, true);
+    return is_array($parsed) ? $parsed : null;
+}
+
+function data_cache_write(string $key, array $payload): void
+{
+    setting_set($key, json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+}
+
 function latest_row(): ?array
 {
     $t = data_table();
@@ -58,9 +73,23 @@ function period_rows(string $period): array
 
 function rain_totals(): array
 {
-    $t = data_table();
+    $table = data_table();
     $now = now_paris();
     $today = $now->format('Y-m-d');
+    $cacheKey = 'rain_totals_cache_json';
+    $cacheTtl = 120;
+    $cache = data_cache_read($cacheKey);
+    if (
+        is_array($cache)
+        && (string) ($cache['table'] ?? '') === $table
+        && (string) ($cache['day'] ?? '') === $today
+        && (int) ($cache['computed_at'] ?? 0) > (time() - $cacheTtl)
+        && isset($cache['totals']) && is_array($cache['totals'])
+    ) {
+        return $cache['totals'];
+    }
+
+    $t = $table;
     $monthStartDate = $now->modify('first day of this month')->format('Y-m-d');
     $yearStartDate = $now->setDate((int) $now->format('Y'), 1, 1)->format('Y-m-d');
     $rollingStartDate = $now->modify('-365 days')->format('Y-m-d');
@@ -112,18 +141,38 @@ function rain_totals(): array
     $rollingStmt->execute([':start' => $rollingStartDate, ':end' => $today]);
     $rollingTotal = (float) ($rollingStmt->fetchColumn() ?: 0);
 
-    return [
+    $totals = [
         'day' => round($dayTotal, 3),
         'month' => round($monthTotal, 3),
         'year' => round($yearTotal, 3),
         'rolling_year' => round($rollingTotal, 3),
     ];
+    data_cache_write($cacheKey, [
+        'table' => $table,
+        'day' => $today,
+        'computed_at' => time(),
+        'totals' => $totals,
+    ]);
+    return $totals;
 }
 
 function rain_reference_averages(): array
 {
-    $t = data_table();
+    $table = data_table();
     $now = now_paris();
+    $today = $now->format('Y-m-d');
+    $cacheKey = 'rain_refs_cache_json';
+    $cache = data_cache_read($cacheKey);
+    if (
+        is_array($cache)
+        && (string) ($cache['table'] ?? '') === $table
+        && (string) ($cache['day'] ?? '') === $today
+        && isset($cache['refs']) && is_array($cache['refs'])
+    ) {
+        return $cache['refs'];
+    }
+
+    $t = $table;
     $currentYear = (int) $now->format('Y');
     $currentMonth = (int) $now->format('n');
     $monthDay = $now->format('m-d');
@@ -235,7 +284,7 @@ function rain_reference_averages(): array
         $rollingAvg = round(array_sum($rollingTotals) / count($rollingTotals), 3);
     }
 
-    return [
+    $refs = [
         'day_avg' => $dayAvg,
         'month_avg' => $monthAvg,
         'year_to_date_avg' => $yearAvg,
@@ -245,6 +294,13 @@ function rain_reference_averages(): array
         'year_samples' => (int) ($yearRow['sample_count'] ?? 0),
         'rolling_samples' => count($rollingTotals),
     ];
+    data_cache_write($cacheKey, [
+        'table' => $table,
+        'day' => $today,
+        'computed_at' => time(),
+        'refs' => $refs,
+    ]);
+    return $refs;
 }
 
 function climat_available_years(): array
