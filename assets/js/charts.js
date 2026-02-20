@@ -1,53 +1,15 @@
 (function () {
   var d = window.METEO_DATA;
-  if (!d || !window.Chart) return;
+  if (!d) return;
 
   var STORAGE_KEY = 'meteo13_chart_density_mode';
   var DENSITY_ORDER = ['auto', 'compact', 'dense'];
   var dToggle = document.getElementById('chartDensityToggle');
-
   var labels = Array.isArray(d.labels) ? d.labels : [];
   var l = d.chart_labels || {};
   var ui = d.chart_ui || {};
-  var major = parseInt((String(window.Chart.version || '3').split('.')[0] || '3'), 10);
-  var isV2 = Number.isFinite(major) && major < 3;
   var charts = [];
   var resizeTimer = null;
-  var hoverGuidePlugin = {
-    id: 'meteoHoverGuide',
-    beforeDatasetsDraw: function (chart) {
-      var ctx = chart && chart.ctx;
-      var area = chart && chart.chartArea;
-      if (!ctx || !area) return;
-
-      var active = [];
-      if (chart.tooltip) {
-        if (typeof chart.tooltip.getActiveElements === 'function') {
-          active = chart.tooltip.getActiveElements() || [];
-        } else if (Array.isArray(chart.tooltip._active)) {
-          active = chart.tooltip._active;
-        }
-      }
-      if (!active.length) return;
-
-      var x = null;
-      if (active[0] && active[0].element && Number.isFinite(active[0].element.x)) {
-        x = active[0].element.x;
-      } else if (active[0] && active[0]._model && Number.isFinite(active[0]._model.x)) {
-        x = active[0]._model.x;
-      }
-      if (!Number.isFinite(x)) return;
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(x, area.top);
-      ctx.lineTo(x, area.bottom);
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = 'rgba(35, 92, 146, 0.35)';
-      ctx.stroke();
-      ctx.restore();
-    }
-  };
 
   function safeNumber(v) {
     if (v === null || v === undefined || v === '') return null;
@@ -61,23 +23,6 @@
       return raw.slice(8, 10) + '/' + raw.slice(5, 7) + ' ' + raw.slice(11, 16);
     }
     return raw;
-  }
-
-  function valueDecimals(values) {
-    var max = 0;
-    for (var i = 0; i < values.length; i++) {
-      var v = values[i];
-      if (!Number.isFinite(v)) continue;
-      var s = String(v);
-      var p = s.indexOf('.');
-      if (p >= 0) max = Math.max(max, s.length - p - 1);
-    }
-    return Math.min(2, max);
-  }
-
-  function formatValue(value, decimals) {
-    if (!Number.isFinite(value)) return 'N/A';
-    return Number(value).toFixed(decimals);
   }
 
   function compactDateLabel(raw) {
@@ -123,171 +68,36 @@
 
   function chooseMaxXTicks(count, resolvedMode) {
     if (resolvedMode === 'compact') {
-      if (count <= 24) return 8;
-      if (count <= 72) return 6;
-      if (count <= 240) return 5;
-      return 4;
+      if (count <= 24) return 6;
+      if (count <= 72) return 5;
+      if (count <= 240) return 4;
+      return 3;
     }
-
-    if (count <= 24) return 16;
-    if (count <= 72) return 12;
-    if (count <= 240) return 10;
-    return 8;
+    if (count <= 24) return 12;
+    if (count <= 72) return 10;
+    if (count <= 240) return 8;
+    return 6;
   }
 
-  function chooseMaxYTicks(resolvedMode) {
-    return resolvedMode === 'compact' ? 5 : 9;
+  function chooseYTicks(resolvedMode) {
+    return resolvedMode === 'compact' ? 4 : 6;
   }
 
-  function commonDataset(label, color, data) {
-    var decimals = valueDecimals(data);
-    return {
-      label: label,
-      data: data,
-      borderColor: color,
-      backgroundColor: 'rgba(0,0,0,0)',
-      borderWidth: 2.4,
-      pointRadius: 0,
-      pointHitRadius: 14,
-      pointHoverRadius: 4,
-      pointHoverBorderWidth: 2,
-      fill: false,
-      tension: 0.2,
-      spanGaps: true,
-      _decimals: decimals
-    };
-  }
-
-  function buildScales(resolvedMode, yAxisTitle) {
-    var maxXTicks = chooseMaxXTicks(labels.length, resolvedMode);
-    var maxYTicks = chooseMaxYTicks(resolvedMode);
-    var xAxisTitle = ui.time_axis || 'Date/Heure';
-    var tickColor = 'rgba(60, 84, 112, 0.95)';
-    var gridColor = 'rgba(120,140,165,0.26)';
-
-    if (isV2) {
-      return {
-        xAxes: [{
-          gridLines: { color: gridColor },
-          scaleLabel: { display: true, labelString: xAxisTitle, fontColor: tickColor },
-          ticks: {
-            fontColor: tickColor,
-            maxTicksLimit: maxXTicks,
-            callback: function (v) { return compactDateLabel(v); }
-          }
-        }],
-        yAxes: [{
-          gridLines: { color: gridColor },
-          scaleLabel: { display: true, labelString: yAxisTitle, fontColor: tickColor },
-          ticks: { beginAtZero: false, maxTicksLimit: maxYTicks, fontColor: tickColor }
-        }]
-      };
+  function valueDecimals(values) {
+    var max = 0;
+    for (var i = 0; i < values.length; i++) {
+      var v = values[i];
+      if (!Number.isFinite(v)) continue;
+      var s = String(v);
+      var p = s.indexOf('.');
+      if (p >= 0) max = Math.max(max, s.length - p - 1);
     }
-
-    return {
-      x: {
-        title: { display: true, text: xAxisTitle, color: tickColor },
-        grid: { color: gridColor },
-        ticks: {
-          color: tickColor,
-          maxTicksLimit: maxXTicks,
-          callback: function (_value, index) {
-            return compactDateLabel(labels[index]);
-          }
-        }
-      },
-      y: {
-        title: { display: true, text: yAxisTitle, color: tickColor },
-        grid: { color: gridColor },
-        ticks: { maxTicksLimit: maxYTicks, color: tickColor }
-      }
-    };
+    return Math.min(2, max);
   }
 
-  function buildOptions(resolvedMode, yAxisTitle) {
-    var scales = buildScales(resolvedMode, yAxisTitle);
-
-    if (isV2) {
-      return {
-        responsive: true,
-        maintainAspectRatio: false,
-        devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
-        animation: { duration: 0 },
-        events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
-        legend: { display: false },
-        tooltips: {
-          enabled: true,
-          mode: 'index',
-          intersect: false,
-          displayColors: false,
-          callbacks: {
-            title: function (items) {
-              if (!items || !items.length) return '';
-              return rawDateLabel(items[0].label);
-            },
-            label: function (item, data) {
-              var ds = (data && data.datasets && data.datasets[item.datasetIndex]) || {};
-              var raw = item && item.yLabel !== undefined ? item.yLabel : item.value;
-              var val = Number(raw);
-              return (ds.label || '') + ': ' + formatValue(val, Number(ds._decimals || 0));
-            }
-          }
-        },
-        hover: { mode: 'index', intersect: false },
-        scales: scales
-      };
-    }
-
-    return {
-      responsive: true,
-      maintainAspectRatio: false,
-      devicePixelRatio: Math.max(1, window.devicePixelRatio || 1),
-      animation: false,
-      events: ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'],
-      interaction: { mode: 'index', intersect: false, axis: 'x' },
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          enabled: true,
-          mode: 'index',
-          intersect: false,
-          displayColors: false,
-          callbacks: {
-            title: function (items) {
-              if (!items || !items.length) return '';
-              return rawDateLabel(items[0].label);
-            },
-            label: function (ctx) {
-              var ds = ctx && ctx.dataset ? ctx.dataset : {};
-              var raw = ctx && ctx.parsed && ctx.parsed.y !== undefined
-                ? ctx.parsed.y
-                : (ctx ? ctx.raw : NaN);
-              var v = Number(raw);
-              return (ds.label || '') + ': ' + formatValue(v, Number(ds._decimals || 0));
-            }
-          }
-        }
-      },
-      scales: scales
-    };
-  }
-
-  function buildChart(id, datasetLabel, color, series, resolvedMode) {
-    var cv = document.getElementById(id);
-    if (!cv) return;
-
-    var values = (Array.isArray(series) ? series : []).map(safeNumber);
-    var chart = new Chart(cv.getContext('2d'), {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [commonDataset(datasetLabel, color, values)]
-      },
-      options: buildOptions(resolvedMode, datasetLabel),
-      plugins: [hoverGuidePlugin]
-    });
-
-    charts.push(chart);
+  function formatValue(value, decimals) {
+    if (!Number.isFinite(value)) return 'N/A';
+    return Number(value).toFixed(decimals);
   }
 
   function rainSeries() {
@@ -328,10 +138,276 @@
     return out;
   }
 
+  function createTooltip(container) {
+    var tip = document.createElement('div');
+    tip.className = 'chart-tooltip';
+    tip.style.display = 'none';
+    container.style.position = container.style.position || 'relative';
+    container.appendChild(tip);
+    return tip;
+  }
+
+  function CanvasLineChart(canvas, config) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.container = canvas.closest('.chart-panel') || canvas.parentElement;
+    this.tooltip = createTooltip(this.container);
+    this.cfg = config;
+    this.hoverIndex = null;
+    this.dpr = Math.max(1, window.devicePixelRatio || 1);
+    this.area = { left: 58, right: 10, top: 16, bottom: 42 };
+    this._bind();
+    this.resize();
+  }
+
+  CanvasLineChart.prototype._bind = function () {
+    var self = this;
+    this.canvas.addEventListener('mousemove', function (e) { self.onMove(e); });
+    this.canvas.addEventListener('mouseleave', function () { self.onLeave(); });
+    this.canvas.addEventListener('touchstart', function (e) { self.onTouch(e); }, { passive: true });
+    this.canvas.addEventListener('touchmove', function (e) { self.onTouch(e); }, { passive: true });
+    this.canvas.addEventListener('touchend', function () { self.onLeave(); }, { passive: true });
+  };
+
+  CanvasLineChart.prototype.resize = function () {
+    var rect = this.canvas.getBoundingClientRect();
+    var w = Math.max(300, Math.round(rect.width));
+    var h = Math.max(220, Math.round(rect.height));
+    this.canvas.width = Math.round(w * this.dpr);
+    this.canvas.height = Math.round(h * this.dpr);
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.w = w;
+    this.h = h;
+    this.draw();
+  };
+
+  CanvasLineChart.prototype.setMode = function (mode) {
+    this.cfg.mode = mode;
+    this.draw();
+  };
+
+  CanvasLineChart.prototype.getPlot = function () {
+    return {
+      left: this.area.left,
+      top: this.area.top,
+      right: this.w - this.area.right,
+      bottom: this.h - this.area.bottom,
+      width: this.w - this.area.left - this.area.right,
+      height: this.h - this.area.top - this.area.bottom
+    };
+  };
+
+  CanvasLineChart.prototype.yRange = function () {
+    var data = this.cfg.values;
+    var min = Infinity;
+    var max = -Infinity;
+    for (var i = 0; i < data.length; i++) {
+      var v = data[i];
+      if (!Number.isFinite(v)) continue;
+      min = Math.min(min, v);
+      max = Math.max(max, v);
+    }
+    if (!Number.isFinite(min) || !Number.isFinite(max)) return { min: 0, max: 1 };
+    if (min === max) {
+      min -= 1;
+      max += 1;
+    }
+    var pad = (max - min) * 0.08;
+    return { min: min - pad, max: max + pad };
+  };
+
+  CanvasLineChart.prototype.xForIndex = function (idx, plot) {
+    if (labels.length <= 1) return plot.left;
+    return plot.left + (idx * plot.width) / (labels.length - 1);
+  };
+
+  CanvasLineChart.prototype.yForValue = function (v, yr, plot) {
+    return plot.bottom - ((v - yr.min) * plot.height) / (yr.max - yr.min);
+  };
+
+  CanvasLineChart.prototype.drawAxes = function (plot, yr) {
+    var ctx = this.ctx;
+    var resolved = this.cfg.mode;
+    var maxXTicks = chooseMaxXTicks(labels.length, resolved);
+    var yTicks = chooseYTicks(resolved);
+    var tickColor = 'rgba(60, 84, 112, 0.95)';
+    var gridColor = 'rgba(120,140,165,0.26)';
+
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    for (var i = 0; i <= yTicks; i++) {
+      var p = i / yTicks;
+      var y = plot.top + p * plot.height;
+      ctx.beginPath();
+      ctx.moveTo(plot.left, y);
+      ctx.lineTo(plot.right, y);
+      ctx.stroke();
+
+      var value = yr.max - p * (yr.max - yr.min);
+      ctx.fillStyle = tickColor;
+      ctx.font = '12px Verdana, Arial, sans-serif';
+      ctx.textAlign = 'right';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(formatValue(value, this.cfg.decimals), plot.left - 8, y);
+    }
+
+    var step = Math.max(1, Math.ceil(labels.length / maxXTicks));
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (var j = 0; j < labels.length; j += step) {
+      var x = this.xForIndex(j, plot);
+      ctx.beginPath();
+      ctx.moveTo(x, plot.top);
+      ctx.lineTo(x, plot.bottom);
+      ctx.stroke();
+      ctx.fillStyle = tickColor;
+      ctx.fillText(compactDateLabel(labels[j]), x, plot.bottom + 7);
+    }
+
+    ctx.strokeStyle = 'rgba(60, 84, 112, 0.55)';
+    ctx.beginPath();
+    ctx.moveTo(plot.left, plot.top);
+    ctx.lineTo(plot.left, plot.bottom);
+    ctx.lineTo(plot.right, plot.bottom);
+    ctx.stroke();
+
+    ctx.fillStyle = tickColor;
+    ctx.font = '12px Verdana, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(ui.time_axis || 'Date/Heure', plot.left + plot.width / 2, this.h - 5);
+
+    ctx.save();
+    ctx.translate(14, plot.top + plot.height / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = 'center';
+    ctx.fillText(this.cfg.yTitle, 0, 0);
+    ctx.restore();
+  };
+
+  CanvasLineChart.prototype.drawLine = function (plot, yr) {
+    var ctx = this.ctx;
+    ctx.strokeStyle = this.cfg.color;
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+
+    var started = false;
+    for (var i = 0; i < this.cfg.values.length; i++) {
+      var v = this.cfg.values[i];
+      if (!Number.isFinite(v)) {
+        started = false;
+        continue;
+      }
+      var x = this.xForIndex(i, plot);
+      var y = this.yForValue(v, yr, plot);
+      if (!started) {
+        ctx.moveTo(x, y);
+        started = true;
+      } else {
+        ctx.lineTo(x, y);
+      }
+    }
+    ctx.stroke();
+  };
+
+  CanvasLineChart.prototype.nearestIndex = function (px, py, plot) {
+    if (px < plot.left || px > plot.right || py < plot.top || py > plot.bottom) return null;
+    var ratio = (px - plot.left) / Math.max(1, plot.width);
+    var idx = Math.round(ratio * (labels.length - 1));
+    idx = Math.max(0, Math.min(labels.length - 1, idx));
+
+    if (Number.isFinite(this.cfg.values[idx])) return idx;
+
+    var left = idx - 1;
+    var right = idx + 1;
+    while (left >= 0 || right < this.cfg.values.length) {
+      if (right < this.cfg.values.length && Number.isFinite(this.cfg.values[right])) return right;
+      if (left >= 0 && Number.isFinite(this.cfg.values[left])) return left;
+      left -= 1;
+      right += 1;
+    }
+    return null;
+  };
+
+  CanvasLineChart.prototype.drawHover = function (plot, yr) {
+    if (this.hoverIndex === null) {
+      this.tooltip.style.display = 'none';
+      return;
+    }
+    var idx = this.hoverIndex;
+    var value = this.cfg.values[idx];
+    if (!Number.isFinite(value)) {
+      this.tooltip.style.display = 'none';
+      return;
+    }
+
+    var x = this.xForIndex(idx, plot);
+    var y = this.yForValue(value, yr, plot);
+    var ctx = this.ctx;
+
+    ctx.strokeStyle = 'rgba(35, 92, 146, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, plot.top);
+    ctx.lineTo(x, plot.bottom);
+    ctx.stroke();
+
+    ctx.fillStyle = this.cfg.color;
+    ctx.beginPath();
+    ctx.arc(x, y, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    this.tooltip.style.display = 'block';
+    this.tooltip.innerHTML = '<strong>' + rawDateLabel(labels[idx]) + '</strong><br>' +
+      this.cfg.yTitle + ': ' + formatValue(value, this.cfg.decimals);
+
+    var left = x + 12;
+    var top = y - 12;
+    var maxLeft = this.w - this.tooltip.offsetWidth - 8;
+    if (left > maxLeft) left = x - this.tooltip.offsetWidth - 12;
+    if (left < 8) left = 8;
+    if (top < 8) top = 8;
+    this.tooltip.style.left = left + 'px';
+    this.tooltip.style.top = top + 'px';
+  };
+
+  CanvasLineChart.prototype.draw = function () {
+    var ctx = this.ctx;
+    ctx.clearRect(0, 0, this.w, this.h);
+
+    var plot = this.getPlot();
+    var yr = this.yRange();
+    this.drawAxes(plot, yr);
+    this.drawLine(plot, yr);
+    this.drawHover(plot, yr);
+  };
+
+  CanvasLineChart.prototype.onMove = function (e) {
+    var rect = this.canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left;
+    var py = e.clientY - rect.top;
+    this.hoverIndex = this.nearestIndex(px, py, this.getPlot());
+    this.draw();
+  };
+
+  CanvasLineChart.prototype.onTouch = function (e) {
+    if (!e.touches || !e.touches[0]) return;
+    var t = e.touches[0];
+    var rect = this.canvas.getBoundingClientRect();
+    var px = t.clientX - rect.left;
+    var py = t.clientY - rect.top;
+    this.hoverIndex = this.nearestIndex(px, py, this.getPlot());
+    this.draw();
+  };
+
+  CanvasLineChart.prototype.onLeave = function () {
+    this.hoverIndex = null;
+    this.draw();
+  };
+
   function destroyCharts() {
     for (var i = 0; i < charts.length; i++) {
-      if (charts[i] && typeof charts[i].destroy === 'function') {
-        charts[i].destroy();
+      if (charts[i] && charts[i].tooltip && charts[i].tooltip.parentNode) {
+        charts[i].tooltip.parentNode.removeChild(charts[i].tooltip);
       }
     }
     charts = [];
@@ -341,6 +417,20 @@
     if (!dToggle) return;
     var prefix = ui.density_label || 'Density';
     dToggle.textContent = prefix + ': ' + modeLabel(selectedMode);
+  }
+
+  function buildChart(id, yTitle, color, series, resolvedMode) {
+    var cv = document.getElementById(id);
+    if (!cv) return;
+    var values = (Array.isArray(series) ? series : []).map(safeNumber);
+    var chart = new CanvasLineChart(cv, {
+      mode: resolvedMode,
+      yTitle: yTitle,
+      color: color,
+      values: values,
+      decimals: valueDecimals(values)
+    });
+    charts.push(chart);
   }
 
   function renderAll(selectedMode) {
@@ -368,7 +458,6 @@
   }
 
   window.addEventListener('resize', function () {
-    if (selectedMode !== 'auto') return;
     window.clearTimeout(resizeTimer);
     resizeTimer = window.setTimeout(function () {
       renderAll(selectedMode);
