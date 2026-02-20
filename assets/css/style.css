@@ -15,6 +15,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .panel-dashboard.season-autumn{background-image:url('../img/seasons/autumn.svg')}
 .panel-dashboard.season-winter{background-image:url('../img/seasons/winter.svg')}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
+.card h3 .label-paren{font-size:.82em;font-weight:600;opacity:.86}
 .card.is-stale-card{filter:grayscale(.88);opacity:.58}
 [data-live-key]{transition:background-color .35s ease,color .35s ease,transform .25s ease,box-shadow .35s ease}
 .live-updated{background:rgba(26,92,157,.11);border-radius:8px;padding:.04rem .28rem;box-shadow:0 0 0 1px rgba(26,92,157,.2) inset;animation:liveFlash .85s ease}

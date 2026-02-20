@@ -330,6 +330,15 @@ if (!function_exists('rain_delta_display')) {
         return $sign . $formatted . ' ' . units_symbol('R');
     }
 }
+if (!function_exists('label_with_small_paren')) {
+    function label_with_small_paren(string $label): string
+    {
+        if (preg_match('/^(.*?)(\s*\(.*\))$/u', $label, $m) === 1) {
+            return h(trim((string) $m[1])) . ' <small class="label-paren">' . h(trim((string) $m[2])) . '</small>';
+        }
+        return h($label);
+    }
+}
 if (!function_exists('rain_episode_start_display')) {
     function rain_episode_start_display(array $episode): string
     {
@@ -623,22 +632,22 @@ $metricGroupIcons = [
     <?php $rainYear = units_format('R', $rain['year']); ?>
     <?php $rainRolling = units_format('R', $rain['rolling_year'] ?? 0.0); ?>
     <article class="card js-live-card" data-card-ok="<?= isset($rain['day']) ? '1' : '0' ?>">
-      <h3><?= h($rainDayLabel) ?></h3>
+      <h3><?= label_with_small_paren($rainDayLabel) ?></h3>
       <div data-live-key="rain_day" data-live-value="<?= h(isset($rain['day']) ? (string) $rain['day'] : '') ?>"><?= h($rainDay . ($rainDay !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_day_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['day']) ? (float) $rain['day'] : null, isset($rainRefs['day_avg']) ? ($rainRefs['day_avg'] !== null ? (float) $rainRefs['day_avg'] : null) : null)) ?></strong></p>
     </article>
     <article class="card js-live-card" data-card-ok="<?= isset($rain['month']) ? '1' : '0' ?>">
-      <h3><?= h($rainMonthLabel) ?></h3>
+      <h3><?= label_with_small_paren($rainMonthLabel) ?></h3>
       <div data-live-key="rain_month" data-live-value="<?= h(isset($rain['month']) ? (string) $rain['month'] : '') ?>"><?= h($rainMonth . ($rainMonth !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_month_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['month']) ? (float) $rain['month'] : null, isset($rainRefs['month_avg']) ? ($rainRefs['month_avg'] !== null ? (float) $rainRefs['month_avg'] : null) : null)) ?></strong></p>
     </article>
     <article class="card js-live-card" data-card-ok="<?= isset($rain['year']) ? '1' : '0' ?>">
-      <h3><?= h($rainYearLabel) ?></h3>
+      <h3><?= label_with_small_paren($rainYearLabel) ?></h3>
       <div data-live-key="rain_year" data-live-value="<?= h(isset($rain['year']) ? (string) $rain['year'] : '') ?>"><?= h($rainYear . ($rainYear !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_year_vs_same_date_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['year']) ? (float) $rain['year'] : null, isset($rainRefs['year_to_date_avg']) ? ($rainRefs['year_to_date_avg'] !== null ? (float) $rainRefs['year_to_date_avg'] : null) : null)) ?></strong></p>
     </article>
     <article class="card js-live-card" data-card-ok="<?= isset($rain['rolling_year']) ? '1' : '0' ?>">
-      <h3><?= h($rainRollingLabel) ?></h3>
+      <h3><?= label_with_small_paren($rainRollingLabel) ?></h3>
       <div data-live-key="rain_rolling_year" data-live-value="<?= h(isset($rain['rolling_year']) ? (string) $rain['rolling_year'] : '') ?>"><?= h($rainRolling . ($rainRolling !== t('common.na') ? (' ' . units_symbol('R')) : '')) ?></div>
       <p class="small-muted"><?= h(t('rain.delta_rolling_vs_avg')) ?>: <strong><?= h(rain_delta_display(isset($rain['rolling_year']) ? (float) $rain['rolling_year'] : null, isset($rainRefs['rolling_365_avg']) ? ($rainRefs['rolling_365_avg'] !== null ? (float) $rainRefs['rolling_365_avg'] : null) : null)) ?></strong></p>
     </article>
