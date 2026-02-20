@@ -831,7 +831,7 @@ $metricGroupIcons = [
         </svg>
       </span>
       <div class="forecast-current">
-        <div class="forecast-value"><?= h(t('alerts.zone')) ?>: <?= h($weatherAlertsZoneLabel) ?></div>
+        <div class="forecast-value"><?= h($weatherAlertsZoneLabel) ?></div>
         <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
       </div>
     </div>
