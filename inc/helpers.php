@@ -168,3 +168,48 @@ function sanitize_rich_html(string $html): string
 
     return strip_tags($html, '<p><br><strong><em><b><i><u><ul><ol><li><a><h2><h3><h4><blockquote>');
 }
+
+function app_release_info(): array
+{
+    static $cached = null;
+    if ($cached !== null) {
+        return $cached;
+    }
+
+    $fallback = 'v' . APP_VERSION;
+    $fileTagPath = dirname(__DIR__) . '/config/release_tag.txt';
+    if (is_file($fileTagPath)) {
+        $fileTag = trim((string) @file_get_contents($fileTagPath));
+        if ($fileTag !== '') {
+            return $cached = ['tag' => $fileTag, 'source' => 'file'];
+        }
+    }
+
+    $envTag = trim((string) getenv('APP_RELEASE_TAG'));
+    if ($envTag !== '') {
+        return $cached = ['tag' => $envTag, 'source' => 'env'];
+    }
+
+    if (!function_exists('shell_exec')) {
+        return $cached = ['tag' => $fallback, 'source' => 'fallback'];
+    }
+
+    $root = dirname(__DIR__);
+    if (!is_dir($root . '/.git')) {
+        return $cached = ['tag' => $fallback, 'source' => 'fallback'];
+    }
+
+    $cmd = 'git -C ' . escapeshellarg($root) . ' describe --tags --abbrev=0 2>/dev/null';
+    $out = @shell_exec($cmd);
+    $tag = trim((string) $out);
+    if ($tag !== '') {
+        return $cached = ['tag' => $tag, 'source' => 'git'];
+    }
+    return $cached = ['tag' => $fallback, 'source' => 'fallback'];
+}
+
+function app_release_tag(): string
+{
+    $info = app_release_info();
+    return (string) ($info['tag'] ?? ('v' . APP_VERSION));
+}

@@ -24,6 +24,14 @@ $lockStatus = station_position_locked() ? t('health.position_on') : t('health.po
 $zip = station_zipcode();
 $lat = station_latitude_setting();
 $lon = station_longitude_setting();
+$release = app_release_info();
+$releaseSourceMap = [
+    'file' => 'release_tag.txt',
+    'env' => 'APP_RELEASE_TAG',
+    'git' => '.git tag',
+    'fallback' => 'APP_VERSION',
+];
+$releaseSource = $releaseSourceMap[(string) ($release['source'] ?? '')] ?? (string) ($release['source'] ?? 'unknown');
 
 admin_header(t('admin.health'));
 ?>
@@ -36,6 +44,8 @@ admin_header(t('admin.health'));
   <p><?= h(t('health.last_external')) ?>: <?= h($lastExternal['created_at'] ?? t('common.na')) ?> (<?= h($lastExternal['message'] ?? '') ?>)</p>
   <p><?= h(t('health.token_status')) ?>: <?= $token['configured'] ? h(t('netatmo.configured')) : h(t('netatmo.missing')) ?><?= $token['expired'] ? ' (' . h(t('netatmo.expired')) . ')' : '' ?></p>
   <p><?= h(t('health.error_24h')) ?>: <?= $err24h ?></p>
+  <p><?= h(t('health.release_tag')) ?>: <?= h((string) ($release['tag'] ?? t('common.na'))) ?></p>
+  <p><?= h(t('health.release_source')) ?>: <?= h($releaseSource) ?></p>
   <hr>
   <p><strong><?= h(t('health.position')) ?></strong></p>
   <p><?= h(t('health.position_source')) ?>: <?= h($source) ?></p>
