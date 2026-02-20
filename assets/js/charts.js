@@ -348,16 +348,21 @@
     var y = this.yForValue(value, yr, plot);
     var ctx = this.ctx;
 
-    ctx.strokeStyle = 'rgba(35, 92, 146, 0.4)';
+    ctx.strokeStyle = 'rgba(35, 92, 146, 0.5)';
     ctx.lineWidth = 1;
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(x, plot.top);
     ctx.lineTo(x, plot.bottom);
     ctx.stroke();
+    ctx.strokeStyle = 'rgba(210, 86, 43, 0.9)';
+    ctx.lineWidth = 1.4;
+    ctx.setLineDash([5, 4]);
     ctx.beginPath();
     ctx.moveTo(plot.left, y);
     ctx.lineTo(plot.right, y);
     ctx.stroke();
+    ctx.setLineDash([]);
 
     ctx.fillStyle = this.cfg.color;
     ctx.beginPath();
