@@ -823,19 +823,19 @@ $metricGroupIcons = [
   </article>
   <article class="card forecast-card alerts-card js-live-card" data-card-ok="<?= !empty($weatherAlerts['available']) ? '1' : '0' ?>">
     <h3><?= h(t('alerts.title')) ?></h3>
-    <?php if (!empty($weatherAlerts['available'])): ?>
-      <div class="forecast-head">
-        <span class="forecast-icon alerts-icon" aria-hidden="true">
-          <svg viewBox="0 0 64 64">
-            <path d="M32 8L6 54h52L32 8z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-            <path d="M32 24v14M32 45.5v.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-          </svg>
-        </span>
-        <div class="forecast-current">
-          <div class="forecast-value"><?= h($weatherAlertsZoneLabel) ?></div>
-          <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
-        </div>
+    <div class="forecast-head">
+      <span class="forecast-icon alerts-icon" aria-hidden="true">
+        <svg viewBox="0 0 64 64">
+          <path d="M32 8L6 54h52L32 8z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M32 24v14M32 45.5v.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <div class="forecast-current">
+        <div class="forecast-value"><?= h(t('alerts.zone')) ?>: <?= h($weatherAlertsZoneLabel) ?></div>
+        <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
       </div>
+    </div>
+    <?php if (!empty($weatherAlerts['available'])): ?>
       <?php if ($weatherAlertsList !== []): ?>
         <div class="alerts-list">
           <?php foreach ($weatherAlertsList as $alert): ?>
