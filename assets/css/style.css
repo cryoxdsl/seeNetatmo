@@ -46,7 +46,6 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .extremes-label .extremes-icon svg{width:15px;height:15px;display:block}
 .extremes-card .extremes-line strong{font-size:.87rem;color:#1d3e60}
 .extremes-card .extremes-line strong .extremes-time{font-size:.82em;font-weight:600;opacity:.86}
-.extremes-card .extremes-line strong .extremes-ref-hint{font-size:.78em;opacity:.65;margin-left:.18rem;vertical-align:1px}
 .extremes-card .sun-visual{padding:.4rem .45rem;background:#f8fbff;border:1px solid #d7e3ef;border-radius:8px}
 .extremes-card .sun-scale{position:relative;height:10px;border-radius:999px;background:linear-gradient(90deg,#c7d7e8,#b7cade);overflow:visible}
 .extremes-card .sun-daylight{position:absolute;top:0;height:100%;border-radius:999px;background:linear-gradient(90deg,#f3c766,#ffe08b)}
