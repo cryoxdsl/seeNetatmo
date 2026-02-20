@@ -124,6 +124,15 @@ function weather_alerts_summary(bool $allowRemote = false): array
     if ($cacheRaw !== '') {
         $cache = json_decode($cacheRaw, true);
         if (is_array($cache)) {
+            if ((string) ($cache['zone_label'] ?? '') === '') {
+                $cache['zone_label'] = weather_alerts_reverse_admin_label($coords['lat'], $coords['lon']);
+                if ((string) ($cache['zone_label'] ?? '') === '') {
+                    $cache['zone_label'] = number_format($coords['lat'], 3, '.', '') . ', ' . number_format($coords['lon'], 3, '.', '');
+                }
+                $cache['station_lat'] = $coords['lat'];
+                $cache['station_lon'] = $coords['lon'];
+                setting_set('weather_alerts_cache_json', json_encode($cache, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));
+            }
             $fresh = ((int) ($cache['fetched_at'] ?? 0)) > (time() - WEATHER_ALERTS_CACHE_TTL_SECONDS);
             $same = abs(((float) ($cache['station_lat'] ?? 0)) - $coords['lat']) < 0.0001
                 && abs(((float) ($cache['station_lon'] ?? 0)) - $coords['lon']) < 0.0001;
