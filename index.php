@@ -260,8 +260,9 @@ $dayMaxRefDisplay = units_format('T', $dayTempRef['max_avg'] ?? null);
 if ($dayMaxRefDisplay !== t('common.na')) {
     $dayMaxRefDisplay .= ' ' . units_symbol('T');
 }
-$dayMinRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . ', n=' . $refSamples . '): ' . $dayMinRefDisplay;
-$dayMaxRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . ', n=' . $refSamples . '): ' . $dayMaxRefDisplay;
+$refSamplesLabel = $refSamples > 0 ? (', n=' . $refSamples) : '';
+$dayMinRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . $refSamplesLabel . '): ' . $dayMinRefDisplay;
+$dayMaxRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . $refSamplesLabel . '): ' . $dayMaxRefDisplay;
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
 $dayLengthDisplay = t('common.na');

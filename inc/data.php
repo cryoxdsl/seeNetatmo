@@ -470,21 +470,21 @@ function current_day_temp_reference(): array
     $monthDay = $now->format('m-%d');
 
     $fetch = static function (bool $excludeCurrentYear) use ($t, $monthDay, $currentYear): array {
-        $whereYear = $excludeCurrentYear ? 'AND YEAR(`DateTime`) <> :current_year' : '';
-        $stmt = db()->prepare(
-            "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
-             FROM (
-                SELECT YEAR(`DateTime`) AS y,
-                       DATE(`DateTime`) AS d,
-                       MIN(`T`) AS day_min,
-                       MAX(`T`) AS day_max
-                FROM `{$t}`
-                WHERE DATE_FORMAT(`DateTime`, '%m-%d') = :md
-                  {$whereYear}
-                  AND `T` IS NOT NULL
-                GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
-             ) x"
-        );
+        $whereYear = $excludeCurrentYear ? 'WHERE y <> :current_year' : '';
+        $sql = "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
+                FROM (
+                    SELECT
+                        CAST(SUBSTRING(CAST(`DateTime` AS CHAR), 1, 4) AS UNSIGNED) AS y,
+                        SUBSTRING(CAST(`DateTime` AS CHAR), 1, 10) AS d,
+                        MIN(CAST(`T` AS DECIMAL(6,2))) AS day_min,
+                        MAX(CAST(`T` AS DECIMAL(6,2))) AS day_max
+                    FROM `{$t}`
+                    WHERE SUBSTRING(CAST(`DateTime` AS CHAR), 6, 5) = :md
+                      AND `T` IS NOT NULL
+                    GROUP BY y, d
+                ) x
+                {$whereYear}";
+        $stmt = db()->prepare($sql);
         $params = [':md' => $monthDay];
         if ($excludeCurrentYear) {
             $params[':current_year'] = $currentYear;
