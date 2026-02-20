@@ -8,6 +8,7 @@ require_once __DIR__ . '/inc/view.php';
 require_once __DIR__ . '/inc/sea_temp.php';
 require_once __DIR__ . '/inc/forecast.php';
 require_once __DIR__ . '/inc/metar.php';
+require_once __DIR__ . '/inc/weather_alerts.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -183,6 +184,20 @@ $metarHumanLines = metar_decode_human($metar);
 $forecast = $perfMeasure('forecast_cached', static fn() => forecast_summary(false));
 if (empty($forecast['available']) && (($forecast['reason'] ?? '') === 'cache_only')) {
     $forecast = $perfMeasure('forecast_remote', static fn() => forecast_summary(true));
+}
+$weatherAlerts = $perfMeasure('weather_alerts_cached', static fn() => weather_alerts_summary(false));
+if (empty($weatherAlerts['available']) && (($weatherAlerts['reason'] ?? '') === 'cache_only')) {
+    $weatherAlerts = $perfMeasure('weather_alerts_remote', static fn() => weather_alerts_summary(true));
+}
+$weatherAlertsReason = (string) ($weatherAlerts['reason'] ?? '');
+$weatherAlertsUpdated = trim((string) ($weatherAlerts['updated_at'] ?? ''));
+$weatherAlertsWindow = trim((string) ($weatherAlerts['window'] ?? '48h'));
+$weatherAlertsList = is_array($weatherAlerts['alerts'] ?? null) ? $weatherAlerts['alerts'] : [];
+$weatherAlertsUnavailableMsg = t('alerts.unavailable');
+if ($weatherAlertsReason === 'no_station_coords') {
+    $weatherAlertsUnavailableMsg = t('alerts.coords_required');
+} elseif ($weatherAlertsReason === 'retry_later') {
+    $weatherAlertsUnavailableMsg = t('alerts.retry_later');
 }
 $forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
@@ -759,6 +774,50 @@ $metricGroupIcons = [
       <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
         <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
       <?php endif; ?>
+    <?php endif; ?>
+  </article>
+  <article class="card forecast-card alerts-card js-live-card" data-card-ok="<?= !empty($weatherAlerts['available']) ? '1' : '0' ?>">
+    <h3><?= h(t('alerts.title')) ?></h3>
+    <?php if (!empty($weatherAlerts['available'])): ?>
+      <div class="forecast-head">
+        <span class="forecast-icon alerts-icon" aria-hidden="true">
+          <svg viewBox="0 0 64 64">
+            <path d="M32 8L6 54h52L32 8z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+            <path d="M32 24v14M32 45.5v.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <div class="forecast-current">
+          <div class="forecast-value"><?= h(t('alerts.zone_station')) ?></div>
+          <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
+        </div>
+      </div>
+      <?php if ($weatherAlertsList !== []): ?>
+        <div class="alerts-list">
+          <?php foreach ($weatherAlertsList as $alert): ?>
+            <?php
+              $severity = (string) ($alert['severity'] ?? 'low');
+              if (!in_array($severity, ['low', 'moderate', 'high'], true)) {
+                  $severity = 'low';
+              }
+            ?>
+            <p class="forecast-line alerts-line">
+              <span class="alerts-severity alerts-severity-<?= h($severity) ?>"><?= h(t('alerts.severity.' . $severity)) ?></span>
+              <strong><?= h((string) ($alert['title'] ?? t('common.na'))) ?></strong>
+              <?php if (!empty($alert['detail'])): ?>
+                <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
+              <?php endif; ?>
+            </p>
+          <?php endforeach; ?>
+        </div>
+      <?php else: ?>
+        <p class="small-muted"><?= h(t('alerts.none')) ?></p>
+      <?php endif; ?>
+      <?php if ($weatherAlertsUpdated !== ''): ?>
+        <p class="small-muted"><?= h(t('alerts.updated')) ?>: <?= h($weatherAlertsUpdated) ?></p>
+      <?php endif; ?>
+    <?php else: ?>
+      <p class="small-muted"><?= h(t('alerts.unavailable')) ?></p>
+      <p class="small-muted"><?= h($weatherAlertsUnavailableMsg) ?></p>
     <?php endif; ?>
   </article>
   <article class="card wind-rose-card js-live-card" id="wind-rose-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">
