@@ -9,7 +9,6 @@ require_once __DIR__ . '/inc/logger.php';
 require_once __DIR__ . '/inc/forecast.php';
 require_once __DIR__ . '/inc/sea_temp.php';
 require_once __DIR__ . '/inc/metar.php';
-require_once __DIR__ . '/inc/weather_alerts.php';
 require_once __DIR__ . '/inc/data.php';
 
 http_response_code(204);
@@ -53,7 +52,6 @@ try {
     forecast_summary(true);
     sea_temp_nearest(true);
     metar_nearest(true);
-    weather_alerts_summary(true);
     if ($scope === 'full') {
         rain_totals();
         rain_reference_averages();

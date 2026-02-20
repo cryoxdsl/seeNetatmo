@@ -8,7 +8,6 @@ require_once __DIR__ . '/inc/view.php';
 require_once __DIR__ . '/inc/sea_temp.php';
 require_once __DIR__ . '/inc/forecast.php';
 require_once __DIR__ . '/inc/metar.php';
-require_once __DIR__ . '/inc/weather_alerts.php';
 if (is_file(__DIR__ . '/inc/weather_condition.php')) {
     require_once __DIR__ . '/inc/weather_condition.php';
 }
@@ -184,26 +183,6 @@ $metarHumanLines = metar_decode_human($metar);
 $forecast = $perfMeasure('forecast_cached', static fn() => forecast_summary(false));
 if (empty($forecast['available']) && (($forecast['reason'] ?? '') === 'cache_only')) {
     $forecast = $perfMeasure('forecast_remote', static fn() => forecast_summary(true));
-}
-$weatherAlerts = $perfMeasure('weather_alerts_cached', static fn() => weather_alerts_summary(false));
-if (empty($weatherAlerts['available']) && (($weatherAlerts['reason'] ?? '') === 'cache_only')) {
-    $weatherAlerts = $perfMeasure('weather_alerts_remote', static fn() => weather_alerts_summary(true));
-}
-$weatherAlertsReason = (string) ($weatherAlerts['reason'] ?? '');
-$weatherAlertsUpdated = trim((string) ($weatherAlerts['updated_at'] ?? ''));
-$weatherAlertsWindow = trim((string) ($weatherAlerts['window'] ?? '48h'));
-$weatherAlertsList = is_array($weatherAlerts['alerts'] ?? null) ? $weatherAlerts['alerts'] : [];
-$weatherAlertsDebug = is_array($weatherAlerts['debug'] ?? null) ? $weatherAlerts['debug'] : [];
-$alertsDebugEnabled = ((string) ($_GET['alerts_debug'] ?? '')) === '1';
-$weatherAlertsZoneLabel = trim((string) ($weatherAlerts['zone_label'] ?? ''));
-if ($weatherAlertsZoneLabel === '') {
-    $weatherAlertsZoneLabel = t('alerts.zone_station');
-}
-$weatherAlertsUnavailableMsg = t('alerts.unavailable');
-if ($weatherAlertsReason === 'no_station_coords') {
-    $weatherAlertsUnavailableMsg = t('alerts.coords_required');
-} elseif ($weatherAlertsReason === 'retry_later') {
-    $weatherAlertsUnavailableMsg = t('alerts.retry_later');
 }
 $forecastReason = (string) ($forecast['reason'] ?? '');
 $forecastCurrentType = (string) ($forecast['current_type'] ?? 'cloudy');
@@ -474,77 +453,6 @@ if (!function_exists('rain_episode_start_display')) {
         return to_hhmm_local($start);
     }
 }
-if (!function_exists('alert_datetime_label')) {
-    function alert_datetime_label(?string $value): string
-    {
-        $raw = trim((string) $value);
-        if ($raw === '') {
-            return '';
-        }
-        try {
-            $dt = new DateTimeImmutable($raw);
-            $dt = $dt->setTimezone(new DateTimeZone(APP_TIMEZONE));
-            if (locale_current() === 'en_EN') {
-                return $dt->format('Y-m-d H:i');
-            }
-            return $dt->format('d/m/Y H:i');
-        } catch (Throwable) {
-            return $raw;
-        }
-    }
-}
-if (!function_exists('alert_period_line')) {
-    function alert_period_line(array $alert): string
-    {
-        $fromRaw = '';
-        foreach (['onset', 'start', 'effective', 'starts_at', 'from'] as $key) {
-            $v = trim((string) ($alert[$key] ?? ''));
-            if ($v !== '') {
-                $fromRaw = $v;
-                break;
-            }
-        }
-        $toRaw = '';
-        foreach (['expires', 'end', 'ends_at', 'to'] as $key) {
-            $v = trim((string) ($alert[$key] ?? ''));
-            if ($v !== '') {
-                $toRaw = $v;
-                break;
-            }
-        }
-
-        // Fallback for sources with published/updated but no explicit onset/expires.
-        if ($fromRaw === '') {
-            $fromRaw = trim((string) ($alert['published'] ?? ($alert['sent'] ?? '')));
-        }
-        if ($toRaw === '') {
-            $toRaw = trim((string) ($alert['updated'] ?? ($alert['expires'] ?? '')));
-        }
-
-        $from = alert_datetime_label($fromRaw);
-        $to = alert_datetime_label($toRaw);
-
-        if ($from !== '' && $to !== '') {
-            return sprintf(t('alerts.period_from_to'), $from, $to);
-        }
-        return '';
-    }
-}
-if (!function_exists('alerts_type_icon_svg')) {
-    function alerts_type_icon_svg(string $type): string
-    {
-        return match ($type) {
-            'thunderstorm' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.2 13.3h11.4a3.2 3.2 0 0 0 .1-6.4 4.7 4.7 0 0 0-8.8-1.3A3.8 3.8 0 0 0 6.2 13.3z" fill="#e9f2fb" stroke="#3d6288" stroke-width="1"/><path d="M7.4 11.1h9.8" stroke="#ffffff" stroke-opacity=".65" stroke-width=".9" stroke-linecap="round"/><path d="M12.5 10.7l-2 3.1h2l-1.1 3.9 3.9-5.3H13l.9-1.7z" fill="#ffd44f" stroke="#a97711" stroke-width=".45"/><path d="M8.5 14.9c.4.8.1 1.8-.7 2.2-.8-.4-1.1-1.4-.7-2.2.2-.4.4-.7.7-1 .3.3.5.6.7 1zM16.1 14.9c.4.8.1 1.8-.7 2.2-.8-.4-1.1-1.4-.7-2.2.2-.4.4-.7.7-1 .3.3.5.6.7 1z" fill="#59aef6"/></svg>',
-            'heavy_rain' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.1 12.8h11.5a3.2 3.2 0 0 0 .1-6.4 4.7 4.7 0 0 0-8.8-1.2A3.8 3.8 0 0 0 6.1 12.8z" fill="#ebf4fd" stroke="#3d6288" stroke-width="1"/><path d="M7.2 10.7h10.4" stroke="#fff" stroke-opacity=".6" stroke-width=".85" stroke-linecap="round"/><path d="M8.2 14.5c.5.8.1 2-.8 2.4-.9-.4-1.3-1.5-.8-2.4.3-.5.5-.9.8-1.2.3.3.6.7.8 1.2zM11.9 14.5c.5.8.1 2-.8 2.4-.9-.4-1.3-1.5-.8-2.4.3-.5.5-.9.8-1.2.3.3.6.7.8 1.2zM15.6 14.5c.5.8.1 2-.8 2.4-.9-.4-1.3-1.5-.8-2.4.3-.5.5-.9.8-1.2.3.3.6.7.8 1.2z" fill="#4fa8f1"/><path d="M7.4 17.6h8.9" stroke="#2a6ea6" stroke-width=".7" stroke-linecap="round" opacity=".5"/></svg>',
-            'strong_wind' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 9.1h11.2c2.2 0 2.8-2.4 1.1-3.4M3 12.8h14.8c2.5 0 3.5 2.8 1.4 4.2M3 16.2h8.7c1.7 0 2.2-1.5 1.3-2.4" fill="none" stroke="#dff2ff" stroke-width="1.9" stroke-linecap="round"/><path d="M16.9 7.9l2.1.9-2.1.9" fill="none" stroke="#dff2ff" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.8 15.5l2.5-.7-.8 2.5z" fill="#9ec36f" stroke="#5f7d3f" stroke-width=".4"/></svg>',
-            'snow' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="#edf7ff" stroke="#7db0d4" stroke-width=".95"/><path d="M12 5.4v13.2M6.3 8.7l11.4 6.6M17.7 8.7l-11.4 6.6" fill="none" stroke="#2b7db7" stroke-width="1.35" stroke-linecap="round"/><path d="M12 7l1 .7M12 16.3l1 .7M8.5 9.5l1 .7M14.5 13l1 .7M15.5 9.5l-1 .7M9.5 13l-1 .7" fill="none" stroke="#2b7db7" stroke-width="1.05" stroke-linecap="round"/><circle cx="12" cy="12" r="1.5" fill="#b8ddf6" stroke="#4f90bf" stroke-width=".6"/></svg>',
-            'heat' => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="#ffc84a" stroke="#dd8f17" stroke-width="1.05"/><circle cx="12" cy="12" r="5.8" fill="none" stroke="#ffd976" stroke-width=".8" opacity=".7"/><path d="M12 2.9v2.3M12 18.8v2.3M2.9 12h2.3M18.8 12h2.3M5.2 5.2l1.6 1.6M17.2 17.2l1.6 1.6M18.8 5.2l-1.6 1.6M6.8 17.2l-1.6 1.6" fill="none" stroke="#ffe6a0" stroke-width="1.55" stroke-linecap="round"/><path d="M8.4 16.8c.7-.3 1.1-.9 1.1-1.6 0-.5.2-.9.6-1.2.4.3.6.7.6 1.2 0 1.1-.6 2.1-1.7 2.6M13.7 16.8c.7-.3 1.1-.9 1.1-1.6 0-.5.2-.9.6-1.2.4.3.6.7.6 1.2 0 1.1-.6 2.1-1.7 2.6" fill="none" stroke="#e48a2b" stroke-width=".7" stroke-linecap="round"/></svg>',
-            'frost' => '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4.9v14.2M6.5 8.3l11 7.4M17.5 8.3l-11 7.4" fill="none" stroke="#4c94c1" stroke-width="1.45" stroke-linecap="round"/><path d="M12 6.7l1.2.8M12 15.6l1.2.8M8.2 9.2l1.1.8M14.7 13.5l1.1.8M15.8 9.2l-1.1.8M9.3 13.5l-1.1.8" fill="none" stroke="#4c94c1" stroke-width="1.05" stroke-linecap="round"/><circle cx="12" cy="12" r="6.8" fill="none" stroke="#8fc0de" stroke-width=".95"/><circle cx="12" cy="12" r="1.85" fill="#bfe3f9" stroke="#4c94c1" stroke-width=".72"/></svg>',
-            default => '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.4" fill="#ecf4fc" stroke="#335d85" stroke-width="1"/><path d="M12 8.3v4.1M12 15.2h.01" stroke="#335d85" stroke-width="1.75" stroke-linecap="round"/><circle cx="9" cy="8.6" r=".7" fill="#fff" opacity=".55"/></svg>',
-        };
-    }
-}
-
 $perfTimings['total_prepare'] = (microtime(true) - $perfStart) * 1000.0;
 if ($perfEnabled && !headers_sent()) {
     $serverTiming = [];
@@ -891,60 +799,6 @@ $metricGroupIcons = [
       <?php if (($metar['reason'] ?? '') === 'no_station_coords'): ?>
         <p class="small-muted"><?= h(t('forecast.coords_required')) ?></p>
       <?php endif; ?>
-    <?php endif; ?>
-  </article>
-  <article class="card forecast-card alerts-card js-live-card" data-card-ok="<?= !empty($weatherAlerts['available']) ? '1' : '0' ?>">
-    <h3><?= h(t('alerts.title')) ?></h3>
-    <div class="forecast-head">
-      <span class="forecast-icon alerts-icon" aria-hidden="true">
-        <svg viewBox="0 0 64 64">
-          <path d="M32 8L6 54h52L32 8z" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
-          <path d="M32 24v14M32 45.5v.5" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
-        </svg>
-      </span>
-      <div class="forecast-current">
-        <div class="forecast-value"><?= h($weatherAlertsZoneLabel) ?></div>
-      </div>
-    </div>
-    <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
-    <?php if (!empty($weatherAlerts['available'])): ?>
-      <?php if ($weatherAlertsList !== []): ?>
-        <div class="alerts-list">
-          <?php foreach ($weatherAlertsList as $alert): ?>
-            <?php
-              $severity = (string) ($alert['severity'] ?? 'low');
-              if (!in_array($severity, ['low', 'moderate', 'high'], true)) {
-                  $severity = 'low';
-              }
-            ?>
-            <p class="forecast-line alerts-line">
-              <span class="alerts-severity alerts-severity-<?= h($severity) ?>" title="<?= h((string) ($alert['title'] ?? '')) ?>" aria-label="<?= h((string) ($alert['title'] ?? '')) ?>"><?= alerts_type_icon_svg((string) ($alert['type'] ?? '')) ?></span>
-              <span class="alerts-copy">
-                <strong class="alerts-title"><?= h((string) ($alert['title'] ?? t('common.na'))) ?></strong>
-                <?php if (!empty($alert['detail'])): ?>
-                  <span class="alerts-detail"><?= h((string) $alert['detail']) ?></span>
-                <?php endif; ?>
-                <?php $alertPeriod = alert_period_line(is_array($alert) ? $alert : []); ?>
-                <?php if ($alertPeriod !== ''): ?>
-                  <span class="alerts-date"><?= h($alertPeriod) ?></span>
-                <?php endif; ?>
-              </span>
-            </p>
-          <?php endforeach; ?>
-        </div>
-      <?php else: ?>
-        <p class="small-muted"><?= h(t('alerts.none')) ?></p>
-      <?php endif; ?>
-      <?php if ($weatherAlertsUpdated !== ''): ?>
-        <p class="small-muted"><?= h(t('alerts.updated')) ?>: <?= h($weatherAlertsUpdated) ?></p>
-      <?php endif; ?>
-      <?php if ($alertsDebugEnabled && $weatherAlertsDebug !== []): ?>
-        <p class="small-muted"><strong>alerts_debug</strong></p>
-        <p class="code metar-raw"><?= h(json_encode($weatherAlertsDebug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></p>
-      <?php endif; ?>
-    <?php else: ?>
-      <p class="small-muted"><?= h(t('alerts.unavailable')) ?></p>
-      <p class="small-muted"><?= h($weatherAlertsUnavailableMsg) ?></p>
     <?php endif; ?>
   </article>
   <article class="card wind-rose-card js-live-card" id="wind-rose-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">

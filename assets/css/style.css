@@ -35,20 +35,6 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .sea-card .sea-illustration{color:#2f79b7;background:linear-gradient(180deg,#f7fcff,#e9f4ff)}
 .metar-card .metar-icon{color:#2f5f8a;background:linear-gradient(180deg,#f6fbff,#ebf4ff)}
 .metar-card .metar-raw{margin:.2rem 0 0;font-size:.76rem}
-.alerts-card .alerts-icon{color:#8f5c16;background:linear-gradient(180deg,#fff9ef,#fff1d9)}
-.alerts-card .alerts-icon{flex:0 0 42px;width:42px;height:42px;min-width:42px;min-height:42px}
-.alerts-card .forecast-current{min-height:42px;justify-content:center}
-.alerts-card .alerts-list{display:flex;flex-direction:column;gap:.3rem;margin-top:.3rem}
-.alerts-card .alerts-line{display:flex;align-items:flex-start;flex-wrap:nowrap;gap:.42rem;margin:0;padding:.34rem .42rem;border:1px solid #d7e3ef;border-radius:8px;background:#f8fbff}
-.alerts-card .alerts-severity{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;min-width:34px;padding:0;border-radius:999px;font-size:.7rem;line-height:1.1;font-weight:700;border:1px solid transparent}
-.alerts-card .alerts-severity svg{width:17px;height:17px;display:block}
-.alerts-card .alerts-copy{display:flex;flex-direction:column;align-items:flex-start;gap:.08rem;min-width:0;flex:1}
-.alerts-card .alerts-title{font-size:1rem;line-height:1.2}
-.alerts-card .alerts-severity-low{background:#ffea61;color:#4f3f00;border-color:#ddc640}
-.alerts-card .alerts-severity-moderate{background:#f6a043;color:#5a2d00;border-color:#d6852f}
-.alerts-card .alerts-severity-high{background:#d3303f;color:#fff;border-color:#b42734}
-.alerts-card .alerts-detail{color:#5f6f82;font-size:.76rem}
-.alerts-card .alerts-date{color:#6a8097;font-size:.72rem}
 .forecast-card .forecast-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.45rem;margin-top:.45rem}
 .forecast-card .forecast-day{border:1px solid var(--line);border-radius:8px;padding:.35rem .45rem;background:#f8fbff}
 .forecast-card .forecast-day strong{display:block;margin-bottom:.25rem;font-size:.78rem;color:var(--muted)}
@@ -192,12 +178,6 @@ body.theme-dark .wind-rose-period{border-color:#3a5776;background:#11263f;color:
 body.theme-dark .wind-rose-period:hover{background:#16304d}
 body.theme-dark .wind-rose-period.is-active{border-color:#62a4dd;background:#62a4dd;color:#0d2238}
 body.theme-dark .forecast-card .forecast-line{color:#b7cde0}
-body.theme-dark .alerts-card .alerts-line{background:#12233a;border-color:#2b4361}
-body.theme-dark .alerts-card .alerts-severity-low{background:#ffea61;color:#3e3200;border-color:#c8b23b}
-body.theme-dark .alerts-card .alerts-severity-moderate{background:#f6a043;color:#422100;border-color:#bf7728}
-body.theme-dark .alerts-card .alerts-severity-high{background:#cf3040;color:#fff;border-color:#a92532}
-body.theme-dark .alerts-card .alerts-detail{color:#9eb7cb}
-body.theme-dark .alerts-card .alerts-date{color:#8ba8c2}
 body.theme-dark .forecast-card .forecast-day,
 body.theme-dark .extremes-card .extremes-line,
 body.theme-dark .extremes-card .sun-visual{background:#12233a;border-color:#2b4361}
