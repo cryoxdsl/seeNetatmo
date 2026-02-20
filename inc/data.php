@@ -474,12 +474,22 @@ function current_day_temp_reference(): array
         $sql = "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
                 FROM (
                     SELECT
-                        CAST(SUBSTRING(CAST(`DateTime` AS CHAR), 1, 4) AS UNSIGNED) AS y,
-                        SUBSTRING(CAST(`DateTime` AS CHAR), 1, 10) AS d,
-                        MIN(CAST(`T` AS DECIMAL(6,2))) AS day_min,
-                        MAX(CAST(`T` AS DECIMAL(6,2))) AS day_max
-                    FROM `{$t}`
-                    WHERE SUBSTRING(CAST(`DateTime` AS CHAR), 6, 5) = :md
+                        CAST(DATE_FORMAT(dt_parsed, '%Y') AS UNSIGNED) AS y,
+                        DATE_FORMAT(dt_parsed, '%Y-%m-%d') AS d,
+                        MIN(CAST(REPLACE(CAST(`T` AS CHAR), ',', '.') AS DECIMAL(6,2))) AS day_min,
+                        MAX(CAST(REPLACE(CAST(`T` AS CHAR), ',', '.') AS DECIMAL(6,2))) AS day_max
+                    FROM (
+                        SELECT
+                            `T`,
+                            COALESCE(
+                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%Y-%m-%d %H:%i:%s'),
+                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%Y/%m/%d %H:%i:%s'),
+                                STR_TO_DATE(CAST(`DateTime` AS CHAR), '%d/%m/%Y %H:%i:%s')
+                            ) AS dt_parsed
+                        FROM `{$t}`
+                    ) s
+                    WHERE dt_parsed IS NOT NULL
+                      AND DATE_FORMAT(dt_parsed, '%m-%d') = :md
                       AND `T` IS NOT NULL
                     GROUP BY y, d
                 ) x
