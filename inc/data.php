@@ -469,22 +469,36 @@ function current_day_temp_reference(): array
     $currentYear = (int) $now->format('Y');
     $monthDay = $now->format('m-%d');
 
-    $stmt = db()->prepare(
-        "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
-         FROM (
-            SELECT YEAR(`DateTime`) AS y,
-                   DATE(`DateTime`) AS d,
-                   MIN(`T`) AS day_min,
-                   MAX(`T`) AS day_max
-            FROM `{$t}`
-            WHERE DATE_FORMAT(`DateTime`, '%m-%d') = :md
-              AND YEAR(`DateTime`) <> :current_year
-              AND `T` IS NOT NULL
-            GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
-         ) x"
-    );
-    $stmt->execute([':md' => $monthDay, ':current_year' => $currentYear]);
-    $row = $stmt->fetch() ?: [];
+    $fetch = static function (bool $excludeCurrentYear) use ($t, $monthDay, $currentYear): array {
+        $whereYear = $excludeCurrentYear ? 'AND YEAR(`DateTime`) <> :current_year' : '';
+        $stmt = db()->prepare(
+            "SELECT AVG(day_min) AS avg_min, AVG(day_max) AS avg_max, COUNT(*) AS sample_count
+             FROM (
+                SELECT YEAR(`DateTime`) AS y,
+                       DATE(`DateTime`) AS d,
+                       MIN(`T`) AS day_min,
+                       MAX(`T`) AS day_max
+                FROM `{$t}`
+                WHERE DATE_FORMAT(`DateTime`, '%m-%d') = :md
+                  {$whereYear}
+                  AND `T` IS NOT NULL
+                GROUP BY YEAR(`DateTime`), DATE(`DateTime`)
+             ) x"
+        );
+        $params = [':md' => $monthDay];
+        if ($excludeCurrentYear) {
+            $params[':current_year'] = $currentYear;
+        }
+        $stmt->execute($params);
+        return $stmt->fetch() ?: [];
+    };
+
+    $row = $fetch(true);
+    $sampleCount = isset($row['sample_count']) ? (int) $row['sample_count'] : 0;
+    if ($sampleCount <= 0) {
+        // Fallback: if no historical sample exists, use all available years.
+        $row = $fetch(false);
+    }
 
     return [
         'min_avg' => isset($row['avg_min']) && $row['avg_min'] !== null ? (float) $row['avg_min'] : null,
