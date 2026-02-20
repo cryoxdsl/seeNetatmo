@@ -19,8 +19,12 @@ if (!in_array($period, $allowed, true)) {
 $tz = new DateTimeZone(APP_TIMEZONE);
 $now = now_paris();
 $defaultFrom = $now->modify('-24 hours');
-$customFromInput = (string) ($_GET['from'] ?? $defaultFrom->format('Y-m-d\TH:i'));
-$customToInput = (string) ($_GET['to'] ?? $now->format('Y-m-d\TH:i'));
+$customFromInput = trim((string) ($_GET['from'] ?? ''));
+$customToInput = trim((string) ($_GET['to'] ?? ''));
+$hasCustomInput = ($customFromInput !== '' || $customToInput !== '');
+if ($period !== 'custom' && $hasCustomInput) {
+    $period = 'custom';
+}
 
 $parseCustomDate = static function (string $raw, DateTimeZone $tz): ?DateTimeImmutable {
     $raw = trim($raw);
@@ -37,6 +41,12 @@ $parseCustomDate = static function (string $raw, DateTimeZone $tz): ?DateTimeImm
 };
 
 if ($period === 'custom') {
+    if ($customFromInput === '') {
+        $customFromInput = $defaultFrom->format('Y-m-d\TH:i');
+    }
+    if ($customToInput === '') {
+        $customToInput = $now->format('Y-m-d\TH:i');
+    }
     $fromDt = $parseCustomDate($customFromInput, $tz) ?? $defaultFrom;
     $toDt = $parseCustomDate($customToInput, $tz) ?? $now;
     if ($fromDt > $toDt) {
@@ -46,6 +56,8 @@ if ($period === 'custom') {
     $customToInput = $toDt->format('Y-m-d\TH:i');
     $rows = period_rows_between($fromDt, $toDt);
 } else {
+    $customFromInput = '';
+    $customToInput = '';
     $rows = period_rows($period);
 }
 
@@ -107,15 +119,17 @@ front_header(t('charts.title'));
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>
   <p class="pill <?= $state['disconnected'] ? 'pill-bad' : 'pill-ok' ?>"><?= $state['disconnected'] ? h(t('status.disconnected')) : h(t('status.connected')) ?></p>
   <form class="row" method="get">
-    <select name="period">
+    <select name="period" id="periodSelect">
       <?php foreach ($allowed as $p): ?>
         <option value="<?= h($p) ?>" <?= $p === $period ? 'selected' : '' ?>><?= h($periodLabels[$p]) ?></option>
       <?php endforeach; ?>
     </select>
-    <label for="customFrom"><?= h(t('charts.from')) ?></label>
-    <input id="customFrom" type="datetime-local" name="from" value="<?= h($customFromInput) ?>">
-    <label for="customTo"><?= h(t('charts.to')) ?></label>
-    <input id="customTo" type="datetime-local" name="to" value="<?= h($customToInput) ?>">
+    <span id="customRangeFields"<?= $period === 'custom' ? '' : ' style="display:none"' ?>>
+      <label for="customFrom"><?= h(t('charts.from')) ?></label>
+      <input id="customFrom" type="datetime-local" name="from" value="<?= h($customFromInput) ?>">
+      <label for="customTo"><?= h(t('charts.to')) ?></label>
+      <input id="customTo" type="datetime-local" name="to" value="<?= h($customToInput) ?>">
+    </span>
     <button type="submit"><?= h(t('btn.apply')) ?></button>
     <button type="button" class="btn-lite" id="chartDensityToggle"><?= h(t('charts.density')) ?>: <?= h(t('charts.density.auto')) ?></button>
   </form>
@@ -147,4 +161,16 @@ front_header(t('charts.title'));
 <script src="/assets/js/chart.min.js?v=<?= @filemtime(__DIR__ . '/assets/js/chart.min.js') ?: time() ?>"></script>
 <script>window.METEO_DATA = <?= json_encode($payload, JSON_UNESCAPED_SLASHES) ?>;</script>
 <script src="/assets/js/charts.js?v=<?= @filemtime(__DIR__ . '/assets/js/charts.js') ?: time() ?>"></script>
+<script>
+  (function () {
+    var period = document.getElementById('periodSelect');
+    var custom = document.getElementById('customRangeFields');
+    if (!period || !custom) return;
+    function syncCustomVisibility() {
+      custom.style.display = period.value === 'custom' ? '' : 'none';
+    }
+    period.addEventListener('change', syncCustomVisibility);
+    syncCustomVisibility();
+  })();
+</script>
 <?php front_footer();
