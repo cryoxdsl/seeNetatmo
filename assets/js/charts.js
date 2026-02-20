@@ -354,6 +354,10 @@
     ctx.moveTo(x, plot.top);
     ctx.lineTo(x, plot.bottom);
     ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(plot.left, y);
+    ctx.lineTo(plot.right, y);
+    ctx.stroke();
 
     ctx.fillStyle = this.cfg.color;
     ctx.beginPath();
