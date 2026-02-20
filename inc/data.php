@@ -401,13 +401,16 @@ function climat_yearly_stats(): array
 function current_day_temp_range(): array
 {
     $t = data_table();
-    $today = now_paris()->format('Y-m-d');
+    $now = now_paris();
+    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $dayEnd = $now->setTime(0, 0, 0)->modify('+1 day')->format('Y-m-d H:i:s');
     $stmt = db()->prepare(
         "SELECT MIN(`T`) AS t_min, MAX(`T`) AS t_max
          FROM `{$t}`
-         WHERE DATE(`DateTime`) = :d"
+         WHERE `DateTime` >= :day_start
+           AND `DateTime` < :day_end"
     );
-    $stmt->execute([':d' => $today]);
+    $stmt->execute([':day_start' => $dayStart, ':day_end' => $dayEnd]);
     $row = $stmt->fetch();
     return [
         'min' => isset($row['t_min']) && $row['t_min'] !== null ? (float) $row['t_min'] : null,
@@ -418,13 +421,32 @@ function current_day_temp_range(): array
 function current_day_temp_extreme_times(): array
 {
     $t = data_table();
-    $today = now_paris()->format('Y-m-d');
+    $now = now_paris();
+    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $dayEnd = $now->setTime(0, 0, 0)->modify('+1 day')->format('Y-m-d H:i:s');
     $stmt = db()->prepare(
         "SELECT
-            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d_min AND `T` IS NOT NULL ORDER BY `T` ASC, `DateTime` ASC LIMIT 1) AS t_min_time,
-            (SELECT `DateTime` FROM `{$t}` WHERE DATE(`DateTime`) = :d_max AND `T` IS NOT NULL ORDER BY `T` DESC, `DateTime` ASC LIMIT 1) AS t_max_time"
+            (SELECT `DateTime`
+             FROM `{$t}`
+             WHERE `DateTime` >= :day_start_min
+               AND `DateTime` < :day_end_min
+               AND `T` IS NOT NULL
+             ORDER BY `T` ASC, `DateTime` ASC
+             LIMIT 1) AS t_min_time,
+            (SELECT `DateTime`
+             FROM `{$t}`
+             WHERE `DateTime` >= :day_start_max
+               AND `DateTime` < :day_end_max
+               AND `T` IS NOT NULL
+             ORDER BY `T` DESC, `DateTime` ASC
+             LIMIT 1) AS t_max_time"
     );
-    $stmt->execute([':d_min' => $today, ':d_max' => $today]);
+    $stmt->execute([
+        ':day_start_min' => $dayStart,
+        ':day_end_min' => $dayEnd,
+        ':day_start_max' => $dayStart,
+        ':day_end_max' => $dayEnd,
+    ]);
     $row = $stmt->fetch() ?: [];
     return [
         'min_time' => isset($row['t_min_time']) && $row['t_min_time'] !== null ? (string) $row['t_min_time'] : null,
@@ -435,13 +457,16 @@ function current_day_temp_extreme_times(): array
 function current_day_wind_avg_range(): array
 {
     $t = data_table();
-    $today = now_paris()->format('Y-m-d');
+    $now = now_paris();
+    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
+    $dayEnd = $now->setTime(0, 0, 0)->modify('+1 day')->format('Y-m-d H:i:s');
     $stmt = db()->prepare(
         "SELECT MIN(`W`) AS w_min, MAX(`W`) AS w_max
          FROM `{$t}`
-         WHERE DATE(`DateTime`) = :d"
+         WHERE `DateTime` >= :day_start
+           AND `DateTime` < :day_end"
     );
-    $stmt->execute([':d' => $today]);
+    $stmt->execute([':day_start' => $dayStart, ':day_end' => $dayEnd]);
     $row = $stmt->fetch();
     return [
         'min' => isset($row['w_min']) && $row['w_min'] !== null ? (float) $row['w_min'] : null,
