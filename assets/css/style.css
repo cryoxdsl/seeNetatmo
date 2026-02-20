@@ -61,7 +61,8 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .extremes-card .sun-now{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:#ff9f1c;border:2px solid #fff;box-shadow:0 1px 7px rgba(0,0,0,.2);transform:translate(-50%,-50%)}
 .extremes-card .sun-caption{margin:.4rem 0 0;display:flex;align-items:center;justify-content:space-between;gap:.45rem}
 .metric-groups-panel{display:flex;flex-direction:column;gap:.7rem}
-.metric-groups-panel h3{margin:0 0 .2rem}
+.metric-groups-panel>.panel-title-with-icon,
+.rain-totals-panel>.panel-title-with-icon{margin:0 0 .2rem;line-height:1.2}
 .panel-title-with-icon{display:flex;align-items:center;gap:.4rem}
 .panel-title-icon{width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;color:#4a6785}
 .panel-title-icon svg{width:16px;height:16px;display:block}
