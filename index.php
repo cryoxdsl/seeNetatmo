@@ -301,7 +301,13 @@ if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_nu
                 if ($ySunset > $ySunrise) {
                     $yDayLengthSeconds = $ySunset - $ySunrise;
                     $deltaMin = (int) round(($dayLengthSeconds - $yDayLengthSeconds) / 60.0);
-                    $dayLengthTooltip = sprintf(t('extremes.day_length_delta'), $deltaMin);
+                    if ($deltaMin > 0) {
+                        $dayLengthTooltip = sprintf(t('extremes.day_length_more'), $deltaMin);
+                    } elseif ($deltaMin < 0) {
+                        $dayLengthTooltip = sprintf(t('extremes.day_length_less'), abs($deltaMin));
+                    } else {
+                        $dayLengthTooltip = t('extremes.day_length_same');
+                    }
                 }
             }
             $dayStartTs = now_paris()->setTime(0, 0, 0)->getTimestamp();
