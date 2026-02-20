@@ -225,11 +225,11 @@ if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_nu
     if (is_array($sunInfo)) {
         if (isset($sunInfo['sunrise']) && is_numeric($sunInfo['sunrise'])) {
             $sunriseTs = (int) $sunInfo['sunrise'];
-            $sunriseDisplay = date('H:i T', $sunriseTs);
+            $sunriseDisplay = date('H:i', $sunriseTs);
         }
         if (isset($sunInfo['sunset']) && is_numeric($sunInfo['sunset'])) {
             $sunsetTs = (int) $sunInfo['sunset'];
-            $sunsetDisplay = date('H:i T', $sunsetTs);
+            $sunsetDisplay = date('H:i', $sunsetTs);
         }
         if ($sunriseTs !== null && $sunsetTs !== null && $sunsetTs > $sunriseTs) {
             $solarVisualAvailable = true;
@@ -309,7 +309,7 @@ if (!function_exists('to_hhmm_from_db')) {
             return t('common.na');
         }
         try {
-            return (new DateTimeImmutable($dt, new DateTimeZone(APP_TIMEZONE)))->format('H:i T');
+            return (new DateTimeImmutable($dt, new DateTimeZone(APP_TIMEZONE)))->format('H:i');
         } catch (Throwable $e) {
             return t('common.na');
         }
