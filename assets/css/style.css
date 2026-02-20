@@ -37,6 +37,7 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .metar-card .metar-raw{margin:.2rem 0 0;font-size:.76rem}
 .alerts-card .alerts-icon{color:#8f5c16;background:linear-gradient(180deg,#fff9ef,#fff1d9)}
 .alerts-card .alerts-icon{flex:0 0 42px;width:42px;height:42px;min-width:42px;min-height:42px}
+.alerts-card .forecast-current{min-height:42px;justify-content:center}
 .alerts-card .alerts-list{display:flex;flex-direction:column;gap:.3rem;margin-top:.3rem}
 .alerts-card .alerts-line{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin:0;padding:.34rem .42rem;border:1px solid #d7e3ef;border-radius:8px;background:#f8fbff}
 .alerts-card .alerts-severity{display:inline-flex;align-items:center;justify-content:center;min-width:64px;padding:.06rem .42rem;border-radius:999px;font-size:.7rem;line-height:1.1;font-weight:700;border:1px solid transparent}

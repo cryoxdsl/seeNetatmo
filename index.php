@@ -832,9 +832,9 @@ $metricGroupIcons = [
       </span>
       <div class="forecast-current">
         <div class="forecast-value"><?= h($weatherAlertsZoneLabel) ?></div>
-        <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
       </div>
     </div>
+    <p class="small-muted"><?= h(t('alerts.window')) ?>: <?= h($weatherAlertsWindow) ?></p>
     <?php if (!empty($weatherAlerts['available'])): ?>
       <?php if ($weatherAlertsList !== []): ?>
         <div class="alerts-list">
