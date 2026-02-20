@@ -40,8 +40,8 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .alerts-card .forecast-current{min-height:42px;justify-content:center}
 .alerts-card .alerts-list{display:flex;flex-direction:column;gap:.3rem;margin-top:.3rem}
 .alerts-card .alerts-line{display:flex;align-items:center;flex-wrap:wrap;gap:.35rem;margin:0;padding:.34rem .42rem;border:1px solid #d7e3ef;border-radius:8px;background:#f8fbff}
-.alerts-card .alerts-severity{display:inline-flex;align-items:center;justify-content:center;width:28px;height:20px;min-width:28px;padding:0;border-radius:999px;font-size:.7rem;line-height:1.1;font-weight:700;border:1px solid transparent}
-.alerts-card .alerts-severity svg{width:13px;height:13px;display:block}
+.alerts-card .alerts-severity{display:inline-flex;align-items:center;justify-content:center;width:34px;height:24px;min-width:34px;padding:0;border-radius:999px;font-size:.7rem;line-height:1.1;font-weight:700;border:1px solid transparent}
+.alerts-card .alerts-severity svg{width:17px;height:17px;display:block}
 .alerts-card .alerts-severity-low{background:#ffea61;color:#4f3f00;border-color:#ddc640}
 .alerts-card .alerts-severity-moderate{background:#f6a043;color:#5a2d00;border-color:#d6852f}
 .alerts-card .alerts-severity-high{background:#d3303f;color:#fff;border-color:#b42734}
