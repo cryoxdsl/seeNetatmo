@@ -446,6 +446,7 @@ front_header(t('dashboard.title'));
         </button>
         <span class="auto-progress"><span id="autoRefreshProgress"></span></span>
       </div>
+      <button type="button" class="btn-lite" id="refreshCacheBtn"><?= h(t('dashboard.refresh_cache')) ?></button>
     </div>
   </div>
 </section>
@@ -874,6 +875,8 @@ $metricGroupIcons = [
     dark: <?= json_encode(t('dashboard.theme_dark'), JSON_UNESCAPED_UNICODE) ?>
   };
   var reloadingText = <?= json_encode(t('dashboard.auto_refresh_reloading'), JSON_UNESCAPED_UNICODE) ?>;
+  var refreshCacheText = <?= json_encode(t('dashboard.refresh_cache'), JSON_UNESCAPED_UNICODE) ?>;
+  var refreshCacheBusyText = <?= json_encode(t('dashboard.refresh_cache_busy'), JSON_UNESCAPED_UNICODE) ?>;
   var stationDisconnected = <?= json_encode((bool) ($state['disconnected'] ?? true)) ?>;
   var enabled = localStorage.getItem(storageKey);
   enabled = enabled === null ? true : enabled === '1';
@@ -892,9 +895,27 @@ $metricGroupIcons = [
   var countdown = document.getElementById('autoRefreshCountdown');
   var toggle = document.getElementById('autoRefreshToggle');
   var refreshBox = document.getElementById('autoRefreshBox');
+  var refreshCacheBtn = document.getElementById('refreshCacheBtn');
   var sunMomentClock = document.getElementById('sunMomentClock');
   var sunMomentTimezone = <?= json_encode(APP_TIMEZONE, JSON_UNESCAPED_UNICODE) ?>;
   if (!dot || !progress || !countdown || !toggle) return;
+
+  if (refreshCacheBtn) {
+    refreshCacheBtn.addEventListener('click', function () {
+      if (refreshCacheBtn.disabled) return;
+      refreshCacheBtn.disabled = true;
+      refreshCacheBtn.textContent = refreshCacheBusyText;
+      var url = '/front_cache_refresh.php?t=' + encodeURIComponent(asyncRefreshToken) + '&force=1&scope=full';
+      fetch(url, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).finally(function () {
+        window.location.reload();
+      });
+    });
+  }
 
   function triggerAsyncCacheRefresh() {
     if (!asyncRefreshToken) return;
