@@ -307,7 +307,7 @@ if (!function_exists('wind_rose_period_url')) {
         $query = $queryBase;
         $query['wrp'] = $period;
         $qs = http_build_query($query);
-        return $path . ($qs !== '' ? ('?' . $qs) : '');
+        return $path . ($qs !== '' ? ('?' . $qs) : '') . '#wind-rose-card';
     }
 }
 if (!function_exists('wind_cardinal_label')) {
@@ -735,7 +735,7 @@ $metricGroupIcons = [
       <?php endif; ?>
     <?php endif; ?>
   </article>
-  <article class="card wind-rose-card js-live-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">
+  <article class="card wind-rose-card js-live-card" id="wind-rose-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">
     <div class="wind-rose-head">
       <h3><?= h(t('windrose.title')) ?></h3>
       <div class="wind-rose-periods" role="tablist" aria-label="<?= h(t('windrose.title')) ?>">
