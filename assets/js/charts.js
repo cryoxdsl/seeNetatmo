@@ -155,7 +155,7 @@
     this.cfg = config;
     this.hoverIndex = null;
     this.dpr = Math.max(1, window.devicePixelRatio || 1);
-    this.area = { left: 58, right: 10, top: 16, bottom: 42 };
+    this.area = { left: 58, right: 10, top: 16, bottom: 56 };
     this._bind();
     this.resize();
   }
@@ -198,6 +198,10 @@
   };
 
   CanvasLineChart.prototype.yRange = function () {
+    if (Number.isFinite(this.cfg.yMin) && Number.isFinite(this.cfg.yMax) && this.cfg.yMax > this.cfg.yMin) {
+      return { min: this.cfg.yMin, max: this.cfg.yMax };
+    }
+
     var data = this.cfg.values;
     var min = Infinity;
     var max = -Infinity;
@@ -274,7 +278,7 @@
     ctx.fillStyle = tickColor;
     ctx.font = '12px Verdana, Arial, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(ui.time_axis || 'Date/Heure', plot.left + plot.width / 2, this.h - 5);
+    ctx.fillText(ui.time_axis || 'Date/Heure', plot.left + plot.width / 2, this.h - 14);
 
     ctx.save();
     ctx.translate(14, plot.top + plot.height / 2);
@@ -419,16 +423,19 @@
     dToggle.textContent = prefix + ': ' + modeLabel(selectedMode);
   }
 
-  function buildChart(id, yTitle, color, series, resolvedMode) {
+  function buildChart(id, yTitle, color, series, resolvedMode, opts) {
     var cv = document.getElementById(id);
     if (!cv) return;
     var values = (Array.isArray(series) ? series : []).map(safeNumber);
+    var options = opts || {};
     var chart = new CanvasLineChart(cv, {
       mode: resolvedMode,
       yTitle: yTitle,
       color: color,
       values: values,
-      decimals: valueDecimals(values)
+      decimals: Number.isFinite(options.decimals) ? options.decimals : valueDecimals(values),
+      yMin: options.yMin,
+      yMax: options.yMax
     });
     charts.push(chart);
   }
@@ -442,6 +449,7 @@
     buildChart('chartP', l.P || 'Pressure', '#0f6cbf', d.P, resolved);
     buildChart('chartR', l.R || 'Rain', '#1269a8', rainSeries(), resolved);
     buildChart('chartW', l.W || 'Wind', '#7e3fa1', windSeries(), resolved);
+    buildChart('chartB', l.B || 'Wind dir (°)', '#158f8b', d.B, resolved, { yMin: 0, yMax: 360, decimals: 0 });
     updateToggleLabel(selectedMode);
   }
 

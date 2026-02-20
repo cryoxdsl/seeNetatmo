@@ -40,12 +40,14 @@ $payload = [
     'R' => $metricSeries('R'),
     'W' => $metricSeries('W'),
     'G' => $metricSeries('G'),
+    'B' => $metricSeries('B'),
     'chart_labels' => [
         'T' => units_metric_label('T'),
         'H' => units_metric_label('H'),
         'P' => units_metric_label('P'),
         'R' => units_metric_name('R') . ' (' . units_symbol('R') . ')',
         'W' => units_metric_name('W') . ' (' . units_symbol('W') . ')',
+        'B' => units_metric_label('B'),
     ],
     'chart_ui' => [
         'density_label' => t('charts.density'),
@@ -100,6 +102,10 @@ front_header(t('charts.title'));
 <section class="panel chart-panel">
   <h3 class="chart-title"><?= h($payload['chart_labels']['W']) ?></h3>
   <canvas class="weather-chart" id="chartW"></canvas>
+</section>
+<section class="panel chart-panel">
+  <h3 class="chart-title"><?= h($payload['chart_labels']['B']) ?></h3>
+  <canvas class="weather-chart" id="chartB"></canvas>
 </section>
 <script src="/assets/js/chart.min.js?v=<?= @filemtime(__DIR__ . '/assets/js/chart.min.js') ?: time() ?>"></script>
 <script>window.METEO_DATA = <?= json_encode($payload, JSON_UNESCAPED_SLASHES) ?>;</script>
