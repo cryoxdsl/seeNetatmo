@@ -115,12 +115,22 @@ if (function_exists('current_day_wind_avg_range')) {
         $dayWind = ['min' => null, 'max' => null];
     }
 }
-$windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0];
-if (function_exists('current_day_wind_rose')) {
+$windRosePeriod = (string) ($_GET['wrp'] ?? '1j');
+if (!in_array($windRosePeriod, ['1j', '1s', '1m', '1a'], true)) {
+    $windRosePeriod = '1j';
+}
+$windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0, 'period' => $windRosePeriod, 'from' => null, 'to' => null];
+if (function_exists('wind_rose_for_period')) {
+    try {
+        $windRose = $perfMeasure('wind_rose_for_period', static fn() => wind_rose_for_period($windRosePeriod));
+    } catch (Throwable $e) {
+        $windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0, 'period' => $windRosePeriod, 'from' => null, 'to' => null];
+    }
+} elseif (function_exists('current_day_wind_rose')) {
     try {
         $windRose = $perfMeasure('current_day_wind_rose', static fn() => current_day_wind_rose());
     } catch (Throwable $e) {
-        $windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0];
+        $windRose = ['counts' => array_fill(0, 16, 0), 'max' => 0, 'total' => 0, 'period' => '1j', 'from' => null, 'to' => null];
     }
 }
 $rainEpisode = ['start' => null, 'end' => null, 'ongoing' => false];
@@ -282,6 +292,24 @@ $rainRollingLabel = t('rain.rolling_year_base') . ' (' . $rollingStart->format('
 $windRoseDirs = locale_current() === 'en_EN'
     ? ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
     : ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSO', 'SO', 'OSO', 'O', 'ONO', 'NO', 'NNO'];
+$windRosePeriodLabels = [
+    '1j' => t('windrose.period.1j'),
+    '1s' => t('windrose.period.1s'),
+    '1m' => t('windrose.period.1m'),
+    '1a' => t('windrose.period.1a'),
+];
+$windRoseBasePath = (string) parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/index.php'), PHP_URL_PATH);
+$windRoseQueryBase = $_GET;
+unset($windRoseQueryBase['wrp']);
+if (!function_exists('wind_rose_period_url')) {
+    function wind_rose_period_url(string $path, array $queryBase, string $period): string
+    {
+        $query = $queryBase;
+        $query['wrp'] = $period;
+        $qs = http_build_query($query);
+        return $path . ($qs !== '' ? ('?' . $qs) : '');
+    }
+}
 if (!function_exists('wind_cardinal_label')) {
     function wind_cardinal_label(?float $deg): string
     {
@@ -708,15 +736,32 @@ $metricGroupIcons = [
     <?php endif; ?>
   </article>
   <article class="card wind-rose-card js-live-card" data-card-ok="<?= !empty($windRose['total']) ? '1' : '0' ?>">
-    <h3><?= h(t('windrose.title')) ?></h3>
+    <div class="wind-rose-head">
+      <h3><?= h(t('windrose.title')) ?></h3>
+      <div class="wind-rose-periods" role="tablist" aria-label="<?= h(t('windrose.title')) ?>">
+        <?php foreach ($windRosePeriodLabels as $pKey => $pLabel): ?>
+          <a href="<?= h(wind_rose_period_url($windRoseBasePath, $windRoseQueryBase, $pKey)) ?>" class="wind-rose-period<?= $windRosePeriod === $pKey ? ' is-active' : '' ?>"><?= h($pLabel) ?></a>
+        <?php endforeach; ?>
+      </div>
+    </div>
     <?php if (!empty($windRose['total']) && !empty($windRose['max']) && is_array($windRose['counts'])): ?>
       <?php
         $roseCounts = array_values(array_map(static fn($v) => (int) $v, $windRose['counts']));
         $roseMax = (int) $windRose['max'];
+        $roseTotal = max(1, (int) $windRose['total']);
         $cx = 72.0;
         $cy = 72.0;
         $inner = 12.0;
         $span = 42.0;
+        $roseRanked = [];
+        foreach ($roseCounts as $i => $count) {
+            if ($count <= 0) {
+                continue;
+            }
+            $roseRanked[] = ['idx' => $i, 'count' => $count];
+        }
+        usort($roseRanked, static fn($a, $b) => $b['count'] <=> $a['count']);
+        $roseTop = array_slice($roseRanked, 0, 3);
       ?>
       <svg class="wind-rose-svg" viewBox="0 0 144 144" role="img" aria-label="<?= h(t('windrose.title')) ?>">
         <circle cx="72" cy="72" r="52" class="wind-rose-grid"></circle>
@@ -746,6 +791,21 @@ $metricGroupIcons = [
         <circle cx="72" cy="72" r="2.5" class="wind-rose-center"></circle>
       </svg>
       <p class="small-muted"><?= h(t('windrose.samples')) ?>: <strong><?= h((string) ((int) $windRose['total'])) ?></strong></p>
+      <?php if (!empty($roseTop)): ?>
+        <?php
+          $main = $roseTop[0];
+          $mainDir = $windRoseDirs[$main['idx']] ?? (string) $main['idx'];
+          $mainPct = number_format(($main['count'] / $roseTotal) * 100.0, 1, '.', '');
+          $topParts = [];
+          foreach ($roseTop as $r) {
+              $d = $windRoseDirs[$r['idx']] ?? (string) $r['idx'];
+              $pct = number_format(($r['count'] / $roseTotal) * 100.0, 1, '.', '');
+              $topParts[] = $d . ' ' . $pct . '%';
+          }
+        ?>
+        <p class="small-muted"><strong><?= h(t('windrose.dominant')) ?>:</strong> <?= h($mainDir) ?> (<?= h($mainPct) ?>%)</p>
+        <p class="small-muted"><strong><?= h(t('windrose.top')) ?>:</strong> <?= h(implode(' | ', $topParts)) ?></p>
+      <?php endif; ?>
     <?php else: ?>
       <p class="small-muted"><?= h(t('windrose.no_data')) ?></p>
     <?php endif; ?>

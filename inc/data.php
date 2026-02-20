@@ -484,18 +484,32 @@ function current_day_wind_avg_range(): array
 
 function current_day_wind_rose(): array
 {
+    return wind_rose_for_period('1j');
+}
+
+function wind_rose_for_period(string $period): array
+{
     $t = data_table();
     $now = now_paris();
-    $dayStart = $now->setTime(0, 0, 0)->format('Y-m-d H:i:s');
-    $dayEnd = $now->setTime(0, 0, 0)->modify('+1 day')->format('Y-m-d H:i:s');
+    $period = in_array($period, ['1j', '1s', '1m', '1a'], true) ? $period : '1j';
+    $fromDt = match ($period) {
+        '1s' => $now->modify('-7 days'),
+        '1m' => $now->modify('-30 days'),
+        '1a' => $now->modify('-365 days'),
+        default => $now->setTime(0, 0, 0),
+    };
+    $toDt = $now;
     $stmt = db()->prepare(
         "SELECT `B`
          FROM `{$t}`
-         WHERE `DateTime` >= :day_start
-           AND `DateTime` < :day_end
+         WHERE `DateTime` >= :from_dt
+           AND `DateTime` <= :to_dt
            AND `B` IS NOT NULL"
     );
-    $stmt->execute([':day_start' => $dayStart, ':day_end' => $dayEnd]);
+    $stmt->execute([
+        ':from_dt' => $fromDt->format('Y-m-d H:i:s'),
+        ':to_dt' => $toDt->format('Y-m-d H:i:s'),
+    ]);
     $rows = $stmt->fetchAll();
 
     $counts = array_fill(0, 16, 0);
@@ -513,6 +527,9 @@ function current_day_wind_rose(): array
         'counts' => $counts,
         'max' => max($counts),
         'total' => array_sum($counts),
+        'period' => $period,
+        'from' => $fromDt->format('Y-m-d H:i:s'),
+        'to' => $toDt->format('Y-m-d H:i:s'),
     ];
 }
 

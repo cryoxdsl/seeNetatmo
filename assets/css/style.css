@@ -73,6 +73,12 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .wind-compass{display:inline-flex;align-items:center;justify-content:center;width:1.2em;height:1.2em;margin-right:.22rem;border:1px solid #c8d6e5;border-radius:50%;background:#f7fbff;vertical-align:middle}
 .wind-compass .needle{display:inline-block;line-height:1;font-size:.9em;color:#2f5f8a;transform-origin:50% 55%}
 .wind-rose-card{display:flex;flex-direction:column;align-items:center;justify-content:flex-start}
+.wind-rose-head{width:100%;display:flex;align-items:center;justify-content:space-between;gap:.55rem}
+.wind-rose-head h3{margin:0}
+.wind-rose-periods{display:inline-flex;align-items:center;gap:.25rem;flex-wrap:wrap;justify-content:flex-end}
+.wind-rose-period{display:inline-flex;align-items:center;justify-content:center;min-width:28px;padding:.12rem .34rem;border:1px solid #d3dfeb;border-radius:999px;background:#f5f9fd;color:#3b5d80;text-decoration:none;font-size:.72rem;line-height:1}
+.wind-rose-period:hover{background:#edf4fb}
+.wind-rose-period.is-active{border-color:#2f79b7;background:#2f79b7;color:#fff}
 .wind-rose-svg{width:min(100%,220px);height:auto;display:block;margin:.2rem auto .35rem}
 .wind-rose-grid{fill:none;stroke:#d3e0ec;stroke-width:1}
 .wind-rose-axis{stroke:#b4c7db;stroke-width:1}
@@ -159,6 +165,9 @@ body.theme-dark .wind-rose-axis{stroke:#4a6685}
 body.theme-dark .wind-rose-bar{stroke:#62a4dd}
 body.theme-dark .wind-rose-center{fill:#62a4dd}
 body.theme-dark .wind-rose-label{fill:#a9c2d8}
+body.theme-dark .wind-rose-period{border-color:#3a5776;background:#11263f;color:#b9d2e8}
+body.theme-dark .wind-rose-period:hover{background:#16304d}
+body.theme-dark .wind-rose-period.is-active{border-color:#62a4dd;background:#62a4dd;color:#0d2238}
 body.theme-dark .forecast-card .forecast-line{color:#b7cde0}
 body.theme-dark .forecast-card .forecast-day,
 body.theme-dark .extremes-card .extremes-line,
