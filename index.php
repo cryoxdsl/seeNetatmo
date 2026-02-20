@@ -265,6 +265,7 @@ $dayMaxRefTooltip = t('extremes.historical_avg') . ' (' . $todayMonthDayLabel . 
 $sunriseDisplay = t('common.na');
 $sunsetDisplay = t('common.na');
 $dayLengthDisplay = t('common.na');
+$dayLengthTooltip = t('common.na');
 $sunriseTooltip = t('common.na');
 $sunsetTooltip = t('common.na');
 $sunriseTs = null;
@@ -292,6 +293,17 @@ if ($stationLat !== '' && $stationLon !== '' && is_numeric($stationLat) && is_nu
             $dayHours = (int) floor($dayLengthSeconds / 3600);
             $dayMinutes = (int) floor(($dayLengthSeconds % 3600) / 60);
             $dayLengthDisplay = sprintf('%02d:%02d', $dayHours, $dayMinutes);
+            $yTs = now_paris()->modify('-1 day')->getTimestamp();
+            $yInfo = date_sun_info($yTs, (float) $stationLat, (float) $stationLon);
+            if (is_array($yInfo) && isset($yInfo['sunrise'], $yInfo['sunset']) && is_numeric($yInfo['sunrise']) && is_numeric($yInfo['sunset'])) {
+                $ySunrise = (int) $yInfo['sunrise'];
+                $ySunset = (int) $yInfo['sunset'];
+                if ($ySunset > $ySunrise) {
+                    $yDayLengthSeconds = $ySunset - $ySunrise;
+                    $deltaMin = (int) round(($dayLengthSeconds - $yDayLengthSeconds) / 60.0);
+                    $dayLengthTooltip = sprintf(t('extremes.day_length_delta'), $deltaMin);
+                }
+            }
             $dayStartTs = now_paris()->setTime(0, 0, 0)->getTimestamp();
             $sunriseMinutes = (int) floor(($sunriseTs - $dayStartTs) / 60);
             $sunsetMinutes = (int) floor(($sunsetTs - $dayStartTs) / 60);
@@ -604,9 +616,9 @@ front_header(t('dashboard.title'));
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 18h18M6 18a6 6 0 0 1 12 0M12 3v3M5.6 6.6l2.1 2.1M18.4 6.6l-2.1 2.1M3 12h3M18 12h3M9 21l3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><?= h(t('extremes.sunset')) ?></span>
         <strong title="<?= h($sunsetTooltip) ?>"><?= h($sunsetDisplay) ?></strong>
       </p>
-      <p class="extremes-line">
+      <p class="extremes-line" title="<?= h($dayLengthTooltip) ?>">
         <span class="extremes-label"><span class="extremes-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="7" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 13V9M12 13l3 2M9 3h6M12 6V4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg></span><?= h(t('extremes.day_length')) ?></span>
-        <strong><?= h($dayLengthDisplay) ?></strong>
+        <strong title="<?= h($dayLengthTooltip) ?>"><?= h($dayLengthDisplay) ?></strong>
       </p>
       <?php if ($solarVisualAvailable): ?>
         <div class="sun-visual">
