@@ -64,37 +64,37 @@ $rows = [];
 $searchErrorMsg = '';
 // Some MySQL/MariaDB setups fail on CAST(JSON AS CHAR) with LIKE.
 $didFallbackToMessageOnly = false;
+$runSearch = static function (string $sqlWhere, array $bindParams, int $currentPage, int $limit): array {
+    $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$sqlWhere}");
+    $countStmt->execute($bindParams);
+    $totalRows = (int) $countStmt->fetchColumn();
+    $allPages = max(1, (int) ceil($totalRows / $limit));
+    if ($currentPage > $allPages) {
+        $currentPage = $allPages;
+    }
+    $offsetRows = ($currentPage - 1) * $limit;
+
+    $sql = "SELECT id,level,channel,message,context_json,created_at
+            FROM app_logs
+            {$sqlWhere}
+            ORDER BY id DESC
+            LIMIT :limit OFFSET :offset";
+    $stmt = db()->prepare($sql);
+    foreach ($bindParams as $k => $v) {
+        $stmt->bindValue($k, $v, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offsetRows, PDO::PARAM_INT);
+    $stmt->execute();
+    return [
+        'total' => $totalRows,
+        'pages' => $allPages,
+        'page' => $currentPage,
+        'rows' => $stmt->fetchAll(),
+    ];
+};
+
 try {
-    $runSearch = static function (string $sqlWhere, array $bindParams, int $currentPage, int $limit): array {
-        $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$sqlWhere}");
-        $countStmt->execute($bindParams);
-        $totalRows = (int) $countStmt->fetchColumn();
-        $allPages = max(1, (int) ceil($totalRows / $limit));
-        if ($currentPage > $allPages) {
-            $currentPage = $allPages;
-        }
-        $offsetRows = ($currentPage - 1) * $limit;
-
-        $sql = "SELECT id,level,channel,message,context_json,created_at
-                FROM app_logs
-                {$sqlWhere}
-                ORDER BY id DESC
-                LIMIT :limit OFFSET :offset";
-        $stmt = db()->prepare($sql);
-        foreach ($bindParams as $k => $v) {
-            $stmt->bindValue($k, $v, PDO::PARAM_STR);
-        }
-        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-        $stmt->bindValue(':offset', $offsetRows, PDO::PARAM_INT);
-        $stmt->execute();
-        return [
-            'total' => $totalRows,
-            'pages' => $allPages,
-            'page' => $currentPage,
-            'rows' => $stmt->fetchAll(),
-        ];
-    };
-
     $result = $runSearch($whereSql, $params, $page, $perPage);
     $total = (int) $result['total'];
     $pages = (int) $result['pages'];
@@ -103,35 +103,6 @@ try {
 } catch (Throwable $e) {
     if ($q !== '' && $whereNoContextSql !== $whereSql) {
         try {
-            $runSearch = static function (string $sqlWhere, array $bindParams, int $currentPage, int $limit): array {
-                $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$sqlWhere}");
-                $countStmt->execute($bindParams);
-                $totalRows = (int) $countStmt->fetchColumn();
-                $allPages = max(1, (int) ceil($totalRows / $limit));
-                if ($currentPage > $allPages) {
-                    $currentPage = $allPages;
-                }
-                $offsetRows = ($currentPage - 1) * $limit;
-
-                $sql = "SELECT id,level,channel,message,context_json,created_at
-                        FROM app_logs
-                        {$sqlWhere}
-                        ORDER BY id DESC
-                        LIMIT :limit OFFSET :offset";
-                $stmt = db()->prepare($sql);
-                foreach ($bindParams as $k => $v) {
-                    $stmt->bindValue($k, $v, PDO::PARAM_STR);
-                }
-                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
-                $stmt->bindValue(':offset', $offsetRows, PDO::PARAM_INT);
-                $stmt->execute();
-                return [
-                    'total' => $totalRows,
-                    'pages' => $allPages,
-                    'page' => $currentPage,
-                    'rows' => $stmt->fetchAll(),
-                ];
-            };
             $result = $runSearch($whereNoContextSql, $paramsNoContext, $page, $perPage);
             $total = (int) $result['total'];
             $pages = (int) $result['pages'];
