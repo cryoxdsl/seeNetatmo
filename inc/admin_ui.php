@@ -20,6 +20,7 @@ function admin_header(string $title): void
     echo '<a href="' . APP_ADMIN_PATH . '/security.php">' . h(t('admin.twofa')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/netatmo.php">' . h(t('admin.netatmo')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/health.php">' . h(t('admin.health')) . '</a>';
+    echo '<a href="' . APP_ADMIN_PATH . '/stats.php">' . h(t('admin.stats')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/logs.php">' . h(t('admin.logs')) . '</a>';
     echo '<a href="' . APP_ADMIN_PATH . '/backups.php">' . h(t('admin.backups')) . '</a>';
     echo '<a href="/upgrade.php">' . h(t('admin.upgrade')) . '</a>';
