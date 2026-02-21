@@ -158,7 +158,26 @@ try {
 }
 
 $levels = db()->query("SELECT DISTINCT level FROM app_logs ORDER BY level ASC")->fetchAll();
-$channels = db()->query("SELECT DISTINCT channel FROM app_logs ORDER BY channel ASC")->fetchAll();
+$channelsRows = db()->query("SELECT DISTINCT channel FROM app_logs ORDER BY channel ASC")->fetchAll();
+$knownChannels = [
+    'admin.logs',
+    'admin.netatmo',
+    'cron.daily',
+    'cron.external',
+    'cron.fetch',
+    'front.forecast',
+    'front.metar',
+    'upgrade',
+];
+$channelMap = array_fill_keys($knownChannels, true);
+foreach ($channelsRows as $row) {
+    $v = trim((string) ($row['channel'] ?? ''));
+    if ($v !== '') {
+        $channelMap[$v] = true;
+    }
+}
+$channels = array_keys($channelMap);
+sort($channels, SORT_STRING);
 
 $baseParams = [
     'level' => $level,
@@ -188,7 +207,7 @@ admin_header(t('admin.logs'));
   <label><?= h(t('logs.channel')) ?>
     <select name="channel">
       <option value=""><?= h(t('logs.all')) ?></option>
-      <?php foreach ($channels as $c): $v = (string) $c['channel']; ?>
+      <?php foreach ($channels as $v): ?>
       <option value="<?= h($v) ?>" <?= $channel === $v ? 'selected' : '' ?>><?= h($v) ?></option>
       <?php endforeach; ?>
     </select>
