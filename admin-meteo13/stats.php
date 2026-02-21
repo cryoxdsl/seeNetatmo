@@ -69,7 +69,6 @@ $uniqueIps = (int) ($summary['unique_ips'] ?? 0);
 $totalPages = (int) ($summary['total_pages'] ?? 0);
 $avgDuration = isset($summary['avg_duration']) ? (int) round((float) $summary['avg_duration']) : 0;
 $totalDuration = isset($summary['total_duration']) ? (int) round((float) $summary['total_duration']) : 0;
-$avgPagesPerVisitor = $uniqueIps > 0 ? round($totalPages / $uniqueIps, 2) : 0.0;
 
 admin_header(t('stats.title'));
 ?>
@@ -101,10 +100,6 @@ admin_header(t('stats.title'));
   <article class="card">
     <h3><?= h(t('stats.pageviews')) ?></h3>
     <div><?= (int) $totalPages ?></div>
-  </article>
-  <article class="card">
-    <h3><?= h(t('stats.avg_usage_visitor')) ?></h3>
-    <div><?= h(number_format($avgPagesPerVisitor, 2, '.', '')) ?> <?= h(t('stats.pages_per_visitor')) ?></div>
   </article>
   <article class="card">
     <h3><?= h(t('stats.avg_duration')) ?></h3>
