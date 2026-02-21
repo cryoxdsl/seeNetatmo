@@ -235,25 +235,20 @@
 
     var ctx = this.ctx;
     var isDark = document.body && document.body.classList && document.body.classList.contains('theme-dark');
-    var alpha = isDark ? 0.09 : 0.07;
+    var alpha = isDark ? 0.12 : 0.09;
 
     ctx.save();
     ctx.beginPath();
     ctx.rect(plot.left, plot.top, plot.width, plot.height);
     ctx.clip();
     ctx.translate(plot.left + plot.width / 2, plot.top + plot.height / 2);
-    ctx.rotate(-Math.PI / 6);
+    ctx.rotate(-Math.PI / 7);
     ctx.fillStyle = isDark ? 'rgba(180,205,228,' + alpha + ')' : 'rgba(42,84,122,' + alpha + ')';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.font = '700 26px Verdana, Arial, sans-serif';
-
-    var gap = 190;
-    for (var y = -plot.height; y <= plot.height; y += gap) {
-      for (var x = -plot.width; x <= plot.width; x += gap) {
-        ctx.fillText(text, x, y);
-      }
-    }
+    var px = Math.max(22, Math.min(56, Math.floor(plot.width * 0.11)));
+    ctx.font = '700 ' + px + 'px Verdana, Arial, sans-serif';
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   };
 
