@@ -43,39 +43,111 @@ if ($hours > 0) {
 }
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+$whereNoContextSql = $whereSql;
+if ($q !== '') {
+    $whereNoContext = array_map(
+        static fn(string $clause): string => $clause === '(message LIKE :q OR CAST(context_json AS CHAR) LIKE :q)'
+            ? '(message LIKE :q)'
+            : $clause,
+        $where
+    );
+    $whereNoContextSql = $whereNoContext ? ('WHERE ' . implode(' AND ', $whereNoContext)) : '';
+}
 
 $total = 0;
 $pages = 1;
 $rows = [];
+// Some MySQL/MariaDB setups fail on CAST(JSON AS CHAR) with LIKE.
+$didFallbackToMessageOnly = false;
 try {
-    $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$whereSql}");
-    $countStmt->execute($params);
-    $total = (int) $countStmt->fetchColumn();
-    $pages = max(1, (int) ceil($total / $perPage));
-    if ($page > $pages) {
-        $page = $pages;
-    }
-    $offset = ($page - 1) * $perPage;
+    $runSearch = static function (string $sqlWhere, array $bindParams, int $currentPage, int $limit): array {
+        $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$sqlWhere}");
+        $countStmt->execute($bindParams);
+        $totalRows = (int) $countStmt->fetchColumn();
+        $allPages = max(1, (int) ceil($totalRows / $limit));
+        if ($currentPage > $allPages) {
+            $currentPage = $allPages;
+        }
+        $offsetRows = ($currentPage - 1) * $limit;
 
-    $sql = "SELECT id,level,channel,message,context_json,created_at
-            FROM app_logs
-            {$whereSql}
-            ORDER BY id DESC
-            LIMIT :limit OFFSET :offset";
-    $stmt = db()->prepare($sql);
-    foreach ($params as $k => $v) {
-        $stmt->bindValue($k, $v, PDO::PARAM_STR);
-    }
-    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-    $stmt->execute();
-    $rows = $stmt->fetchAll();
+        $sql = "SELECT id,level,channel,message,context_json,created_at
+                FROM app_logs
+                {$sqlWhere}
+                ORDER BY id DESC
+                LIMIT :limit OFFSET :offset";
+        $stmt = db()->prepare($sql);
+        foreach ($bindParams as $k => $v) {
+            $stmt->bindValue($k, $v, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offsetRows, PDO::PARAM_INT);
+        $stmt->execute();
+        return [
+            'total' => $totalRows,
+            'pages' => $allPages,
+            'page' => $currentPage,
+            'rows' => $stmt->fetchAll(),
+        ];
+    };
+
+    $result = $runSearch($whereSql, $params, $page, $perPage);
+    $total = (int) $result['total'];
+    $pages = (int) $result['pages'];
+    $page = (int) $result['page'];
+    $rows = is_array($result['rows']) ? $result['rows'] : [];
 } catch (Throwable $e) {
-    log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e->getMessage()]);
-    $total = 0;
-    $pages = 1;
-    $page = 1;
-    $rows = [];
+    if ($q !== '' && $whereNoContextSql !== $whereSql) {
+        try {
+            $runSearch = static function (string $sqlWhere, array $bindParams, int $currentPage, int $limit): array {
+                $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$sqlWhere}");
+                $countStmt->execute($bindParams);
+                $totalRows = (int) $countStmt->fetchColumn();
+                $allPages = max(1, (int) ceil($totalRows / $limit));
+                if ($currentPage > $allPages) {
+                    $currentPage = $allPages;
+                }
+                $offsetRows = ($currentPage - 1) * $limit;
+
+                $sql = "SELECT id,level,channel,message,context_json,created_at
+                        FROM app_logs
+                        {$sqlWhere}
+                        ORDER BY id DESC
+                        LIMIT :limit OFFSET :offset";
+                $stmt = db()->prepare($sql);
+                foreach ($bindParams as $k => $v) {
+                    $stmt->bindValue($k, $v, PDO::PARAM_STR);
+                }
+                $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+                $stmt->bindValue(':offset', $offsetRows, PDO::PARAM_INT);
+                $stmt->execute();
+                return [
+                    'total' => $totalRows,
+                    'pages' => $allPages,
+                    'page' => $currentPage,
+                    'rows' => $stmt->fetchAll(),
+                ];
+            };
+            $result = $runSearch($whereNoContextSql, $params, $page, $perPage);
+            $total = (int) $result['total'];
+            $pages = (int) $result['pages'];
+            $page = (int) $result['page'];
+            $rows = is_array($result['rows']) ? $result['rows'] : [];
+            $didFallbackToMessageOnly = true;
+            log_event('warning', 'admin.logs', 'Logs search fallback to message-only', ['err' => $e->getMessage()]);
+        } catch (Throwable $e2) {
+            log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e2->getMessage()]);
+            $total = 0;
+            $pages = 1;
+            $page = 1;
+            $rows = [];
+        }
+    } else {
+        log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e->getMessage()]);
+        $total = 0;
+        $pages = 1;
+        $page = 1;
+        $rows = [];
+    }
 }
 
 $levels = db()->query("SELECT DISTINCT level FROM app_logs ORDER BY level ASC")->fetchAll();
@@ -141,6 +213,9 @@ admin_header(t('admin.logs'));
   <a class="btn" href="logs.php"><?= h(t('logs.reset')) ?></a>
 </form>
 <p><?= (int) $total ?> <?= h(t('logs.found')) ?></p>
+<?php if ($didFallbackToMessageOnly): ?>
+  <p class="small-muted"><?= h('Recherche contexte indisponible sur ce moteur SQL, recherche limitée au message.') ?></p>
+<?php endif; ?>
 </div>
 <div class="panel table-wrap">
 <table>
