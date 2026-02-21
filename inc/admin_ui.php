@@ -7,6 +7,9 @@ require_once __DIR__ . '/settings.php';
 
 function admin_header(string $title): void
 {
+    if (!headers_sent()) {
+        header('X-Robots-Tag: noindex, nofollow, noarchive', true);
+    }
     $baseTitle = browser_title_base();
     $fullTitle = $title !== '' ? ($title . ' - ' . $baseTitle . ' (Admin)') : ($baseTitle . ' (Admin)');
     echo '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';

@@ -11,6 +11,8 @@ echo "User-agent: *\n";
 echo "Disallow: /admin-meteo13/\n";
 echo "Disallow: /install/\n";
 echo "Disallow: /config/\n";
+echo "Disallow: /track.php\n";
+echo "Disallow: /front-log.php\n";
+echo "Disallow: /front_cache_refresh.php\n";
 echo "Allow: /\n";
 echo 'Sitemap: ' . base_url_root() . "/sitemap.xml\n";
-

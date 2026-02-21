@@ -124,6 +124,8 @@ function backup_stream_sql(string $filename, callable $writer): never
 
     $ts = (new DateTimeImmutable('now', new DateTimeZone(APP_TIMEZONE)))->format('Y-m-d H:i:s');
     echo "-- Generated at {$ts} (" . APP_TIMEZONE . ")\n";
+    echo '-- Source: ' . app_name() . " | " . base_url_root() . "\n";
+    echo '-- Domain: ' . base_url_root() . "\n";
     echo "SET NAMES utf8mb4;\n";
     echo "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
@@ -141,8 +143,16 @@ $hasAlldata = backup_table_exists($pdo, 'alldata');
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     require_csrf();
     $action = (string) ($_POST['action'] ?? '');
+    $rl = rate_limit_allow('admin_backup_export', 6, 3600, 'admin:' . (string) ($_SESSION['admin_uid'] ?? '0') . ':' . client_ip());
+    if (empty($rl['ok'])) {
+        $retry = (int) ($rl['retry_after'] ?? 3600);
+        $err = 'export quota exceeded (retry in ' . $retry . 's)';
+    }
 
     try {
+        if ($err !== '') {
+            throw new RuntimeException($err);
+        }
         if ($action === 'export_alldata') {
             if (!$hasAlldata) {
                 throw new RuntimeException(t('backup.table_missing'));

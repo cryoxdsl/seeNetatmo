@@ -21,6 +21,15 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$rl = rate_limit_allow('track', 300, 60);
+if (empty($rl['ok'])) {
+    http_response_code(429);
+    $retryAfter = (int) ($rl['retry_after'] ?? 60);
+    header('Retry-After: ' . $retryAfter);
+    echo json_encode(['ok' => false, 'reason' => 'rate_limited']);
+    exit;
+}
+
 $raw = file_get_contents('php://input');
 $data = [];
 if (is_string($raw) && $raw !== '') {

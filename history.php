@@ -18,9 +18,31 @@ if (!in_array($period, $allowed, true)) {
 $rows = period_rows($period);
 
 if ((string)($_GET['export'] ?? '') === 'csv') {
+    $rl = rate_limit_allow('history_export_csv', 10, 3600);
+    if (empty($rl['ok'])) {
+        http_response_code(429);
+        $retryAfter = (int) ($rl['retry_after'] ?? 3600);
+        header('Retry-After: ' . $retryAfter);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Export quota reached. Please try again later.';
+        exit;
+    }
+
+    $maxRows = 25000;
+    if (count($rows) > $maxRows) {
+        http_response_code(413);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo 'Export too large for this period. Please choose a shorter period.';
+        exit;
+    }
+
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="meteo13_' . $period . '.csv"');
     $out = fopen('php://output', 'w');
+    $generatedAt = now_paris()->format('Y-m-d H:i:s');
+    fputcsv($out, ['# Source', app_name() . ' - ' . base_url_root()]);
+    fputcsv($out, ['# Generated at', $generatedAt . ' (' . APP_TIMEZONE . ')']);
+    fputcsv($out, ['# Domain', base_url_root()]);
     fputcsv($out, ['DateTime','T','Tmax','Tmin','H','D','W','G','B','RR','R','P','S','A']);
     foreach ($rows as $r) {
         fputcsv($out, [$r['DateTime'],$r['T'],$r['Tmax'],$r['Tmin'],$r['H'],$r['D'],$r['W'],$r['G'],$r['B'],$r['RR'],$r['R'],$r['P'],$r['S'],$r['A']]);

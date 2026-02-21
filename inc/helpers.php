@@ -213,3 +213,66 @@ function app_release_tag(): string
     $info = app_release_info();
     return (string) ($info['tag'] ?? ('v' . APP_VERSION));
 }
+
+function rate_limit_allow(string $bucket, int $limit, int $windowSeconds, ?string $scopeKey = null): array
+{
+    $limit = max(1, $limit);
+    $windowSeconds = max(1, $windowSeconds);
+    $scope = $scopeKey !== null && $scopeKey !== '' ? $scopeKey : client_ip();
+    $scopeHash = sha1($scope);
+    $safeBucket = preg_replace('/[^a-z0-9_.-]/i', '_', strtolower($bucket)) ?? 'default';
+    $dir = rtrim((string) sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'meteo13_rl';
+
+    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
+        return ['ok' => true, 'remaining' => $limit, 'retry_after' => 0];
+    }
+
+    $file = $dir . DIRECTORY_SEPARATOR . 'rl_' . $safeBucket . '_' . $scopeHash . '.json';
+    $fp = @fopen($file, 'c+');
+    if ($fp === false) {
+        return ['ok' => true, 'remaining' => $limit, 'retry_after' => 0];
+    }
+
+    $now = time();
+    $ok = true;
+    $remaining = $limit;
+    $retryAfter = 0;
+
+    try {
+        if (!flock($fp, LOCK_EX)) {
+            return ['ok' => true, 'remaining' => $limit, 'retry_after' => 0];
+        }
+
+        $raw = stream_get_contents($fp);
+        $state = is_string($raw) && $raw !== '' ? json_decode($raw, true) : null;
+        if (!is_array($state)) {
+            $state = ['window_start' => $now, 'count' => 0];
+        }
+
+        $windowStart = (int) ($state['window_start'] ?? $now);
+        $count = (int) ($state['count'] ?? 0);
+        if (($now - $windowStart) >= $windowSeconds) {
+            $windowStart = $now;
+            $count = 0;
+        }
+
+        if ($count >= $limit) {
+            $ok = false;
+            $retryAfter = max(1, $windowSeconds - ($now - $windowStart));
+            $remaining = 0;
+        } else {
+            $count++;
+            $remaining = max(0, $limit - $count);
+            $state = ['window_start' => $windowStart, 'count' => $count];
+            ftruncate($fp, 0);
+            rewind($fp);
+            fwrite($fp, (string) json_encode($state, JSON_UNESCAPED_SLASHES));
+            fflush($fp);
+        }
+    } finally {
+        @flock($fp, LOCK_UN);
+        @fclose($fp);
+    }
+
+    return ['ok' => $ok, 'remaining' => $remaining, 'retry_after' => $retryAfter];
+}
