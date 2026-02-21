@@ -99,6 +99,7 @@ $payload = [
         'density_compact' => t('charts.density.compact'),
         'density_dense' => t('charts.density.dense'),
         'time_axis' => t('table.datetime'),
+        'watermark' => app_name(),
     ],
 ];
 
