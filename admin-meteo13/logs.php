@@ -33,8 +33,9 @@ if ($channel !== '') {
     $params[':channel'] = $channel;
 }
 if ($q !== '') {
-    $where[] = '(message LIKE :q OR CAST(context_json AS CHAR) LIKE :q)';
-    $params[':q'] = '%' . $q . '%';
+    $where[] = '(message LIKE :q_msg OR CAST(context_json AS CHAR) LIKE :q_ctx)';
+    $params[':q_msg'] = '%' . $q . '%';
+    $params[':q_ctx'] = '%' . $q . '%';
 }
 if ($hours > 0) {
     $since = now_paris()->modify('-' . $hours . ' hours')->format('Y-m-d H:i:s');
@@ -44,14 +45,17 @@ if ($hours > 0) {
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 $whereNoContextSql = $whereSql;
+// Dedicated bind params for the message-only fallback query.
+$paramsNoContext = $params;
 if ($q !== '') {
     $whereNoContext = array_map(
-        static fn(string $clause): string => $clause === '(message LIKE :q OR CAST(context_json AS CHAR) LIKE :q)'
-            ? '(message LIKE :q)'
+        static fn(string $clause): string => $clause === '(message LIKE :q_msg OR CAST(context_json AS CHAR) LIKE :q_ctx)'
+            ? '(message LIKE :q_msg)'
             : $clause,
         $where
     );
     $whereNoContextSql = $whereNoContext ? ('WHERE ' . implode(' AND ', $whereNoContext)) : '';
+    unset($paramsNoContext[':q_ctx']);
 }
 
 $total = 0;
@@ -127,7 +131,7 @@ try {
                     'rows' => $stmt->fetchAll(),
                 ];
             };
-            $result = $runSearch($whereNoContextSql, $params, $page, $perPage);
+            $result = $runSearch($whereNoContextSql, $paramsNoContext, $page, $perPage);
             $total = (int) $result['total'];
             $pages = (int) $result['pages'];
             $page = (int) $result['page'];
