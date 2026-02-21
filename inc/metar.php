@@ -4,7 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/settings.php';
 require_once __DIR__ . '/logger.php';
 
-const METAR_API_URL = 'https://aviationweather.gov/adds/dataserver_current/httpparam';
+const METAR_API_XML_URL = 'https://aviationweather.gov/adds/dataserver_current/httpparam';
 const METAR_API_JSON_URL = 'https://aviationweather.gov/api/data/metar';
 const METAR_CACHE_TTL_SECONDS = 900;
 
@@ -37,9 +37,10 @@ function metar_http_get_xml(string $url): string
     $ch = curl_init($url);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_CONNECTTIMEOUT => 2,
-        CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
+        CURLOPT_TIMEOUT => 7,
+        CURLOPT_CONNECTTIMEOUT => 3,
+        CURLOPT_USERAGENT => 'meteo13-netatmo/1.0 contact@meteo13.fr',
+        CURLOPT_HTTPHEADER => ['Accept: application/xml,text/xml;q=0.9,*/*;q=0.8'],
     ]);
     $raw = curl_exec($ch);
     $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -57,29 +58,72 @@ function metar_http_get_xml(string $url): string
 
 function metar_http_get_json(string $url): array
 {
-    $ch = curl_init($url);
-    curl_setopt_array($ch, [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 5,
-        CURLOPT_CONNECTTIMEOUT => 2,
-        CURLOPT_USERAGENT => 'meteo13-netatmo/1.0',
-    ]);
-    $raw = curl_exec($ch);
-    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
+    $transientErrnos = [6, 7, 28, 35, 52, 56];
+    $maxAttempts = 3;
+    $lastErr = '';
+    $lastHttp = 0;
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        $ch = curl_init($url);
+        curl_setopt_array($ch, [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $attempt === 1 ? 5 : 8,
+            CURLOPT_CONNECTTIMEOUT => $attempt === 1 ? 2 : 4,
+            CURLOPT_USERAGENT => 'meteo13-netatmo/1.0 contact@meteo13.fr',
+            CURLOPT_HTTPHEADER => ['Accept: application/json,text/plain;q=0.9,*/*;q=0.8'],
+        ]);
+        $raw = curl_exec($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errno = curl_errno($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
 
-    if (!is_string($raw) || $raw === '') {
-        throw new RuntimeException('METAR JSON fetch failed: ' . $err);
+        if (!is_string($raw) || $raw === '') {
+            $lastErr = $err;
+            $lastHttp = $http;
+            if (in_array($errno, $transientErrnos, true) && $attempt < $maxAttempts) {
+                usleep(250000 * $attempt);
+                continue;
+            }
+            throw new RuntimeException('METAR JSON fetch failed: ' . $err);
+        }
+        if ($http >= 400) {
+            $lastHttp = $http;
+            if ($http >= 500 && $attempt < $maxAttempts) {
+                usleep(250000 * $attempt);
+                continue;
+            }
+            throw new RuntimeException('METAR JSON HTTP ' . $http);
+        }
+        $json = json_decode($raw, true);
+        if (!is_array($json)) {
+            throw new RuntimeException('METAR JSON invalid');
+        }
+        return $json;
     }
-    if ($http >= 400) {
-        throw new RuntimeException('METAR JSON HTTP ' . $http);
-    }
-    $json = json_decode($raw, true);
-    if (!is_array($json)) {
-        throw new RuntimeException('METAR JSON invalid');
-    }
-    return $json;
+    throw new RuntimeException('METAR JSON fetch failed: ' . ($lastErr !== '' ? $lastErr : ('HTTP ' . $lastHttp)));
+}
+
+function metar_fetch_nearby_json(array $coords, int $radiusKm = 120, int $hours = 3): array
+{
+    $lat = (float) $coords['lat'];
+    $lon = (float) $coords['lon'];
+    $deltaLat = max(0.1, $radiusKm / 111.0);
+    $cosLat = max(0.15, abs(cos(deg2rad($lat))));
+    $deltaLon = max(0.1, $radiusKm / (111.0 * $cosLat));
+    $latMin = max(-90.0, $lat - $deltaLat);
+    $latMax = min(90.0, $lat + $deltaLat);
+    $lonMin = max(-180.0, $lon - $deltaLon);
+    $lonMax = min(180.0, $lon + $deltaLon);
+
+    $query = http_build_query([
+        'format' => 'json',
+        'hours' => $hours,
+        // AviationWeather JSON API expects bbox=minLon,minLat,maxLon,maxLat
+        'bbox' => number_format($lonMin, 4, '.', '') . ',' . number_format($latMin, 4, '.', '')
+            . ',' . number_format($lonMax, 4, '.', '') . ',' . number_format($latMax, 4, '.', ''),
+    ]);
+    $url = METAR_API_JSON_URL . '?' . $query;
+    return ['items' => metar_http_get_json($url), 'url' => $url];
 }
 
 function metar_decode_summary(array $metar): array
@@ -657,13 +701,10 @@ function metar_nearest(bool $allowRemote = false): array
     }
 
     $query = http_build_query([
-        'dataSource' => 'metars',
-        'requestType' => 'retrieve',
-        'format' => 'xml',
-        'hoursBeforeNow' => 3,
-        'radialDistance' => '120;' . number_format($coords['lat'], 4, '.', '') . ',' . number_format($coords['lon'], 4, '.', ''),
+        'format' => 'json',
+        'hours' => 3,
     ]);
-    $url = METAR_API_URL . '?' . $query;
+    $url = METAR_API_JSON_URL . '?' . $query;
 
     $out = [
         'available' => false,
@@ -681,10 +722,14 @@ function metar_nearest(bool $allowRemote = false): array
         'source_url' => $url,
     ];
 
+    $primaryErrors = [];
     try {
         setting_set('metar_last_try', (string) time());
-        $xml = metar_http_get_xml($url);
-        $items = metar_parse_items($xml);
+        $near = metar_fetch_nearby_json($coords, 120, 3);
+        $items = is_array($near['items'] ?? null) ? $near['items'] : [];
+        if (!empty($near['url']) && is_string($near['url'])) {
+            $out['source_url'] = $near['url'];
+        }
         if (!$items) {
             $out['reason'] = 'no_data';
         } else {
@@ -716,7 +761,51 @@ function metar_nearest(bool $allowRemote = false): array
             }
         }
     } catch (Throwable $e) {
-        log_event('warning', 'front.metar', 'METAR fetch failed', ['err' => $e->getMessage()]);
+        $primaryErrors[] = $e->getMessage();
+    }
+
+    if (empty($out['available'])) {
+        try {
+            $queryXml = http_build_query([
+                'dataSource' => 'metars',
+                'requestType' => 'retrieve',
+                'format' => 'xml',
+                'hoursBeforeNow' => 3,
+                'radialDistance' => '120;' . number_format($coords['lat'], 4, '.', '') . ',' . number_format($coords['lon'], 4, '.', ''),
+            ]);
+            $urlXml = METAR_API_XML_URL . '?' . $queryXml;
+            $xml = metar_http_get_xml($urlXml);
+            $items = metar_parse_items($xml);
+            if ($items) {
+                $best = null;
+                $bestDist = null;
+                foreach ($items as $item) {
+                    if (!isset($item['latitude'], $item['longitude']) || !is_numeric($item['latitude']) || !is_numeric($item['longitude'])) {
+                        continue;
+                    }
+                    $dist = metar_haversine_km($coords['lat'], $coords['lon'], (float) $item['latitude'], (float) $item['longitude']);
+                    if ($bestDist === null || $dist < $bestDist) {
+                        $bestDist = $dist;
+                        $best = $item;
+                    }
+                }
+                if ($best !== null) {
+                    $decoded = metar_decode_summary($best);
+                    $out['available'] = true;
+                    $out['reason'] = '';
+                    $out['source_url'] = $urlXml;
+                    $out['airport_icao'] = (string) ($best['station_id'] ?? '');
+                    $out['distance_km'] = $bestDist !== null ? round($bestDist, 1) : null;
+                    $out['observed_at'] = (string) ($best['observation_time'] ?? '');
+                    $out['raw_text'] = (string) ($best['raw_text'] ?? '');
+                    $out['headline'] = (string) ($decoded['headline'] ?? '');
+                    $out['weather'] = (string) ($decoded['weather'] ?? '');
+                    $out['sky'] = (string) ($decoded['sky'] ?? '');
+                }
+            }
+        } catch (Throwable $e) {
+            $primaryErrors[] = $e->getMessage();
+        }
     }
 
     if (empty($out['available'])) {
@@ -747,10 +836,16 @@ function metar_nearest(bool $allowRemote = false): array
                 $out['headline'] = (string) ($decoded['headline'] ?? '');
                 $out['weather'] = (string) ($decoded['weather'] ?? '');
                 $out['sky'] = (string) ($decoded['sky'] ?? '');
+                // Fallback works: no warning spam for primary provider hiccups.
+                $primaryErrors = [];
             }
         } catch (Throwable $e) {
             log_event('warning', 'front.metar', 'METAR fallback fetch failed', ['err' => $e->getMessage()]);
         }
+    }
+
+    if (empty($out['available']) && $primaryErrors !== []) {
+        log_event('warning', 'front.metar', 'METAR fetch failed', ['err' => implode(' | ', $primaryErrors)]);
     }
 
     setting_set('metar_cache_json', json_encode($out, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE));

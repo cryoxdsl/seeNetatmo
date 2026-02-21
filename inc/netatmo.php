@@ -6,34 +6,56 @@ require_once __DIR__ . '/logger.php';
 
 function curl_json(string $url, ?array $post = null, array $headers = []): array
 {
-    $ch = curl_init($url);
-    $opts = [
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_TIMEOUT => 8,
-        CURLOPT_CONNECTTIMEOUT => 4,
-        CURLOPT_HTTPHEADER => $headers,
-    ];
-    if ($post !== null) {
-        $opts[CURLOPT_POST] = true;
-        $opts[CURLOPT_POSTFIELDS] = http_build_query($post);
+    $transientErrnos = [6, 7, 28, 35, 52, 56];
+    $maxAttempts = 3;
+    $lastCurlError = '';
+    $lastCurlErrno = 0;
+
+    for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+        $timeout = $attempt === 1 ? 8 : 12;
+        $connectTimeout = $attempt === 1 ? 4 : 6;
+
+        $ch = curl_init($url);
+        $opts = [
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_TIMEOUT => $timeout,
+            CURLOPT_CONNECTTIMEOUT => $connectTimeout,
+            CURLOPT_HTTPHEADER => $headers,
+        ];
+        if ($post !== null) {
+            $opts[CURLOPT_POST] = true;
+            $opts[CURLOPT_POSTFIELDS] = http_build_query($post);
+        }
+        curl_setopt_array($ch, $opts);
+        $raw = curl_exec($ch);
+        $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        $errno = curl_errno($ch);
+        $err = curl_error($ch);
+        curl_close($ch);
+
+        if ($raw === false) {
+            $lastCurlError = $err;
+            $lastCurlErrno = $errno;
+            if (in_array($errno, $transientErrnos, true) && $attempt < $maxAttempts) {
+                usleep(300000 * $attempt);
+                continue;
+            }
+            throw new RuntimeException('cURL failed: ' . $err);
+        }
+
+        $json = json_decode($raw, true);
+        if (!is_array($json)) {
+            throw new RuntimeException('Invalid JSON response');
+        }
+        if ($http >= 400 || isset($json['error'])) {
+            $msg = is_array($json['error'] ?? null) ? json_encode($json['error']) : (string) ($json['error_description'] ?? ($json['error'] ?? ('HTTP ' . $http)));
+            throw new RuntimeException('Netatmo error: ' . $msg);
+        }
+        return $json;
     }
-    curl_setopt_array($ch, $opts);
-    $raw = curl_exec($ch);
-    $http = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
-    if ($raw === false) {
-        throw new RuntimeException('cURL failed: ' . $err);
-    }
-    $json = json_decode($raw, true);
-    if (!is_array($json)) {
-        throw new RuntimeException('Invalid JSON response');
-    }
-    if ($http >= 400 || isset($json['error'])) {
-        $msg = is_array($json['error'] ?? null) ? json_encode($json['error']) : (string) ($json['error_description'] ?? ($json['error'] ?? ('HTTP ' . $http)));
-        throw new RuntimeException('Netatmo error: ' . $msg);
-    }
-    return $json;
+
+    $suffix = $lastCurlErrno > 0 ? (' [errno=' . $lastCurlErrno . ']') : '';
+    throw new RuntimeException('cURL failed: ' . $lastCurlError . $suffix);
 }
 
 function netatmo_redirect_uri(): string
