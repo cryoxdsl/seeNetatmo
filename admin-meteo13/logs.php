@@ -61,6 +61,7 @@ if ($q !== '') {
 $total = 0;
 $pages = 1;
 $rows = [];
+$searchErrorMsg = '';
 // Some MySQL/MariaDB setups fail on CAST(JSON AS CHAR) with LIKE.
 $didFallbackToMessageOnly = false;
 try {
@@ -140,6 +141,7 @@ try {
             log_event('warning', 'admin.logs', 'Logs search fallback to message-only', ['err' => $e->getMessage()]);
         } catch (Throwable $e2) {
             log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e2->getMessage()]);
+            $searchErrorMsg = $e2->getMessage();
             $total = 0;
             $pages = 1;
             $page = 1;
@@ -147,6 +149,7 @@ try {
         }
     } else {
         log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e->getMessage()]);
+        $searchErrorMsg = $e->getMessage();
         $total = 0;
         $pages = 1;
         $page = 1;
@@ -219,6 +222,9 @@ admin_header(t('admin.logs'));
 <p><?= (int) $total ?> <?= h(t('logs.found')) ?></p>
 <?php if ($didFallbackToMessageOnly): ?>
   <p class="small-muted"><?= h('Recherche contexte indisponible sur ce moteur SQL, recherche limitée au message.') ?></p>
+<?php endif; ?>
+<?php if ($searchErrorMsg !== ''): ?>
+  <p class="small-muted" style="color:#b23a2b"><?= h('Erreur recherche logs: ' . $searchErrorMsg) ?></p>
 <?php endif; ?>
 </div>
 <div class="panel table-wrap">
