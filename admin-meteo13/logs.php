@@ -33,7 +33,7 @@ if ($channel !== '') {
     $params[':channel'] = $channel;
 }
 if ($q !== '') {
-    $where[] = '(message LIKE :q OR context_json LIKE :q)';
+    $where[] = '(message LIKE :q OR CAST(context_json AS CHAR) LIKE :q)';
     $params[':q'] = '%' . $q . '%';
 }
 if ($hours > 0) {
@@ -44,28 +44,39 @@ if ($hours > 0) {
 
 $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
 
-$countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$whereSql}");
-$countStmt->execute($params);
-$total = (int) $countStmt->fetchColumn();
-$pages = max(1, (int) ceil($total / $perPage));
-if ($page > $pages) {
-    $page = $pages;
-}
-$offset = ($page - 1) * $perPage;
+$total = 0;
+$pages = 1;
+$rows = [];
+try {
+    $countStmt = db()->prepare("SELECT COUNT(*) FROM app_logs {$whereSql}");
+    $countStmt->execute($params);
+    $total = (int) $countStmt->fetchColumn();
+    $pages = max(1, (int) ceil($total / $perPage));
+    if ($page > $pages) {
+        $page = $pages;
+    }
+    $offset = ($page - 1) * $perPage;
 
-$sql = "SELECT id,level,channel,message,context_json,created_at
-        FROM app_logs
-        {$whereSql}
-        ORDER BY id DESC
-        LIMIT :limit OFFSET :offset";
-$stmt = db()->prepare($sql);
-foreach ($params as $k => $v) {
-    $stmt->bindValue($k, $v, PDO::PARAM_STR);
+    $sql = "SELECT id,level,channel,message,context_json,created_at
+            FROM app_logs
+            {$whereSql}
+            ORDER BY id DESC
+            LIMIT :limit OFFSET :offset";
+    $stmt = db()->prepare($sql);
+    foreach ($params as $k => $v) {
+        $stmt->bindValue($k, $v, PDO::PARAM_STR);
+    }
+    $stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
+    $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+    $stmt->execute();
+    $rows = $stmt->fetchAll();
+} catch (Throwable $e) {
+    log_event('warning', 'admin.logs', 'Logs search query failed', ['err' => $e->getMessage()]);
+    $total = 0;
+    $pages = 1;
+    $page = 1;
+    $rows = [];
 }
-$stmt->bindValue(':limit', $perPage, PDO::PARAM_INT);
-$stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
-$stmt->execute();
-$rows = $stmt->fetchAll();
 
 $levels = db()->query("SELECT DISTINCT level FROM app_logs ORDER BY level ASC")->fetchAll();
 $channels = db()->query("SELECT DISTINCT channel FROM app_logs ORDER BY channel ASC")->fetchAll();
