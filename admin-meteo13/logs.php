@@ -136,8 +136,12 @@ $knownChannels = [
     'cron.daily',
     'cron.external',
     'cron.fetch',
+    'front.analytics',
+    'front.cache_refresh',
+    'front.client',
     'front.forecast',
     'front.metar',
+    'front.sea_temp',
     'upgrade',
 ];
 $channelMap = array_fill_keys($knownChannels, true);
