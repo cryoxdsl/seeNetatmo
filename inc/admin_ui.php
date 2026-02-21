@@ -10,6 +10,7 @@ function admin_header(string $title): void
     $baseTitle = browser_title_base();
     $fullTitle = $title !== '' ? ($title . ' - ' . $baseTitle . ' (Admin)') : ($baseTitle . ' (Admin)');
     echo '<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+    echo '<meta name="robots" content="noindex,nofollow,noarchive">';
     echo '<title>' . h($fullTitle) . '</title>';
     echo '<link rel="icon" href="' . h(favicon_url()) . '" type="image/x-icon">';
     echo '<link rel="stylesheet" href="/assets/css/style.css"></head><body>';

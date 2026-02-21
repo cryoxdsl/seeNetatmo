@@ -2,6 +2,8 @@ Options -Indexes
 
 <IfModule mod_rewrite.c>
 RewriteEngine On
+RewriteRule ^robots\.txt$ /robots.php [L,NC,QSA]
+RewriteRule ^sitemap\.xml$ /sitemap.php [L,NC,QSA]
 RewriteRule ^config/ - [F,L,NC]
 RewriteRule ^install/schema\.sql$ - [F,L,NC]
 RewriteCond %{REQUEST_FILENAME} -f [OR]
