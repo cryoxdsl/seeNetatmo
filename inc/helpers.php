@@ -41,7 +41,24 @@ function is_https(): bool
 function base_url_root(): string
 {
     $scheme = is_https() ? 'https' : 'http';
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $rawHost = trim((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $rawHost = str_replace(["\r", "\n"], '', $rawHost);
+
+    $host = '';
+    if ($rawHost !== '' && preg_match('/^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?|\[[0-9a-f:.]+\])(?::\d{1,5})?$/i', $rawHost) === 1) {
+        $host = $rawHost;
+    }
+    if ($host === '' && function_exists('cfg')) {
+        $cfgDomain = trim((string) cfg('domain', ''));
+        $cfgDomain = preg_replace('#^https?://#i', '', $cfgDomain) ?? '';
+        $cfgDomain = trim($cfgDomain, "/ \t\n\r\0\x0B");
+        if ($cfgDomain !== '' && preg_match('/^(?:localhost|(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?|\[[0-9a-f:.]+\])(?::\d{1,5})?$/i', $cfgDomain) === 1) {
+            $host = $cfgDomain;
+        }
+    }
+    if ($host === '') {
+        $host = 'localhost';
+    }
     return $scheme . '://' . $host;
 }
 
@@ -275,4 +292,18 @@ function rate_limit_allow(string $bucket, int $limit, int $windowSeconds, ?strin
     }
 
     return ['ok' => $ok, 'remaining' => $remaining, 'retry_after' => $retryAfter];
+}
+
+function request_bearer_token(): string
+{
+    $headers = [
+        (string) ($_SERVER['HTTP_AUTHORIZATION'] ?? ''),
+        (string) ($_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? ''),
+    ];
+    foreach ($headers as $auth) {
+        if ($auth !== '' && preg_match('/^\s*Bearer\s+(.+?)\s*$/i', $auth, $m) === 1) {
+            return trim((string) $m[1]);
+        }
+    }
+    return '';
 }

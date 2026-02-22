@@ -195,9 +195,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'admin_path' => APP_ADMIN_PATH,
                 'app_version' => APP_VERSION,
             ];
-            file_put_contents(__DIR__ . '/../config/config.php', "<?php\nreturn " . var_export($config, true) . ";\n");
-            file_put_contents(__DIR__ . '/../config/secrets.php', "<?php\nreturn " . var_export(['master_key' => $st['master_key']], true) . ";\n");
-            file_put_contents(__DIR__ . '/../config/installed.lock', date('c'));
+            $configPhp = "<?php\nreturn " . var_export($config, true) . ";\n";
+            $secretsPhp = "<?php\nreturn " . var_export(['master_key' => $st['master_key']], true) . ";\n";
+            if (file_put_contents(__DIR__ . '/../config/config.php', $configPhp, LOCK_EX) === false) {
+                throw new RuntimeException('Cannot write config/config.php');
+            }
+            if (file_put_contents(__DIR__ . '/../config/secrets.php', $secretsPhp, LOCK_EX) === false) {
+                throw new RuntimeException('Cannot write config/secrets.php');
+            }
+            if (file_put_contents(__DIR__ . '/../config/installed.lock', date('c'), LOCK_EX) === false) {
+                throw new RuntimeException('Cannot write config/installed.lock');
+            }
 
             $_SESSION['install_done'] = true;
             $_SESSION['install'] = $st;

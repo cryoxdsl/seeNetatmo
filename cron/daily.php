@@ -17,14 +17,24 @@ if (!app_is_installed()) {
     exit("Not installed\n");
 }
 
-$provided = (string) ($_GET['key'] ?? '');
+$provided = request_bearer_token();
+if ($provided === '') {
+    $provided = (string) ($_GET['key'] ?? '');
+}
 $expected = secret_get('cron_key_daily') ?? '';
 if ($provided === '' || $expected === '' || !hash_equals($expected, $provided)) {
     http_response_code(403);
     exit("Forbidden\n");
 }
 
-$lock = lock_acquire('cron_daily');
+$lock = null;
+try {
+    $lock = lock_acquire('cron_daily');
+} catch (Throwable $e) {
+    log_event('error', 'cron.daily', 'Lock acquire failed', ['err' => $e->getMessage()]);
+    http_response_code(500);
+    exit("Lock error\n");
+}
 if ($lock === null) {
     http_response_code(429);
     exit("Busy\n");

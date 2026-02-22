@@ -15,7 +15,6 @@ $period = (string) ($_GET['period'] ?? '24h');
 if (!in_array($period, $allowed, true)) {
     $period = '24h';
 }
-$rows = period_rows($period);
 
 if ((string)($_GET['export'] ?? '') === 'csv') {
     $rl = rate_limit_allow('history_export_csv', 10, 3600);
@@ -28,6 +27,7 @@ if ((string)($_GET['export'] ?? '') === 'csv') {
         exit;
     }
 
+    $rows = period_rows($period);
     $maxRows = 25000;
     if (count($rows) > $maxRows) {
         http_response_code(413);
@@ -50,6 +50,8 @@ if ((string)($_GET['export'] ?? '') === 'csv') {
     fclose($out);
     exit;
 }
+
+$rows = period_rows($period);
 
 $page = max(1, (int) ($_GET['page'] ?? 1));
 $perPage = (int) ($_GET['per_page'] ?? 25);

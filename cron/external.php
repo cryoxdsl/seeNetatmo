@@ -17,32 +17,29 @@ if (!app_is_installed()) {
     exit("Not installed\n");
 }
 
-$provided = trim((string) ($_GET['key'] ?? $_GET['k'] ?? $_GET['cron_key'] ?? $_GET['token'] ?? ''));
-$cfgSecrets = app_secrets_config();
-$candidates = array_values(array_unique(array_filter([
-    secret_get('cron_key_external') ?? '',
-    secret_get('cron_key_daily') ?? '',
-    secret_get('cron_key_fetch') ?? '',
-    setting_get('cron_key_external', '') ?? '',
-    setting_get('cron_key_daily', '') ?? '',
-    setting_get('cron_key_fetch', '') ?? '',
-    (string) ($cfgSecrets['cron_key_external'] ?? ''),
-    (string) ($cfgSecrets['cron_key_daily'] ?? ''),
-    (string) ($cfgSecrets['cron_key_fetch'] ?? ''),
-], static fn(string $v): bool => trim($v) !== '')));
-$ok = false;
-foreach ($candidates as $expected) {
-    if (hash_equals(trim($expected), $provided)) {
-        $ok = true;
-        break;
-    }
+$provided = request_bearer_token();
+if ($provided === '') {
+    $provided = trim((string) ($_GET['key'] ?? $_GET['k'] ?? $_GET['cron_key'] ?? $_GET['token'] ?? ''));
 }
-if ($provided === '' || !$ok) {
+$cfgSecrets = app_secrets_config();
+$expected = trim((string) (
+    secret_get('cron_key_external')
+    ?? setting_get('cron_key_external', '')
+    ?? ($cfgSecrets['cron_key_external'] ?? '')
+));
+if ($provided === '' || $expected === '' || !hash_equals($expected, $provided)) {
     http_response_code(403);
     exit("Forbidden\n");
 }
 
-$lock = lock_acquire('cron_external');
+$lock = null;
+try {
+    $lock = lock_acquire('cron_external');
+} catch (Throwable $e) {
+    log_event('error', 'cron.external', 'Lock acquire failed', ['err' => $e->getMessage()]);
+    http_response_code(500);
+    exit("Lock error\n");
+}
 if ($lock === null) {
     http_response_code(429);
     exit("Busy\n");

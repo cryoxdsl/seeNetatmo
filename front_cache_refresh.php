@@ -19,14 +19,14 @@ if (!app_is_installed()) {
     exit;
 }
 
-$rl = rate_limit_allow('front_cache_refresh', 20, 60);
-if (empty($rl['ok'])) {
-    exit;
-}
-
 $token = trim((string) ($_GET['t'] ?? ''));
 $expected = (string) ($_SESSION['csrf_token'] ?? '');
 if ($token === '' || $expected === '' || !hash_equals($expected, $token)) {
+    exit;
+}
+
+$rl = rate_limit_allow('front_cache_refresh', 20, 60);
+if (empty($rl['ok'])) {
     exit;
 }
 $force = ((string) ($_GET['force'] ?? '')) === '1';
