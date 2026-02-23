@@ -467,6 +467,18 @@ if ($perfEnabled && !headers_sent()) {
 
 front_header(t('dashboard.title'));
 ?>
+<script>
+(function () {
+  try { document.body.classList.add('page-loading-skeleton'); } catch (e) { return; }
+  window.addEventListener('load', function () {
+    document.body.classList.add('page-loading-skeleton-done');
+    document.body.classList.remove('page-loading-skeleton');
+    setTimeout(function () {
+      document.body.classList.remove('page-loading-skeleton-done');
+    }, 280);
+  }, { once: true });
+})();
+</script>
 <section class="panel panel-dashboard season-<?= h($season) ?>" style="background-image:url('<?= h($seasonUrl) ?>')">
   <h2><?= h(t('dashboard.title')) ?></h2>
   <p><?= h(t('dashboard.last_update')) ?>: <strong><?= h($state['last'] ?? t('common.na')) ?></strong></p>

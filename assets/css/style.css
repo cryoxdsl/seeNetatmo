@@ -14,6 +14,77 @@ main{padding:var(--space) 0 2rem;display:flex;flex-direction:column;gap:var(--sp
 .panel-dashboard.season-summer{background-image:url('../img/seasons/summer.svg')}
 .panel-dashboard.season-autumn{background-image:url('../img/seasons/autumn.svg')}
 .panel-dashboard.season-winter{background-image:url('../img/seasons/winter.svg')}
+body.page-loading-skeleton main .panel,body.page-loading-skeleton main .card{position:relative;overflow:hidden}
+body.page-loading-skeleton main .panel>*:not(script),body.page-loading-skeleton main .card>*{visibility:hidden}
+body.page-loading-skeleton main .panel::before,body.page-loading-skeleton main .card::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#eef3f8,#e7edf5);z-index:3}
+body.page-loading-skeleton main .panel::after,body.page-loading-skeleton main .card::after{content:"";position:absolute;inset:-40% -30%;background:linear-gradient(90deg,rgba(255,255,255,0) 20%,rgba(255,255,255,.55) 50%,rgba(255,255,255,0) 80%);animation:skeletonShimmer 1.15s linear infinite;z-index:4}
+body.page-loading-skeleton-done main .panel,body.page-loading-skeleton-done main .card{animation:skeletonReveal .24s ease}
+body.page-loading-skeleton main .panel-dashboard::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) 1rem 1rem/34% 16px no-repeat,
+linear-gradient(#e7eef6,#e7eef6) 1rem 2.9rem/42% 12px no-repeat,
+linear-gradient(#dbe6f1,#dbe6f1) 1rem calc(100% - 3.05rem)/90px 28px no-repeat,
+linear-gradient(#e4ecf4,#e4ecf4) calc(100% - 14.2rem) calc(100% - 3.05rem)/13.2rem 28px no-repeat,
+linear-gradient(#dbe6f1,#dbe6f1) calc(100% - 14.2rem) calc(100% - 1.9rem)/13.2rem 4px no-repeat,
+linear-gradient(180deg,#edf3f9,#e6edf5)}
+body.page-loading-skeleton main .weather-hero::before{background:
+linear-gradient(#dbe6f1,#dbe6f1) 1rem 1rem/120px 120px no-repeat,
+linear-gradient(#dfe8f2,#dfe8f2) 10.2rem 1.2rem/36% 18px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) 10.2rem 2.8rem/28% 12px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) 10.2rem 4.1rem/32% 12px no-repeat,
+linear-gradient(#d9e4ef,#d9e4ef) calc(100% - 11.8rem) 1.2rem/10.8rem 52px no-repeat,
+linear-gradient(#e5edf6,#e5edf6) calc(100% - 11.8rem) 4.2rem/10.8rem 22px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .station-card::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/52% 14px no-repeat,
+radial-gradient(circle at 22px 58px,#dbe6f1 0 22px,transparent 23px) .8rem .8rem/52px 52px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 4.6rem/88% 10px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 5.8rem/74% 10px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 7rem/66% 10px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 8.2rem/80% 10px no-repeat,
+linear-gradient(180deg,#eef3f9,#e7edf5)}
+body.page-loading-skeleton main .forecast-card::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/62% 14px no-repeat,
+linear-gradient(#dbe6f1,#dbe6f1) .8rem 2rem/42px 42px no-repeat,
+linear-gradient(#dfe8f2,#dfe8f2) 3.7rem 2.1rem/38% 15px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) 3.7rem 3.15rem/26% 10px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 5rem/calc(50% - 1.05rem) 56px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) calc(50% + .25rem) 5rem/calc(50% - 1.05rem) 56px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem calc(100% - 1.25rem)/44% 10px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .extremes-card::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/58% 14px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 2rem/88% 30px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 3.95rem/88% 30px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 5.9rem/88% 30px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 7.85rem/88% 30px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 9.8rem/88% 30px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .metric-group-card::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/68% 14px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 2rem/calc(50% - .95rem) 58px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) calc(50% + .15rem) 2rem/calc(50% - .95rem) 58px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) .8rem 6.05rem/calc(50% - .95rem) 58px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) calc(50% + .15rem) 6.05rem/calc(50% - .95rem) 58px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .wind-rose-card::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/56% 14px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) calc(100% - 4.6rem) .8rem/3.8rem 14px no-repeat,
+radial-gradient(circle at 50% 62%,#dfe8f2 0 58px,transparent 59px) center 2.1rem/140px 140px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) 1.1rem calc(100% - 1.2rem)/80% 10px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .metric-groups-panel::before,
+body.page-loading-skeleton main .rain-totals-panel::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) 1rem 1rem/34% 15px no-repeat,
+linear-gradient(#e8eef6,#e8eef6) 1rem 2.2rem/100% 1px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+body.page-loading-skeleton main .card:not(.station-card):not(.forecast-card):not(.extremes-card):not(.metric-group-card):not(.wind-rose-card)::before{background:
+linear-gradient(#dfe8f2,#dfe8f2) .8rem .8rem/56% 14px no-repeat,
+linear-gradient(#dbe6f1,#dbe6f1) .8rem 2.1rem/72% 22px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 4rem/84% 10px no-repeat,
+linear-gradient(#e6edf5,#e6edf5) .8rem 5.2rem/62% 10px no-repeat,
+linear-gradient(180deg,#eef4fa,#e7eef6)}
+@keyframes skeletonShimmer{0%{transform:translateX(-35%)}100%{transform:translateX(35%)}}
+@keyframes skeletonReveal{0%{opacity:.74;transform:translateY(1px)}100%{opacity:1;transform:none}}
 .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:var(--space);margin:0}.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem;height:100%}.card h3{margin:0 0 .35rem;font-size:.9rem;color:var(--muted)}.card div{font-size:1.2rem;font-weight:700}
 .card h3 .label-paren{font-size:.82em;font-weight:600;opacity:.86}
 .card.is-stale-card{filter:grayscale(.88);opacity:.58}
