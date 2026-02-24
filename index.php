@@ -216,19 +216,13 @@ if ($forecastReason === 'no_station_coords') {
 } elseif ($forecastReason === 'retry_later') {
     $forecastUnavailableMsg = t('forecast.retry_later');
 }
-$forecastSource = (string) ($forecast['source'] ?? '');
-$forecastSourceLabel = match ($forecastSource) {
-    'openmeteo' => t('site.forecast_source_openmeteo'),
-    'metno' => t('site.forecast_source_metno'),
-    default => ($forecastSource !== '' ? $forecastSource : t('common.na')),
-};
 $weatherHeroType = (string) ($weather['type'] ?? 'offline');
 $weatherHeroLabel = (string) ($weather['label'] ?? t('weather.unavailable'));
 $weatherHeroDetail = t('weather.hero.local_only');
 if (!empty($forecast['available'])) {
     $weatherHeroType = $forecastCurrentType !== '' ? $forecastCurrentType : $weatherHeroType;
     $weatherHeroLabel = $forecastCurrentLabel;
-    $weatherHeroDetail = sprintf(t('weather.hero.source_forecast'), $forecastSourceLabel);
+    $weatherHeroDetail = t('weather.hero.source_forecast');
     if ($forecastUpdated !== '') {
         $weatherHeroDetail .= ' | ' . t('forecast.updated') . ': ' . $forecastUpdated;
     }
