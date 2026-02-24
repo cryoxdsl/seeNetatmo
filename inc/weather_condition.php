@@ -16,6 +16,21 @@ function weather_condition_from_row(?array $row, array $state, ?array $prev = nu
     $h = $row['H'] !== null ? (float) $row['H'] : null;
     $rr = $row['RR'] !== null ? (float) $row['RR'] : 0.0;
     $w = $row['W'] !== null ? (float) $row['W'] : 0.0;
+    $p = (isset($row['P']) && $row['P'] !== null) ? (float) $row['P'] : null;
+    $hour = null;
+    if (!empty($row['DateTime'])) {
+        try {
+            $dt = new DateTimeImmutable((string) $row['DateTime'], new DateTimeZone(defined('APP_TIMEZONE') ? APP_TIMEZONE : 'UTC'));
+            $hour = (int) $dt->format('G');
+        } catch (Throwable $e) {
+            $hour = null;
+        }
+    }
+    $isNight = $hour !== null && ($hour < 7 || $hour >= 21);
+    $tempDelta = null;
+    if ($prev && isset($prev['T']) && $prev['T'] !== null && $row['T'] !== null) {
+        $tempDelta = (float) $row['T'] - (float) $prev['T'];
+    }
 
     $type = 'voile';
     $label = t('weather.label.voile');
@@ -33,15 +48,20 @@ function weather_condition_from_row(?array $row, array $state, ?array $prev = nu
         $type = 'wind';
         $label = t('weather.label.wind');
         $detail = t('weather.detail.wind');
-    } elseif ($h !== null && $h >= 90) {
+    } elseif (
+        $h !== null && (
+            $h >= 97
+            || ($h >= 93 && ($isNight || ($p !== null && $p <= 1008) || ($tempDelta !== null && $tempDelta <= 0.1)))
+        )
+    ) {
         $type = 'very_cloudy';
         $label = t('weather.label.very_cloudy');
         $detail = t('weather.detail.very_cloudy');
-    } elseif ($h !== null && $h >= 75) {
+    } elseif ($h !== null && $h >= 84) {
         $type = 'cloudy';
         $label = t('weather.label.cloudy');
         $detail = t('weather.detail.cloudy');
-    } elseif ($h !== null && $h < 55) {
+    } elseif ($h !== null && ($h < 50 || ($h < 60 && !$isNight && ($p === null || $p >= 1010)))) {
         $type = 'sunny';
         $label = t('weather.label.sunny');
         $detail = t('weather.detail.sunny');

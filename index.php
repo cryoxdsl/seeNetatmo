@@ -216,6 +216,34 @@ if ($forecastReason === 'no_station_coords') {
 } elseif ($forecastReason === 'retry_later') {
     $forecastUnavailableMsg = t('forecast.retry_later');
 }
+$forecastSource = (string) ($forecast['source'] ?? '');
+$forecastSourceLabel = match ($forecastSource) {
+    'openmeteo' => t('site.forecast_source_openmeteo'),
+    'metno' => t('site.forecast_source_metno'),
+    default => ($forecastSource !== '' ? $forecastSource : t('common.na')),
+};
+$weatherHeroType = (string) ($weather['type'] ?? 'offline');
+$weatherHeroLabel = (string) ($weather['label'] ?? t('weather.unavailable'));
+$weatherHeroDetail = t('weather.hero.local_only');
+if (!empty($forecast['available'])) {
+    $weatherHeroType = $forecastCurrentType !== '' ? $forecastCurrentType : $weatherHeroType;
+    $weatherHeroLabel = $forecastCurrentLabel;
+    $weatherHeroDetail = sprintf(t('weather.hero.source_forecast'), $forecastSourceLabel);
+    if ($forecastUpdated !== '') {
+        $weatherHeroDetail .= ' | ' . t('forecast.updated') . ': ' . $forecastUpdated;
+    }
+}
+$weatherLocalNoteParts = [];
+if (!$state['disconnected']) {
+    $weatherLocalNoteParts[] = sprintf(t('weather.hero.local_indicator'), (string) ($weather['detail'] ?? t('weather.unavailable')));
+    if (isset($row['H']) && $row['H'] !== null) {
+        $weatherLocalNoteParts[] = sprintf(t('weather.hero.local_humidity'), (string) ((int) round((float) $row['H'])));
+    }
+}
+if (isset($state['age']) && $state['age'] !== null) {
+    $weatherLocalNoteParts[] = sprintf(t('weather.hero.station_age_min'), (string) ((int) $state['age']));
+}
+$weatherLocalNote = implode(' | ', $weatherLocalNoteParts);
 $stationLat = station_latitude_setting();
 $stationLon = station_longitude_setting();
 $stationAlt = station_altitude_setting();
@@ -506,11 +534,14 @@ front_header(t('dashboard.title'));
     </div>
   </div>
 </section>
-<section class="panel weather-hero weather-<?= h($weather['type']) ?>">
-  <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weather['type'], weather_icon_style_setting()) : '' ?></div>
+<section class="panel weather-hero weather-<?= h($weatherHeroType) ?>">
+  <div class="weather-icon"><?= function_exists('weather_icon_svg') ? weather_icon_svg($weatherHeroType, weather_icon_style_setting()) : '' ?></div>
   <div class="weather-copy">
-    <h3><?= h($weather['label']) ?></h3>
-    <p><?= h($weather['detail']) ?></p>
+    <h3><?= h($weatherHeroLabel) ?></h3>
+    <p><?= h($weatherHeroDetail) ?></p>
+    <?php if ($weatherLocalNote !== ''): ?>
+      <p class="small-muted"><?= h($weatherLocalNote) ?></p>
+    <?php endif; ?>
     <p class="weather-trend"><?= h(function_exists('weather_trend_label') ? weather_trend_label($weather['trend']) : t('weather.trend.unavailable')) ?></p>
   </div>
   <div class="weather-temp-side">
